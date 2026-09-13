@@ -132,9 +132,10 @@ async function requestSpotifyToken(body: URLSearchParams) {
     },
     body,
   });
-  const payload = (await response.json()) as SpotifyTokenResponse;
+  const payload = (await response.json()) as SpotifyTokenResponse & { error?: string; error_description?: string };
   if (!response.ok || !payload.access_token) {
-    throw new Error(`Spotify token request failed with ${response.status}`);
+    const detail = payload.error_description || payload.error || `HTTP ${response.status}`;
+    throw new Error(`Spotify token request failed with ${response.status}: ${detail}`);
   }
   return payload;
 }
@@ -142,12 +143,17 @@ async function requestSpotifyToken(body: URLSearchParams) {
 async function getSpotifyAccessToken() {
   if (!hasSpotifyCredentials()) return null;
   if (cachedToken && cachedToken.expiresAt > Date.now() + 30_000) return cachedToken.value;
-  const payload = await requestSpotifyToken(new URLSearchParams({ grant_type: "client_credentials" }));
-  cachedToken = {
-    value: payload.access_token!,
-    expiresAt: Date.now() + Math.max(60, payload.expires_in ?? 3600) * 1000,
-  };
-  return cachedToken.value;
+  try {
+    const payload = await requestSpotifyToken(new URLSearchParams({ grant_type: "client_credentials" }));
+    cachedToken = {
+      value: payload.access_token!,
+      expiresAt: Date.now() + Math.max(60, payload.expires_in ?? 3600) * 1000,
+    };
+    return cachedToken.value;
+  } catch (error) {
+    console.warn("[Spotify] Client credentials grant failed:", error instanceof Error ? error.message : error);
+    return null;
+  }
 }
 
 async function exchangeUserCode(code: string, redirectUri: string) {

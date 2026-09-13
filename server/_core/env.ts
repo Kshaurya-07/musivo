@@ -1,14 +1,22 @@
+function cleanEnvString(val: string | undefined): string {
+  if (!val) return "";
+  const cleaned = val.trim().replace(/^["']|["']$/g, "");
+  if (cleaned.startsWith("<") && cleaned.endsWith(">")) return "";
+  return cleaned;
+}
+
 export const ENV = {
-  appId: process.env.VITE_APP_ID ?? "",
-  cookieSecret: process.env.JWT_SECRET ?? "",
-  databaseUrl: process.env.DATABASE_URL ?? "",
-  oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
-  ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
+  appId: cleanEnvString(process.env.VITE_APP_ID),
+  cookieSecret: cleanEnvString(process.env.JWT_SECRET),
+  databaseUrl: cleanEnvString(process.env.DATABASE_URL),
+  oAuthServerUrl: cleanEnvString(process.env.OAUTH_SERVER_URL),
+  ownerOpenId: cleanEnvString(process.env.OWNER_OPEN_ID),
   isProduction: process.env.NODE_ENV === "production",
-  forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
-  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
-  spotifyClientId: process.env.SPOTIFY_CLIENT_ID ?? "",
-  spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET ?? "",
-  spotifyMarket: process.env.SPOTIFY_MARKET ?? "US",
-  spotifyRedirectUri: process.env.SPOTIFY_REDIRECT_URI ?? "",
+  forgeApiUrl: cleanEnvString(process.env.BUILT_IN_FORGE_API_URL),
+  forgeApiKey: cleanEnvString(process.env.BUILT_IN_FORGE_API_KEY),
+  spotifyClientId: cleanEnvString(process.env.SPOTIFY_CLIENT_ID),
+  spotifyClientSecret: cleanEnvString(process.env.SPOTIFY_CLIENT_SECRET),
+  spotifyMarket: cleanEnvString(process.env.SPOTIFY_MARKET) || "US",
+  spotifyRedirectUri: cleanEnvString(process.env.SPOTIFY_REDIRECT_URI),
 };
+

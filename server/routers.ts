@@ -113,10 +113,16 @@ export const appRouter = router({
     status: publicProcedure.query(() => catalogStatus()),
     home: publicProcedure.query(async () => {
       try {
-        return await getSpotifyHomeTracks();
+        const spotifyTracks = await getSpotifyHomeTracks();
+        if (spotifyTracks && spotifyTracks.length > 0) return spotifyTracks;
+        return await searchItunesTracks("top hits", 12);
       } catch (error) {
-        console.error("[Music] Spotify home feed failed:", error);
-        return null;
+        console.warn("[Music] Spotify home feed fallback active:", error instanceof Error ? error.message : error);
+        try {
+          return await searchItunesTracks("top hits", 12);
+        } catch {
+          return null;
+        }
       }
     }),
     search: publicProcedure
