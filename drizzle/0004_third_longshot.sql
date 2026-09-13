@@ -1,0 +1,1 @@
+ALTER TABLE `spotifyConnections` ADD `spotifyProfileImageUrl` text;

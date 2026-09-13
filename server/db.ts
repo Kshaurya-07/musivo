@@ -148,10 +148,11 @@ export async function getSpotifyConnection(userId: number) {
 
 export async function getSpotifyConnectionStatus(userId: number) {
   const connection = await getSpotifyConnection(userId);
-  if (!connection) return { connected: false as const, displayName: null, spotifyUserId: null, scope: null, updatedAt: null };
+  if (!connection) return { connected: false as const, displayName: null, profileImageUrl: null, spotifyUserId: null, scope: null, updatedAt: null };
   return {
     connected: true as const,
     displayName: connection.spotifyDisplayName,
+    profileImageUrl: connection.spotifyProfileImageUrl,
     spotifyUserId: connection.spotifyUserId,
     scope: connection.scope,
     updatedAt: connection.updatedAt,
@@ -165,6 +166,7 @@ export async function upsertSpotifyConnection(values: InsertSpotifyConnection) {
     set: {
       spotifyUserId: values.spotifyUserId,
       spotifyDisplayName: values.spotifyDisplayName,
+      spotifyProfileImageUrl: values.spotifyProfileImageUrl,
       accessTokenEncrypted: values.accessTokenEncrypted,
       refreshTokenEncrypted: values.refreshTokenEncrypted,
       accessTokenExpiresAt: values.accessTokenExpiresAt,

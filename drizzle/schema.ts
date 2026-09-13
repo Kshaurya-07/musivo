@@ -61,6 +61,7 @@ export const spotifyConnections = mysqlTable("spotifyConnections", {
   userId: int("userId").notNull().unique(),
   spotifyUserId: varchar("spotifyUserId", { length: 128 }).notNull(),
   spotifyDisplayName: varchar("spotifyDisplayName", { length: 255 }),
+  spotifyProfileImageUrl: text("spotifyProfileImageUrl"),
   accessTokenEncrypted: text("accessTokenEncrypted").notNull(),
   refreshTokenEncrypted: text("refreshTokenEncrypted").notNull(),
   accessTokenExpiresAt: timestamp("accessTokenExpiresAt").notNull(),

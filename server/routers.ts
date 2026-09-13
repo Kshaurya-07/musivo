@@ -26,6 +26,8 @@ import {
   getSpotifyHomeTracks,
   getSpotifyPlaylistDetail,
   getUserSpotifyAccessToken,
+  createSpotifyPlaylist,
+  createAiSpotifyMix,
   searchSpotifyTracks,
   syncSpotifyUserData,
 } from "./spotify";
@@ -173,6 +175,22 @@ export const appRouter = router({
       }
     }),
     recentlyPlayed: protectedProcedure.query(({ ctx }) => listSpotifyRecentTracks(ctx.user.id)),
+    createPlaylist: protectedProcedure.input(z.object({ name: z.string().trim().min(1).max(100), description: z.string().trim().max(300).optional(), trackIds: z.array(z.string().min(1)).max(500).default([]) })).mutation(async ({ ctx, input }) => {
+      try {
+        return await createSpotifyPlaylist(ctx.user.id, input.name, input.description ?? "Created in Musivo", input.trackIds);
+      } catch (error) {
+        console.error("[Spotify] Playlist creation failed:", error);
+        throw new TRPCError({ code: "BAD_GATEWAY", message: "Spotify playlist could not be created. Please reconnect and try again." });
+      }
+    }),
+    createAiMix: protectedProcedure.mutation(async ({ ctx }) => {
+      try {
+        return await createAiSpotifyMix(ctx.user.id);
+      } catch (error) {
+        console.error("[Spotify] AI mix failed:", error);
+        throw new TRPCError({ code: "BAD_GATEWAY", message: error instanceof Error ? error.message : "The AI mix could not be created right now." });
+      }
+    }),
   }),
   playlists: router({
     list: protectedProcedure.query(({ ctx }) => listUserPlaylists(ctx.user.id)),

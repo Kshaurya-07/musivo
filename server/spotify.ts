@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "./_core/env";
 import * as db from "./db";
+import { invokeLLM } from "./_core/llm";
 
 export type CatalogTrack = {
   id: string;
@@ -28,7 +29,7 @@ type SpotifyTrack = {
 
 type SpotifySearchResponse = { tracks?: { items?: SpotifyTrack[] } };
 type SpotifyTokenResponse = { access_token?: string; refresh_token?: string; expires_in?: number; scope?: string; token_type?: string };
-type SpotifyProfile = { id?: string; display_name?: string | null };
+type SpotifyProfile = { id?: string; display_name?: string | null; images?: Array<{ url?: string }> };
 type SpotifyPlaylistResponse = { items?: Array<{ id?: string; name?: string; description?: string | null; images?: Array<{ url?: string }>; external_urls?: { spotify?: string }; tracks?: { total?: number } }> };
 type SpotifyRecentResponse = { items?: Array<{ played_at?: string; track?: SpotifyTrack | null }> };
 type SpotifyPlaylistTracksResponse = { items?: Array<{ track?: SpotifyTrack | null }> };
@@ -41,6 +42,7 @@ const USER_SCOPES = [
   "user-modify-playback-state",
   "playlist-read-private",
   "playlist-read-collaborative",
+  "playlist-modify-private",
   "user-read-recently-played",
   "user-read-private",
   "user-read-email",
@@ -190,6 +192,7 @@ export async function completeSpotifyConnection(userId: number, code: string, re
     userId,
     spotifyUserId: profile.id,
     spotifyDisplayName: profile.display_name ?? null,
+    spotifyProfileImageUrl: profile.images?.[0]?.url ?? null,
     accessTokenEncrypted: encryptSpotifyToken(payload.access_token!),
     refreshTokenEncrypted: encryptSpotifyToken(payload.refresh_token),
     accessTokenExpiresAt: new Date(Date.now() + Math.max(60, payload.expires_in ?? 3600) * 1000),
@@ -204,6 +207,59 @@ async function spotifyUserFetchWithToken<T>(accessToken: string, path: string) {
   });
   if (!response.ok) throw new Error(`Spotify user API request failed with ${response.status}`);
   return (await response.json()) as T;
+}
+
+async function spotifyUserRequest<T>(userId: number, path: string, init: RequestInit) {
+  const accessToken = await getUserSpotifyAccessToken(userId);
+  const response = await fetch(`https://api.spotify.com/v1${path}`, {
+    ...init,
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", ...(init.headers ?? {}) },
+  });
+  if (!response.ok) throw new Error(`Spotify user API request failed with ${response.status}`);
+  return (await response.json()) as T;
+}
+
+async function searchSpotifyUserTrack(userId: number, title: string, artist: string) {
+  const payload = await spotifyUserFetch<SpotifySearchResponse>(userId, `/search?q=${encodeURIComponent(`track:${title} artist:${artist}`)}&type=track&limit=1&market=${encodeURIComponent(ENV.spotifyMarket || "US")}`);
+  return payload.tracks?.items?.[0];
+}
+
+export async function createSpotifyPlaylist(userId: number, name: string, description: string, trackIds: string[]) {
+  const connection = await db.getSpotifyConnection(userId);
+  if (!connection) throw new Error("Spotify account is not connected");
+  const playlist = await spotifyUserRequest<{ id?: string; external_urls?: { spotify?: string }; name?: string }>(userId, `/users/${encodeURIComponent(connection.spotifyUserId)}/playlists`, { method: "POST", body: JSON.stringify({ name, description, public: false, collaborative: false }) });
+  if (!playlist.id) throw new Error("Spotify did not create the playlist");
+  const uniqueIds = Array.from(new Set(trackIds.map((id) => id.replace(/^spotify-/, "")).filter(Boolean)));
+  for (let offset = 0; offset < uniqueIds.length; offset += 100) {
+    await spotifyUserRequest(userId, `/playlists/${encodeURIComponent(playlist.id)}/tracks`, { method: "POST", body: JSON.stringify({ uris: uniqueIds.slice(offset, offset + 100).map((id) => `spotify:track:${id}`) }) });
+  }
+  return { id: playlist.id, name: playlist.name ?? name, storeUrl: playlist.external_urls?.spotify ?? `https://open.spotify.com/playlist/${playlist.id}`, trackCount: uniqueIds.length };
+}
+
+export async function createAiSpotifyMix(userId: number) {
+  const recent = await db.listSpotifyRecentTracks(userId);
+  if (!recent.length) throw new Error("Sync your recently played tracks before building an AI mix.");
+  const seedTracks = recent.slice(0, 20).map((track) => `${track.title} — ${track.artist} — ${track.album ?? "single"}`).join("\n");
+  const result = await invokeLLM({
+    model: "gpt-5-mini",
+    maxTokens: 1200,
+    messages: [
+      { role: "system", content: "You are a music discovery assistant. Analyze recently played tracks and suggest musically similar songs. Return only the requested JSON." },
+      { role: "user", content: `Recently played tracks:\n${seedTracks}\nSuggest 8 distinct songs not already in the list. Favor adjacent genres, moods, and artists. Include a concise reason for each.` },
+    ],
+    responseFormat: { type: "json_schema", json_schema: { name: "music_recommendations", strict: true, schema: { type: "object", properties: { recommendations: { type: "array", items: { type: "object", properties: { title: { type: "string" }, artist: { type: "string" }, reason: { type: "string" } }, required: ["title", "artist", "reason"], additionalProperties: false } } }, required: ["recommendations"], additionalProperties: false } } },
+  });
+  const content = result.choices[0]?.message.content;
+  const parsed = typeof content === "string" ? JSON.parse(content) as { recommendations?: Array<{ title: string; artist: string; reason: string }> } : { recommendations: [] };
+  const recommendations = (parsed.recommendations ?? []).slice(0, 8);
+  const matches = [];
+  for (const recommendation of recommendations) {
+    const match = await searchSpotifyUserTrack(userId, recommendation.title, recommendation.artist);
+    if (match?.id) matches.push({ ...recommendation, id: match.id, art: match.album?.images?.[0]?.url ?? null });
+  }
+  if (!matches.length) throw new Error("Spotify could not find matching tracks for the AI mix.");
+  const playlist = await createSpotifyPlaylist(userId, `Musivo AI Mix · ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`, "An AI-curated mix based on your recently played tracks in Musivo.", matches.map((match) => match.id));
+  return { playlist, recommendations: matches };
 }
 
 export async function syncSpotifyUserData(userId: number) {
