@@ -17,6 +17,9 @@ declare global {
   }
 }
 
+const SDK_URL = "https://sdk.scdn.co/spotify-player.js";
+const SDK_SELECTOR = 'script[data-musivo-spotify-sdk="true"]';
+
 export function useSpotifyPlayer(enabled: boolean) {
   const tokenQuery = trpc.spotify.playbackToken.useQuery(undefined, { enabled, staleTime: 45 * 60 * 1000, retry: false });
   const playerRef = useRef<SpotifySdkPlayer | null>(null);
@@ -27,6 +30,7 @@ export function useSpotifyPlayer(enabled: boolean) {
   useEffect(() => {
     if (!enabled || !tokenQuery.data?.token) return;
     let cancelled = false;
+    let script: HTMLScriptElement | null = null;
 
     const initialize = () => {
       if (cancelled || !window.Spotify || playerRef.current) return;
@@ -59,31 +63,38 @@ export function useSpotifyPlayer(enabled: boolean) {
       });
       player.connect().then((connected) => {
         if (!connected && !cancelled) setError("Spotify player could not connect in this browser");
+      }).catch((connectError: unknown) => {
+        if (!cancelled) setError(connectError instanceof Error ? connectError.message : "Spotify player could not connect");
       });
       playerRef.current = player;
     };
 
-    if (window.Spotify) initialize();
-    else {
-      const previousReady = window.onSpotifyWebPlaybackSDKReady;
-      window.onSpotifyWebPlaybackSDKReady = () => {
-        previousReady?.();
+    const loadSdk = () => {
+      if (window.Spotify) {
         initialize();
-      };
-      const timer = window.setInterval(() => {
-        if (window.Spotify) {
-          window.clearInterval(timer);
-          initialize();
-        }
-      }, 100);
-      return () => {
-        cancelled = true;
-        window.clearInterval(timer);
-      };
-    }
+        return;
+      }
+      script = document.querySelector<HTMLScriptElement>(SDK_SELECTOR);
+      if (!script) {
+        script = document.createElement("script");
+        script.src = SDK_URL;
+        script.async = true;
+        script.dataset.musivoSpotifySdk = "true";
+        script.addEventListener("error", () => {
+          if (!cancelled) setError("Spotify playback SDK could not load in this browser");
+        }, { once: true });
+        document.head.appendChild(script);
+      }
+      script.addEventListener("load", initialize, { once: true });
+      window.onSpotifyWebPlaybackSDKReady = initialize;
+    };
+
+    loadSdk();
 
     return () => {
       cancelled = true;
+      if (window.onSpotifyWebPlaybackSDKReady === initialize) window.onSpotifyWebPlaybackSDKReady = undefined;
+      script?.removeEventListener("load", initialize);
       playerRef.current?.disconnect();
       playerRef.current = null;
       setDeviceId(null);
@@ -93,7 +104,7 @@ export function useSpotifyPlayer(enabled: boolean) {
 
   async function playTrack(trackId: string) {
     if (tokenQuery.error) throw new Error(tokenQuery.error.message);
-    if (!deviceId || !tokenQuery.data?.token) throw new Error("Spotify in-app player is not ready");
+    if (!deviceId || !tokenQuery.data?.token) throw new Error(error || "Spotify in-app player is not ready");
     const spotifyId = trackId.replace(/^spotify-/, "");
     const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(deviceId)}`, {
       method: "PUT",
