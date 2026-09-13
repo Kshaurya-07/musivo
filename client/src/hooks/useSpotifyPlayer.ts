@@ -7,6 +7,7 @@ type SpotifySdkPlayer = {
   togglePlay: () => Promise<void>;
   pause: () => Promise<void>;
   resume: () => Promise<void>;
+  setVolume: (volume: number) => Promise<void>;
   addListener: (event: string, callback: (payload: any) => void) => boolean;
 };
 
@@ -19,21 +20,43 @@ declare global {
 
 const SDK_URL = "https://sdk.scdn.co/spotify-player.js";
 const SDK_SELECTOR = 'script[data-musivo-spotify-sdk="true"]';
+export type SpotifyConnectionState = "idle" | "authorizing" | "loading" | "connecting" | "ready" | "not_ready" | "error";
 
 export function useSpotifyPlayer(enabled: boolean) {
   const tokenQuery = trpc.spotify.playbackToken.useQuery(undefined, { enabled, staleTime: 45 * 60 * 1000, retry: false });
   const playerRef = useRef<SpotifySdkPlayer | null>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
-  const [isReady, setIsReady] = useState(false);
+  const [sdkLoaded, setSdkLoaded] = useState(Boolean(typeof window !== "undefined" && window.Spotify));
+  const [connectionState, setConnectionState] = useState<SpotifyConnectionState>("idle");
+  const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!enabled || !tokenQuery.data?.token) return;
+    if (!enabled) {
+      setConnectionState("idle");
+      setSdkLoaded(Boolean(window.Spotify));
+      return;
+    }
+    if (tokenQuery.isLoading) {
+      setConnectionState("authorizing");
+      return;
+    }
+    if (tokenQuery.error) {
+      setConnectionState("error");
+      setError(tokenQuery.error.message);
+      return;
+    }
+    if (!tokenQuery.data?.token) return;
+
     let cancelled = false;
     let script: HTMLScriptElement | null = null;
+    setConnectionState("loading");
+    setError(null);
 
     const initialize = () => {
       if (cancelled || !window.Spotify || playerRef.current) return;
+      setSdkLoaded(true);
+      setConnectionState("connecting");
       const player = new window.Spotify.Player({
         name: "Musivo in-app player",
         volume: 0.72,
@@ -42,35 +65,57 @@ export function useSpotifyPlayer(enabled: boolean) {
       player.addListener("ready", ({ device_id }: { device_id: string }) => {
         if (!cancelled) {
           setDeviceId(device_id);
-          setIsReady(true);
+          setConnectionState("ready");
           setError(null);
         }
       });
       player.addListener("not_ready", () => {
-        if (!cancelled) setIsReady(false);
+        if (!cancelled) {
+          setConnectionState("not_ready");
+          setIsPlaying(false);
+        }
+      });
+      player.addListener("player_state_changed", (state: { paused?: boolean } | null) => {
+        if (!cancelled && state) setIsPlaying(state.paused === false);
       });
       player.addListener("initialization_error", ({ message }: { message: string }) => {
-        if (!cancelled) setError(message || "Spotify playback could not initialize");
+        if (!cancelled) {
+          setConnectionState("error");
+          setError(message || "Spotify playback could not initialize");
+        }
       });
       player.addListener("authentication_error", ({ message }: { message: string }) => {
-        if (!cancelled) setError(message || "Spotify playback authorization expired");
+        if (!cancelled) {
+          setConnectionState("error");
+          setError(message || "Spotify playback authorization expired");
+        }
       });
       player.addListener("account_error", () => {
-        if (!cancelled) setError("Spotify in-app playback requires a Premium account.");
+        if (!cancelled) {
+          setConnectionState("error");
+          setError("Spotify in-app playback requires a Premium account.");
+        }
       });
       player.addListener("playback_error", ({ message }: { message: string }) => {
         if (!cancelled) setError(message || "Spotify could not play this track");
       });
       player.connect().then((connected) => {
-        if (!connected && !cancelled) setError("Spotify player could not connect in this browser");
+        if (!connected && !cancelled) {
+          setConnectionState("error");
+          setError("Spotify player could not connect in this browser");
+        }
       }).catch((connectError: unknown) => {
-        if (!cancelled) setError(connectError instanceof Error ? connectError.message : "Spotify player could not connect");
+        if (!cancelled) {
+          setConnectionState("error");
+          setError(connectError instanceof Error ? connectError.message : "Spotify player could not connect");
+        }
       });
       playerRef.current = player;
     };
 
     const loadSdk = () => {
       if (window.Spotify) {
+        setSdkLoaded(true);
         initialize();
         return;
       }
@@ -81,7 +126,10 @@ export function useSpotifyPlayer(enabled: boolean) {
         script.async = true;
         script.dataset.musivoSpotifySdk = "true";
         script.addEventListener("error", () => {
-          if (!cancelled) setError("Spotify playback SDK could not load in this browser");
+          if (!cancelled) {
+            setConnectionState("error");
+            setError("Spotify playback SDK could not load in this browser");
+          }
         }, { once: true });
         document.head.appendChild(script);
       }
@@ -98,9 +146,10 @@ export function useSpotifyPlayer(enabled: boolean) {
       playerRef.current?.disconnect();
       playerRef.current = null;
       setDeviceId(null);
-      setIsReady(false);
+      setIsPlaying(false);
+      setConnectionState("idle");
     };
-  }, [enabled, tokenQuery.data?.token]);
+  }, [enabled, tokenQuery.data?.token, tokenQuery.error, tokenQuery.isLoading]);
 
   async function playTrack(trackId: string) {
     if (tokenQuery.error) throw new Error(tokenQuery.error.message);
@@ -112,15 +161,25 @@ export function useSpotifyPlayer(enabled: boolean) {
       body: JSON.stringify({ uris: [`spotify:track:${spotifyId}`] }),
     });
     if (!response.ok) throw new Error(response.status === 403 ? "Spotify requires a Premium account for in-app playback" : "Spotify could not start playback");
+    setIsPlaying(true);
+  }
+
+  async function setVolume(volume: number) {
+    await playerRef.current?.setVolume(Math.max(0, Math.min(1, volume)));
   }
 
   return {
-    isReady,
-    error,
+    isReady: connectionState === "ready",
+    isPlaying,
+    sdkLoaded,
+    deviceId,
+    connectionState,
+    error: error ?? tokenQuery.error?.message ?? null,
     isLoading: enabled && tokenQuery.isLoading,
     playTrack,
     togglePlay: () => playerRef.current?.togglePlay(),
     pause: () => playerRef.current?.pause(),
     resume: () => playerRef.current?.resume(),
+    setVolume,
   };
 }
