@@ -62,3 +62,9 @@ describe("Spotify OAuth", () => {
     await expect(verifySpotifyState(state!)).resolves.toMatchObject({ userId: 42 });
   });
 });
+
+it("does not expose a playback token without a connected streaming scope", async () => {
+  const cookies: Array<{ name: string; value: string; options: Record<string, unknown> }> = [];
+  const caller = appRouter.createCaller(createContext(cookies));
+  await expect(caller.spotify.playbackToken()).rejects.toMatchObject({ code: "FORBIDDEN" });
+});

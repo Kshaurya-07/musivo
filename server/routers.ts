@@ -8,6 +8,7 @@ import {
   addTrackToPlaylist,
   createUserPlaylist,
   deleteSpotifyConnection,
+  getSpotifyConnection,
   getSpotifyConnectionStatus,
   getUserPlaylist,
   hasLikedTrack,
@@ -23,6 +24,8 @@ import {
   catalogStatus,
   createSpotifyState,
   getSpotifyHomeTracks,
+  getSpotifyPlaylistDetail,
+  getUserSpotifyAccessToken,
   searchSpotifyTracks,
   syncSpotifyUserData,
 } from "./spotify";
@@ -134,6 +137,13 @@ export const appRouter = router({
   }),
   spotify: router({
     status: protectedProcedure.query(({ ctx }) => getSpotifyConnectionStatus(ctx.user.id)),
+    playbackToken: protectedProcedure.query(async ({ ctx }) => {
+      const connection = await getSpotifyConnection(ctx.user.id);
+      if (!connection || !connection.scope?.split(" ").includes("streaming")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Reconnect Spotify to enable in-app playback." });
+      }
+      return { token: await getUserSpotifyAccessToken(ctx.user.id) };
+    }),
     connect: protectedProcedure.input(z.object({ origin: z.string().min(1) })).mutation(async ({ ctx, input }) => {
       const redirectUri = getSpotifyRedirectUri(input.origin);
       const nonce = randomUUID();
@@ -154,6 +164,14 @@ export const appRouter = router({
       return { success: true } as const;
     }),
     playlists: protectedProcedure.query(({ ctx }) => listSpotifyPlaylists(ctx.user.id)),
+    playlistDetail: protectedProcedure.input(z.object({ externalId: z.string().min(1), query: z.string().max(80).optional() })).query(async ({ ctx, input }) => {
+      try {
+        return await getSpotifyPlaylistDetail(ctx.user.id, input.externalId, input.query ?? "");
+      } catch (error) {
+        console.error("[Spotify] Playlist detail failed:", error);
+        throw new TRPCError({ code: "BAD_GATEWAY", message: "Spotify playlist tracks could not be loaded." });
+      }
+    }),
     recentlyPlayed: protectedProcedure.query(({ ctx }) => listSpotifyRecentTracks(ctx.user.id)),
   }),
   playlists: router({

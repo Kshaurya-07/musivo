@@ -31,10 +31,14 @@ type SpotifyTokenResponse = { access_token?: string; refresh_token?: string; exp
 type SpotifyProfile = { id?: string; display_name?: string | null };
 type SpotifyPlaylistResponse = { items?: Array<{ id?: string; name?: string; description?: string | null; images?: Array<{ url?: string }>; external_urls?: { spotify?: string }; tracks?: { total?: number } }> };
 type SpotifyRecentResponse = { items?: Array<{ played_at?: string; track?: SpotifyTrack | null }> };
+type SpotifyPlaylistTracksResponse = { items?: Array<{ track?: SpotifyTrack | null }> };
 
 type SpotifyStatePayload = { userId: number; nonce: string; redirectUri: string };
 
 const USER_SCOPES = [
+  "streaming",
+  "user-read-playback-state",
+  "user-modify-playback-state",
   "playlist-read-private",
   "playlist-read-collaborative",
   "user-read-recently-played",
@@ -233,6 +237,25 @@ export async function syncSpotifyUserData(userId: number) {
   await db.replaceSpotifyPlaylists(userId, playlists);
   await db.replaceSpotifyRecentTracks(userId, recentTracks);
   return { playlists: playlists.length, recentlyPlayed: recentTracks.length, syncedAt: new Date() };
+}
+
+export async function getSpotifyPlaylistDetail(userId: number, externalId: string, query = "") {
+  const playlist = await db.getSpotifyPlaylist(userId, externalId);
+  if (!playlist) throw new Error("Spotify playlist not found in the connected account");
+
+  const tracks: CatalogTrack[] = [];
+  for (let offset = 0; offset < 1000; offset += 100) {
+    const page = await spotifyUserFetch<SpotifyPlaylistTracksResponse>(userId, `/playlists/${encodeURIComponent(externalId)}/tracks?market=${encodeURIComponent(ENV.spotifyMarket || "US")}&limit=100&offset=${offset}`);
+    const items = page.items ?? [];
+    tracks.push(...items.filter((item) => item.track?.id && item.track.name).map((item) => toCatalogTrack(item.track!)));
+    if (items.length < 100) break;
+  }
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredTracks = normalizedQuery
+    ? tracks.filter((track) => `${track.title} ${track.artist} ${track.album}`.toLowerCase().includes(normalizedQuery))
+    : tracks;
+  return { playlist, tracks: filteredTracks, totalTracks: tracks.length, query };
 }
 
 export async function searchSpotifyTracks(query: string, limit = 10) {

@@ -194,6 +194,13 @@ export async function listSpotifyPlaylists(userId: number) {
   return db.select().from(spotifyPlaylists).where(eq(spotifyPlaylists.userId, userId)).orderBy(desc(spotifyPlaylists.syncedAt));
 }
 
+export async function getSpotifyPlaylist(userId: number, externalId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(spotifyPlaylists).where(and(eq(spotifyPlaylists.userId, userId), eq(spotifyPlaylists.externalId, externalId))).limit(1);
+  return result[0];
+}
+
 export async function listSpotifyRecentTracks(userId: number) {
   const db = await getDb();
   if (!db) return [];
