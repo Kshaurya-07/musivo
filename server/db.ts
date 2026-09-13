@@ -1,11 +1,10 @@
 import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertPlaylist, InsertPlaylistTrack, InsertUser, playlistTracks, playlists, users } from "../drizzle/schema";
+import { InsertLikedTrack, InsertPlaylist, InsertPlaylistTrack, InsertUser, likedTracks, playlistTracks, playlists, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -19,10 +18,7 @@ export async function getDb() {
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
-
+  if (!user.openId) throw new Error("User openId is required for upsert");
   const db = await getDb();
   if (!db) {
     console.warn("[Database] Cannot upsert user: database not available");
@@ -30,24 +26,18 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   }
 
   try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
+    const values: InsertUser = { openId: user.openId };
     const updateSet: Record<string, unknown> = {};
-
     const textFields = ["name", "email", "loginMethod"] as const;
     type TextField = (typeof textFields)[number];
 
-    const assignNullable = (field: TextField) => {
+    for (const field of textFields) {
       const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-
-    textFields.forEach(assignNullable);
-
+      if (value !== undefined) {
+        values[field] = value ?? null;
+        updateSet[field] = value ?? null;
+      }
+    }
     if (user.lastSignedIn !== undefined) {
       values.lastSignedIn = user.lastSignedIn;
       updateSet.lastSignedIn = user.lastSignedIn;
@@ -59,18 +49,10 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       values.role = 'admin';
       updateSet.role = 'admin';
     }
+    if (!values.lastSignedIn) values.lastSignedIn = new Date();
+    if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
 
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
+    await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
@@ -79,13 +61,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
-
+  if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -122,4 +99,29 @@ export async function addTrackToPlaylist(values: InsertPlaylistTrack) {
   if (!db) throw new Error("Database is not available");
   await db.insert(playlistTracks).values(values).onDuplicateKeyUpdate({ set: { externalId: values.externalId } });
   return values;
+}
+
+export async function listLikedTracks(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(likedTracks).where(eq(likedTracks.userId, userId)).orderBy(desc(likedTracks.createdAt));
+}
+
+export async function hasLikedTrack(userId: number, externalId: string) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.select({ id: likedTracks.id }).from(likedTracks).where(and(eq(likedTracks.userId, userId), eq(likedTracks.externalId, externalId))).limit(1);
+  return result.length > 0;
+}
+
+export async function toggleLikedTrack(userId: number, track: Omit<InsertLikedTrack, "userId">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  const existing = await db.select({ id: likedTracks.id }).from(likedTracks).where(and(eq(likedTracks.userId, userId), eq(likedTracks.externalId, track.externalId))).limit(1);
+  if (existing[0]) {
+    await db.delete(likedTracks).where(eq(likedTracks.id, existing[0].id));
+    return { liked: false } as const;
+  }
+  await db.insert(likedTracks).values({ ...track, userId });
+  return { liked: true } as const;
 }
