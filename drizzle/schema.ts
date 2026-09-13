@@ -56,9 +56,55 @@ export const likedTracks = mysqlTable("likedTracks", {
   likedTrackUnique: unique("likedTrackUnique").on(table.userId, table.externalId),
 }));
 
+export const spotifyConnections = mysqlTable("spotifyConnections", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  spotifyUserId: varchar("spotifyUserId", { length: 128 }).notNull(),
+  spotifyDisplayName: varchar("spotifyDisplayName", { length: 255 }),
+  accessTokenEncrypted: text("accessTokenEncrypted").notNull(),
+  refreshTokenEncrypted: text("refreshTokenEncrypted").notNull(),
+  accessTokenExpiresAt: timestamp("accessTokenExpiresAt").notNull(),
+  scope: text("scope"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const spotifyPlaylists = mysqlTable("spotifyPlaylists", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  externalId: varchar("externalId", { length: 128 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  imageUrl: text("imageUrl"),
+  storeUrl: text("storeUrl"),
+  trackCount: int("trackCount").default(0).notNull(),
+  syncedAt: timestamp("syncedAt").defaultNow().notNull(),
+}, (table) => ({
+  spotifyPlaylistUnique: unique("spotifyPlaylistUnique").on(table.userId, table.externalId),
+}));
+
+export const spotifyRecentTracks = mysqlTable("spotifyRecentTracks", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  externalId: varchar("externalId", { length: 128 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  artist: varchar("artist", { length: 255 }).notNull(),
+  album: varchar("album", { length: 255 }),
+  artworkUrl: text("artworkUrl"),
+  storeUrl: text("storeUrl"),
+  playedAt: timestamp("playedAt").notNull(),
+  syncedAt: timestamp("syncedAt").defaultNow().notNull(),
+}, (table) => ({
+  spotifyRecentUnique: unique("spotifyRecentUnique").on(table.userId, table.externalId, table.playedAt),
+}));
+
 export type Playlist = typeof playlists.$inferSelect;
 export type InsertPlaylist = typeof playlists.$inferInsert;
 export type PlaylistTrack = typeof playlistTracks.$inferSelect;
 export type InsertPlaylistTrack = typeof playlistTracks.$inferInsert;
 export type LikedTrack = typeof likedTracks.$inferSelect;
 export type InsertLikedTrack = typeof likedTracks.$inferInsert;
+export type SpotifyConnection = typeof spotifyConnections.$inferSelect;
+export type InsertSpotifyConnection = typeof spotifyConnections.$inferInsert;
+export type SpotifyPlaylist = typeof spotifyPlaylists.$inferSelect;
+export type SpotifyRecentTrack = typeof spotifyRecentTracks.$inferSelect;

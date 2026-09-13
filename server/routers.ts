@@ -7,14 +7,27 @@ import { z } from "zod";
 import {
   addTrackToPlaylist,
   createUserPlaylist,
+  deleteSpotifyConnection,
+  getSpotifyConnectionStatus,
   getUserPlaylist,
   hasLikedTrack,
   listLikedTracks,
   listPlaylistTracks,
+  listSpotifyPlaylists,
+  listSpotifyRecentTracks,
   listUserPlaylists,
   toggleLikedTrack,
 } from "./db";
-import { catalogStatus, getSpotifyHomeTracks, searchSpotifyTracks } from "./spotify";
+import {
+  buildSpotifyAuthorizeUrl,
+  catalogStatus,
+  createSpotifyState,
+  getSpotifyHomeTracks,
+  searchSpotifyTracks,
+  syncSpotifyUserData,
+} from "./spotify";
+import { randomUUID } from "node:crypto";
+import { ENV } from "./_core/env";
 
 type ProviderTrack = {
   id: string;
@@ -67,6 +80,20 @@ const trackInput = z.object({
   durationMs: z.number().int().nullable().optional(),
 });
 
+function getSpotifyRedirectUri(origin: string) {
+  if (ENV.spotifyRedirectUri) return ENV.spotifyRedirectUri;
+  let parsed: URL;
+  try {
+    parsed = new URL(origin);
+  } catch {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "A valid app origin is required." });
+  }
+  if (parsed.protocol !== "https:" && !(parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1")) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Spotify connections require a secure app origin." });
+  }
+  return `${parsed.origin}/api/spotify/callback`;
+}
+
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -104,6 +131,30 @@ export const appRouter = router({
           }
         }
       }),
+  }),
+  spotify: router({
+    status: protectedProcedure.query(({ ctx }) => getSpotifyConnectionStatus(ctx.user.id)),
+    connect: protectedProcedure.input(z.object({ origin: z.string().min(1) })).mutation(async ({ ctx, input }) => {
+      const redirectUri = getSpotifyRedirectUri(input.origin);
+      const nonce = randomUUID();
+      const state = await createSpotifyState({ userId: ctx.user.id, nonce, redirectUri });
+      ctx.res.cookie("__Host-spotify_state", nonce, { httpOnly: true, secure: true, sameSite: "none", path: "/", maxAge: 10 * 60 * 1000 });
+      return { authorizeUrl: buildSpotifyAuthorizeUrl(state, redirectUri) };
+    }),
+    sync: protectedProcedure.mutation(async ({ ctx }) => {
+      try {
+        return await syncSpotifyUserData(ctx.user.id);
+      } catch (error) {
+        console.error("[Spotify] Sync failed:", error);
+        throw new TRPCError({ code: "BAD_GATEWAY", message: "Spotify sync failed. Reconnect your account and try again." });
+      }
+    }),
+    disconnect: protectedProcedure.mutation(async ({ ctx }) => {
+      await deleteSpotifyConnection(ctx.user.id);
+      return { success: true } as const;
+    }),
+    playlists: protectedProcedure.query(({ ctx }) => listSpotifyPlaylists(ctx.user.id)),
+    recentlyPlayed: protectedProcedure.query(({ ctx }) => listSpotifyRecentTracks(ctx.user.id)),
   }),
   playlists: router({
     list: protectedProcedure.query(({ ctx }) => listUserPlaylists(ctx.user.id)),

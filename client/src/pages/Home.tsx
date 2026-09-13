@@ -9,8 +9,10 @@ import {
   Download,
   Headphones,
   Heart,
+  History,
   Home as HomeIcon,
   ListMusic,
+  Link2,
   Menu,
   MoreHorizontal,
   Pause,
@@ -19,12 +21,14 @@ import {
   Podcast,
   Radio,
   Repeat2,
+  RefreshCw,
   Search,
   Settings2,
   Shuffle,
   SkipBack,
   SkipForward,
   Sparkles,
+  Unlink,
   Volume2,
   X,
   type LucideIcon,
@@ -90,6 +94,7 @@ const libraryItems: NavItem[] = [
   { id: "liked", label: "Liked songs", icon: Heart },
   { id: "albums", label: "Albums", icon: Album },
   { id: "playlists", label: "Your playlists", icon: ListMusic },
+  { id: "spotify", label: "Spotify sync", icon: Link2 },
 ];
 
 function toUiTrack(item: { id: string | number; title: string; artist: string; album?: string | null; art?: string | null; audio?: string | null; accent?: string; storeUrl?: string | null; durationMs?: number | null; source?: string }): Track {
@@ -138,6 +143,21 @@ function SectionHeading({ eyebrow, title, action, onAction }: { eyebrow?: string
   );
 }
 
+type SpotifySyncPlaylist = { id: number; name: string; description: string | null; imageUrl: string | null; storeUrl: string | null; trackCount: number };
+type SpotifySyncRecent = { id: number; externalId: string; title: string; artist: string; album: string | null; artworkUrl: string | null; storeUrl: string | null; playedAt: Date | string };
+
+function SpotifyPanel({ connected, displayName, playlists, recentTracks, syncing, disconnecting, onConnect, onSync, onDisconnect, onPlay }: { connected: boolean; displayName: string | null; playlists: SpotifySyncPlaylist[]; recentTracks: SpotifySyncRecent[]; syncing: boolean; disconnecting: boolean; onConnect: () => void; onSync: () => void; onDisconnect: () => void; onPlay: (track: Track) => void }) {
+  return (
+    <section>
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4"><div><p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#899789]">Personal connection</p><h1 className="font-display text-3xl font-semibold tracking-[-0.05em] md:text-4xl">Spotify sync</h1><p className="mt-2 max-w-xl text-sm leading-6 text-[#8d978b]">Bring your playlists and listening history into Musivo without copying your Spotify credentials into the browser.</p></div>{connected ? <div className="flex flex-wrap gap-2"><button onClick={onSync} disabled={syncing} className="flex items-center gap-2 rounded-full bg-[#d8ff57] px-4 py-2.5 text-sm font-bold text-[#15200f] disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />{syncing ? "Syncing…" : "Sync now"}</button><button onClick={onDisconnect} disabled={disconnecting} className="flex items-center gap-2 rounded-full border border-white/[0.12] px-4 py-2.5 text-sm font-semibold text-[#c8d0c2] hover:border-[#ef6b5e] hover:text-[#ef9c92]"><Unlink className="h-4 w-4" />Disconnect</button></div> : <button onClick={onConnect} className="flex items-center gap-2 rounded-full bg-[#d8ff57] px-4 py-2.5 text-sm font-bold text-[#15200f]"><Link2 className="h-4 w-4" />Connect Spotify</button>}</div>
+      {!connected ? <div className="rounded-3xl border border-white/[0.08] bg-[#151815] p-8"><Link2 className="h-8 w-8 text-[#d8ff57]" /><h2 className="mt-5 font-display text-2xl font-semibold tracking-[-0.04em]">Your listening space, connected.</h2><p className="mt-2 max-w-xl text-sm leading-6 text-[#899388]">Authorize Musivo to read your Spotify playlists and recently played tracks. We store encrypted tokens on the server and never expose them to the browser.</p><button onClick={onConnect} className="mt-6 rounded-full bg-[#d8ff57] px-5 py-3 text-sm font-bold text-[#15200f]">Continue with Spotify</button></div> : <>
+        <div className="mb-8 flex items-center gap-3 rounded-2xl border border-[#d8ff57]/20 bg-[#1b2415] px-4 py-3"><span className="grid h-9 w-9 place-items-center rounded-full bg-[#d8ff57] text-[#17200f]"><Link2 className="h-4 w-4" /></span><div><p className="text-sm font-semibold text-[#ebf1e2]">Connected{displayName ? ` as ${displayName}` : " to Spotify"}</p><p className="text-xs text-[#99aa90]">Last refreshed from your account</p></div></div>
+        <div className="grid gap-8 xl:grid-cols-[1fr_1fr]"><div><SectionHeading eyebrow="Your Spotify library" title="Playlists" />{playlists.length ? <div className="grid gap-3 sm:grid-cols-2">{playlists.map((playlist) => <a key={playlist.id} href={playlist.storeUrl ?? undefined} target="_blank" rel="noreferrer" className="group flex min-h-[150px] flex-col justify-between overflow-hidden rounded-2xl border border-white/[0.08] bg-[#151815] p-4 transition-colors hover:border-[#779135] hover:bg-[#1c221a]"><div className="flex items-start justify-between gap-3"><div className="h-14 w-14 overflow-hidden rounded-xl bg-[#273321]">{playlist.imageUrl && <img src={playlist.imageUrl} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />}</div><span className="font-mono text-[10px] text-[#718069]">{playlist.trackCount} tracks</span></div><div><p className="truncate font-display text-lg font-semibold text-[#edf2e8]">{playlist.name}</p><p className="mt-1 truncate text-xs text-[#7f8b7c]">{playlist.description || "Open this playlist on Spotify"}</p></div></a>)}</div> : <div className="rounded-2xl border border-dashed border-white/[0.12] px-5 py-12 text-center text-sm text-[#7f887d]">No Spotify playlists found. Tap Sync now to refresh.</div>}</div><div><SectionHeading eyebrow="Listening history" title="Recently played" />{recentTracks.length ? <div className="space-y-1 rounded-2xl border border-white/[0.08] bg-[#121512] p-2">{recentTracks.slice(0, 10).map((track) => <button key={track.id} onClick={() => onPlay(toUiTrack({ id: `spotify-${track.externalId}`, title: track.title, artist: track.artist, album: track.album, art: track.artworkUrl, audio: "", storeUrl: track.storeUrl }) )} className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-white/[0.045]"><div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-[#273321]">{track.artworkUrl && <img src={track.artworkUrl} alt="" className="h-full w-full object-cover" />}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-[#e9ede3]">{track.title}</p><p className="truncate text-xs text-[#7e887c]">{track.artist} · {track.album || "Single"}</p></div><span className="hidden font-mono text-[10px] text-[#637062] sm:block">{new Date(track.playedAt).toLocaleDateString()}</span><History className="h-4 w-4 text-[#718069] transition-colors group-hover:text-[#d8ff57]" /></button>)}</div> : <div className="rounded-2xl border border-dashed border-white/[0.12] px-5 py-12 text-center text-sm text-[#7f887d]">No recent plays returned yet. Tap Sync now to refresh.</div>}</div></div>
+      </>}
+    </section>
+  );
+}
+
 export default function Home() {
   const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
   const playlistUtils = trpc.useUtils();
@@ -159,6 +179,28 @@ export default function Home() {
   const liveSearchQuery = trpc.music.search.useQuery({ query: liveSearchTerm || "music", limit: 12 }, { enabled: liveSearchTerm.length > 0, staleTime: 1000 * 60 * 5, retry: 1 });
   const playlistsQuery = trpc.playlists.list.useQuery(undefined, { enabled: isAuthenticated, retry: false });
   const likedQuery = trpc.likes.list.useQuery(undefined, { enabled: isAuthenticated, retry: false });
+  const spotifyStatusQuery = trpc.spotify.status.useQuery(undefined, { enabled: isAuthenticated, retry: false });
+  const spotifyPlaylistsQuery = trpc.spotify.playlists.useQuery(undefined, { enabled: isAuthenticated && Boolean(spotifyStatusQuery.data?.connected), retry: false });
+  const spotifyRecentQuery = trpc.spotify.recentlyPlayed.useQuery(undefined, { enabled: isAuthenticated && Boolean(spotifyStatusQuery.data?.connected), retry: false });
+  const spotifyConnectMutation = trpc.spotify.connect.useMutation({
+    onSuccess: ({ authorizeUrl }) => { window.location.href = authorizeUrl; },
+    onError: (error) => toast.error(error.message),
+  });
+  const spotifySyncMutation = trpc.spotify.sync.useMutation({
+    onSuccess: async (result) => {
+      await Promise.all([spotifyPlaylistsQuery.refetch(), spotifyRecentQuery.refetch(), spotifyStatusQuery.refetch()]);
+      toast.success(`Synced ${result.playlists} playlists and ${result.recentlyPlayed} recent tracks`);
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const spotifyDisconnectMutation = trpc.spotify.disconnect.useMutation({
+    onSuccess: async () => {
+      await Promise.all([spotifyStatusQuery.refetch(), spotifyPlaylistsQuery.refetch(), spotifyRecentQuery.refetch()]);
+      toast.success("Spotify account disconnected");
+      setActiveView("home");
+    },
+    onError: (error) => toast.error(error.message),
+  });
   const createPlaylistMutation = trpc.playlists.create.useMutation({
     onSuccess: async (playlist) => {
       await playlistUtils.playlists.list.invalidate();
@@ -204,6 +246,20 @@ export default function Home() {
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume / 100;
   }, [volume]);
+
+  useEffect(() => {
+    const result = new URLSearchParams(window.location.search).get("spotify");
+    if (!result) return;
+    if (result === "connected") {
+      toast.success("Spotify connected — sync your library when ready.");
+      void spotifyStatusQuery.refetch();
+    } else if (result === "denied") {
+      toast.info("Spotify connection was cancelled.");
+    } else if (result === "error") {
+      toast.error("Spotify could not be connected. Please try again.");
+    }
+    window.history.replaceState({}, "", window.location.pathname);
+  }, [spotifyStatusQuery]);
 
   function toServerTrack(track: Track) {
     return {
@@ -257,8 +313,7 @@ export default function Home() {
   const handleNav = (id: string) => {
     setActiveView(id);
     setSearchQuery("");
-    if (id === "liked" && !isAuthenticated) startLogin();
-    if (id === "playlists" && !isAuthenticated) startLogin();
+    if ((id === "liked" || id === "playlists" || id === "spotify") && !isAuthenticated) startLogin();
     if (id === "albums") toast.info("Albums are available from every Spotify catalog result.");
   };
 
@@ -278,6 +333,26 @@ export default function Home() {
       return;
     }
     likeMutation.mutate(toServerTrack(track));
+  };
+
+  const connectSpotify = () => {
+    if (!isAuthenticated) {
+      startLogin();
+      return;
+    }
+    spotifyConnectMutation.mutate({ origin: window.location.origin });
+  };
+
+  const syncSpotify = () => {
+    if (!isAuthenticated) {
+      startLogin();
+      return;
+    }
+    spotifySyncMutation.mutate();
+  };
+
+  const disconnectSpotify = () => {
+    if (window.confirm("Disconnect Spotify and remove synced Spotify data from Musivo?")) spotifyDisconnectMutation.mutate();
   };
 
   const createPlaylist = () => {
@@ -307,7 +382,7 @@ export default function Home() {
           </header>
 
           <div className="px-5 py-7 md:px-8 lg:px-12 lg:py-9">
-            {showSearch ? <section><div className="mb-8 flex items-end justify-between gap-4"><div><p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#899789]">Live catalog search · {statusQuery.data?.label ?? "catalog"}</p><h1 className="font-display text-3xl font-semibold tracking-[-0.05em] md:text-4xl">Results for “{searchQuery}”</h1></div><span className="font-mono text-xs text-[#7c8779]">{liveSearchQuery.isFetching ? "Searching…" : `${visibleSearchResults.length} matches`}</span></div>{visibleSearchResults.length > 0 ? <div className="max-w-3xl space-y-1">{visibleSearchResults.map((track) => <TrackRow key={track.id} track={track} onPlay={playTrack} onSave={openPlaylistDialog} onLike={toggleLike} active={currentTrack.id === track.id && isPlaying} liked={likedIds.has(String(track.id))} />)}</div> : <div className="rounded-2xl border border-dashed border-white/[0.12] px-6 py-16 text-center"><Search className="mx-auto mb-4 h-7 w-7 text-[#7a856f]" /><p className="font-display text-lg font-semibold">No tracks found yet</p><p className="mt-1 text-sm text-[#7f887d]">Try an artist, album, or a different mood.</p></div>}</section> : activeView === "liked" ? <section><SectionHeading eyebrow="Your library" title="Liked songs" action="Back home" onAction={() => setActiveView("home")} />{likedTracks.length > 0 ? <div className="max-w-3xl space-y-1">{likedTracks.map((track) => <TrackRow key={track.id} track={track} onPlay={playTrack} onSave={openPlaylistDialog} onLike={toggleLike} active={currentTrack.id === track.id && isPlaying} liked />)}</div> : <div className="rounded-2xl border border-dashed border-white/[0.12] px-6 py-16 text-center"><Heart className="mx-auto mb-4 h-7 w-7 text-[#d8ff57]" /><p className="font-display text-lg font-semibold">Your Liked Songs are waiting</p><p className="mt-1 text-sm text-[#7f887d]">Tap the heart beside any track to keep it synced to your account.</p></div>}</section> : activeView === "playlists" ? <section><SectionHeading eyebrow="Your library" title="Playlists" action="Create new" onAction={() => openPlaylistDialog()} />{(playlistsQuery.data ?? []).length > 0 ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{(playlistsQuery.data ?? []).map((playlist) => <button key={playlist.id} onClick={() => toast.info(`${playlist.name} is ready for track additions.`)} className="flex min-h-[132px] flex-col justify-between rounded-2xl border border-white/[0.08] bg-[#151815] p-5 text-left transition-colors hover:border-[#779135] hover:bg-[#1b201a]"><ListMusic className="h-5 w-5 text-[#d8ff57]" /><span><p className="font-display text-lg font-semibold">{playlist.name}</p><p className="mt-1 text-xs text-[#7e887c]">Synced to your account</p></span></button>)}</div> : <div className="rounded-2xl border border-dashed border-white/[0.12] px-6 py-16 text-center"><ListMusic className="mx-auto mb-4 h-7 w-7 text-[#d8ff57]" /><p className="font-display text-lg font-semibold">Build your first playlist</p><p className="mt-1 text-sm text-[#7f887d]">Save catalog tracks into a collection that follows you.</p><button onClick={() => openPlaylistDialog()} className="mt-5 rounded-full bg-[#d8ff57] px-4 py-2 text-sm font-bold text-[#15200f]">Create playlist</button></div>}</section> : activeView === "podcasts" ? <section><SectionHeading eyebrow="Listen" title="Podcasts" /><div className="rounded-2xl border border-white/[0.08] bg-[#151815] p-8"><Podcast className="h-7 w-7 text-[#d8ff57]" /><h1 className="mt-5 font-display text-3xl font-semibold tracking-[-0.05em]">Podcasts, coming next.</h1><p className="mt-2 max-w-xl text-sm leading-6 text-[#8d978b]">Musivo is connected to music catalog metadata first. Podcast discovery can be added as a separate provider surface without mixing playback or user data.</p></div></section> : <>
+            {showSearch ? <section><div className="mb-8 flex items-end justify-between gap-4"><div><p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#899789]">Live catalog search · {statusQuery.data?.label ?? "catalog"}</p><h1 className="font-display text-3xl font-semibold tracking-[-0.05em] md:text-4xl">Results for “{searchQuery}”</h1></div><span className="font-mono text-xs text-[#7c8779]">{liveSearchQuery.isFetching ? "Searching…" : `${visibleSearchResults.length} matches`}</span></div>{visibleSearchResults.length > 0 ? <div className="max-w-3xl space-y-1">{visibleSearchResults.map((track) => <TrackRow key={track.id} track={track} onPlay={playTrack} onSave={openPlaylistDialog} onLike={toggleLike} active={currentTrack.id === track.id && isPlaying} liked={likedIds.has(String(track.id))} />)}</div> : <div className="rounded-2xl border border-dashed border-white/[0.12] px-6 py-16 text-center"><Search className="mx-auto mb-4 h-7 w-7 text-[#7a856f]" /><p className="font-display text-lg font-semibold">No tracks found yet</p><p className="mt-1 text-sm text-[#7f887d]">Try an artist, album, or a different mood.</p></div>}</section> : activeView === "spotify" ? <SpotifyPanel connected={spotifyStatusQuery.data?.connected ?? false} displayName={spotifyStatusQuery.data?.displayName ?? null} playlists={spotifyPlaylistsQuery.data ?? []} recentTracks={spotifyRecentQuery.data ?? []} syncing={spotifySyncMutation.isPending} disconnecting={spotifyDisconnectMutation.isPending} onConnect={connectSpotify} onSync={syncSpotify} onDisconnect={disconnectSpotify} onPlay={playTrack} /> : activeView === "liked" ? <section><SectionHeading eyebrow="Your library" title="Liked songs" action="Back home" onAction={() => setActiveView("home")} />{likedTracks.length > 0 ? <div className="max-w-3xl space-y-1">{likedTracks.map((track) => <TrackRow key={track.id} track={track} onPlay={playTrack} onSave={openPlaylistDialog} onLike={toggleLike} active={currentTrack.id === track.id && isPlaying} liked />)}</div> : <div className="rounded-2xl border border-dashed border-white/[0.12] px-6 py-16 text-center"><Heart className="mx-auto mb-4 h-7 w-7 text-[#d8ff57]" /><p className="font-display text-lg font-semibold">Your Liked Songs are waiting</p><p className="mt-1 text-sm text-[#7f887d]">Tap the heart beside any track to keep it synced to your account.</p></div>}</section> : activeView === "playlists" ? <section><SectionHeading eyebrow="Your library" title="Playlists" action="Create new" onAction={() => openPlaylistDialog()} />{(playlistsQuery.data ?? []).length > 0 ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{(playlistsQuery.data ?? []).map((playlist) => <button key={playlist.id} onClick={() => toast.info(`${playlist.name} is ready for track additions.`)} className="flex min-h-[132px] flex-col justify-between rounded-2xl border border-white/[0.08] bg-[#151815] p-5 text-left transition-colors hover:border-[#779135] hover:bg-[#1b201a]"><ListMusic className="h-5 w-5 text-[#d8ff57]" /><span><p className="font-display text-lg font-semibold">{playlist.name}</p><p className="mt-1 text-xs text-[#7e887c]">Synced to your account</p></span></button>)}</div> : <div className="rounded-2xl border border-dashed border-white/[0.12] px-6 py-16 text-center"><ListMusic className="mx-auto mb-4 h-7 w-7 text-[#d8ff57]" /><p className="font-display text-lg font-semibold">Build your first playlist</p><p className="mt-1 text-sm text-[#7f887d]">Save catalog tracks into a collection that follows you.</p><button onClick={() => openPlaylistDialog()} className="mt-5 rounded-full bg-[#d8ff57] px-4 py-2 text-sm font-bold text-[#15200f]">Create playlist</button></div>}</section> : activeView === "podcasts" ? <section><SectionHeading eyebrow="Listen" title="Podcasts" /><div className="rounded-2xl border border-white/[0.08] bg-[#151815] p-8"><Podcast className="h-7 w-7 text-[#d8ff57]" /><h1 className="mt-5 font-display text-3xl font-semibold tracking-[-0.05em]">Podcasts, coming next.</h1><p className="mt-2 max-w-xl text-sm leading-6 text-[#8d978b]">Musivo is connected to music catalog metadata first. Podcast discovery can be added as a separate provider surface without mixing playback or user data.</p></div></section> : <>
                 <section className="relative overflow-hidden rounded-[26px] border border-white/[0.09] bg-[#202c1b] shadow-[0_24px_80px_rgba(0,0,0,0.18)]"><div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_12%,rgba(216,255,87,0.34),transparent_22%),linear-gradient(105deg,#172416_0%,#26351b_45%,#131916_100%)]" /><div className="absolute -right-20 -top-32 h-[420px] w-[420px] rounded-full border border-[#d8ff57]/20 bg-[#d8ff57]/10 blur-3xl" /><div className="absolute bottom-0 right-0 top-0 hidden w-[42%] overflow-hidden md:block"><img src={featuredTrack.art} alt="" className="h-full w-full object-cover opacity-35 mix-blend-screen" /><div className="absolute inset-0 bg-gradient-to-r from-[#1a2b1b] via-transparent to-transparent" /></div><div className="relative max-w-[650px] px-6 py-8 md:px-9 md:py-10 lg:px-11 lg:py-12"><div className="mb-7 flex items-center gap-3"><span className="rounded-full bg-[#d8ff57] px-2.5 py-1 font-mono text-[9px] font-medium tracking-[0.16em] text-[#18200f]">{isSpotifyCatalog ? "SPOTIFY CONNECTED" : "PREVIEW MODE"}</span><span className="font-mono text-[10px] tracking-[0.16em] text-[#bdcda3]">{catalog.length} TRACKS</span></div><h1 className="font-display max-w-[570px] text-4xl font-semibold leading-[0.98] tracking-[-0.07em] text-[#f3f6e9] md:text-6xl">Every mood has a frequency<span className="text-[#d8ff57]">.</span></h1><p className="mt-5 max-w-[420px] text-sm leading-6 text-[#c3d0b2] md:text-[15px]">{isSpotifyCatalog ? "Search Spotify's live catalog, save your favorites, and keep your listening space personal." : "Connect a Spotify developer app to search the live catalog. The preview experience still works while you configure it."}</p><div className="mt-8 flex flex-wrap items-center gap-3"><button onClick={() => playTrack(featuredTrack)} className="flex items-center gap-2 rounded-full bg-[#d8ff57] px-5 py-3 text-sm font-bold text-[#15200f] shadow-[0_8px_24px_rgba(216,255,87,0.18)] hover:bg-[#e5ff8c]"><Play className="h-4 w-4 fill-current" /> Start listening</button><button onClick={() => setActiveView("discover")} className="rounded-full border border-white/20 px-5 py-3 text-sm font-semibold text-[#f1f5e8] hover:bg-white/10">Explore the mix</button></div></div><div className="relative flex items-center gap-3 border-t border-white/[0.09] bg-black/10 px-6 py-3 md:px-9 lg:px-11"><div className="waveform"><span /><span /><span /><span /><span /></div><p className="text-xs text-[#b6c4a9]">Your daily mix is ready <span className="text-[#697568]">· refreshed just now</span></p></div></section>
                 <section className="mt-10"><SectionHeading eyebrow="Picked for you" title={`Good evening, ${greeting}`} action="See all" onAction={() => setActiveView("discover")} /><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{catalog.slice(0, 4).map((track) => <div key={track.id} className="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-white/[0.07] bg-[#151815] p-2.5 transition-colors hover:border-white/[0.15] hover:bg-[#1b201a]"><div className="relative h-[62px] w-[62px] shrink-0 overflow-hidden rounded-xl"><img src={track.art} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" /><button onClick={() => playTrack(track)} className="absolute inset-0 m-auto grid h-9 w-9 place-items-center rounded-full bg-[#d8ff57] text-[#15200f] opacity-0 shadow-lg transition-all group-hover:opacity-100"><Play className="h-4 w-4 fill-current" /></button></div><div className="min-w-0"><p className="truncate text-sm font-semibold text-[#ebeee4]">{track.title}</p><p className="mt-0.5 truncate text-xs text-[#848e82]">{track.artist}</p></div><button onClick={() => toggleLike(track)} className={`ml-auto self-start p-1.5 ${likedIds.has(String(track.id)) ? "text-[#d8ff57]" : "text-[#697468] opacity-0 group-hover:opacity-100"}`}><Heart className="h-4 w-4" fill={likedIds.has(String(track.id)) ? "currentColor" : "none"} /></button></div>)}</div></section>
                 <section className="mt-10"><SectionHeading eyebrow="Your sound, expanded" title="Made for your next move" action="View all" onAction={() => setActiveView("discover")} /><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{mixes.map((mix, index) => <button key={mix.title} onClick={() => { playTrack(catalog[index % Math.max(catalog.length, 1)] ?? fallbackTracks[0]); toast.success(`${mix.title} is now playing`); }} className={`group relative min-h-[178px] overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br ${mix.gradient} p-5 text-left transition-transform duration-300 hover:-translate-y-1`}><img src={mix.art} alt="" className="absolute -bottom-8 -right-8 h-40 w-40 rotate-6 rounded-2xl object-cover opacity-70 shadow-2xl transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110" /><div className="relative z-10 max-w-[170px]"><span className="font-mono text-[9px] uppercase tracking-[0.18em] text-white/45">MUSIVO MIX</span><p className="mt-4 font-display text-xl font-semibold tracking-[-0.05em] text-white">{mix.title}</p><p className="mt-1 text-xs leading-5 text-white/55">{mix.detail}</p></div><span className="absolute bottom-4 left-5 grid h-8 w-8 place-items-center rounded-full bg-white/10 text-[#d8ff57] opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100"><Play className="h-3.5 w-3.5 fill-current" /></span></button>)}</div></section>

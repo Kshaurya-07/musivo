@@ -10,4 +10,5 @@ export const ENV = {
   spotifyClientId: process.env.SPOTIFY_CLIENT_ID ?? "",
   spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET ?? "",
   spotifyMarket: process.env.SPOTIFY_MARKET ?? "US",
+  spotifyRedirectUri: process.env.SPOTIFY_REDIRECT_URI ?? "",
 };

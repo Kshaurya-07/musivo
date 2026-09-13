@@ -1,6 +1,19 @@
 import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertLikedTrack, InsertPlaylist, InsertPlaylistTrack, InsertUser, likedTracks, playlistTracks, playlists, users } from "../drizzle/schema";
+import {
+  InsertLikedTrack,
+  InsertPlaylist,
+  InsertPlaylistTrack,
+  InsertSpotifyConnection,
+  InsertUser,
+  likedTracks,
+  playlistTracks,
+  playlists,
+  spotifyConnections,
+  spotifyPlaylists,
+  spotifyRecentTracks,
+  users,
+} from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -124,4 +137,83 @@ export async function toggleLikedTrack(userId: number, track: Omit<InsertLikedTr
   }
   await db.insert(likedTracks).values({ ...track, userId });
   return { liked: true } as const;
+}
+
+export async function getSpotifyConnection(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(spotifyConnections).where(eq(spotifyConnections.userId, userId)).limit(1);
+  return result[0];
+}
+
+export async function getSpotifyConnectionStatus(userId: number) {
+  const connection = await getSpotifyConnection(userId);
+  if (!connection) return { connected: false as const, displayName: null, spotifyUserId: null, scope: null, updatedAt: null };
+  return {
+    connected: true as const,
+    displayName: connection.spotifyDisplayName,
+    spotifyUserId: connection.spotifyUserId,
+    scope: connection.scope,
+    updatedAt: connection.updatedAt,
+  };
+}
+
+export async function upsertSpotifyConnection(values: InsertSpotifyConnection) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  await db.insert(spotifyConnections).values(values).onDuplicateKeyUpdate({
+    set: {
+      spotifyUserId: values.spotifyUserId,
+      spotifyDisplayName: values.spotifyDisplayName,
+      accessTokenEncrypted: values.accessTokenEncrypted,
+      refreshTokenEncrypted: values.refreshTokenEncrypted,
+      accessTokenExpiresAt: values.accessTokenExpiresAt,
+      scope: values.scope,
+      updatedAt: new Date(),
+    },
+  });
+}
+
+export async function updateSpotifyConnectionTokens(userId: number, values: Pick<InsertSpotifyConnection, "accessTokenEncrypted" | "refreshTokenEncrypted" | "accessTokenExpiresAt" | "scope">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  await db.update(spotifyConnections).set({ ...values, updatedAt: new Date() }).where(eq(spotifyConnections.userId, userId));
+}
+
+export async function deleteSpotifyConnection(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  await db.delete(spotifyConnections).where(eq(spotifyConnections.userId, userId));
+  await db.delete(spotifyPlaylists).where(eq(spotifyPlaylists.userId, userId));
+  await db.delete(spotifyRecentTracks).where(eq(spotifyRecentTracks.userId, userId));
+}
+
+export async function listSpotifyPlaylists(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(spotifyPlaylists).where(eq(spotifyPlaylists.userId, userId)).orderBy(desc(spotifyPlaylists.syncedAt));
+}
+
+export async function listSpotifyRecentTracks(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(spotifyRecentTracks).where(eq(spotifyRecentTracks.userId, userId)).orderBy(desc(spotifyRecentTracks.playedAt));
+}
+
+export async function replaceSpotifyPlaylists(userId: number, values: Array<Omit<typeof spotifyPlaylists.$inferInsert, "userId">>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  await db.delete(spotifyPlaylists).where(eq(spotifyPlaylists.userId, userId));
+  for (const value of values) {
+    await db.insert(spotifyPlaylists).values({ ...value, userId });
+  }
+}
+
+export async function replaceSpotifyRecentTracks(userId: number, values: Array<Omit<typeof spotifyRecentTracks.$inferInsert, "userId">>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  await db.delete(spotifyRecentTracks).where(eq(spotifyRecentTracks.userId, userId));
+  for (const value of values) {
+    await db.insert(spotifyRecentTracks).values({ ...value, userId });
+  }
 }
