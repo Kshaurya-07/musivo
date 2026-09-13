@@ -150,7 +150,15 @@ export const appRouter = router({
       const redirectUri = getSpotifyRedirectUri(input.origin);
       const nonce = randomUUID();
       const state = await createSpotifyState({ userId: ctx.user.id, nonce, redirectUri });
-      ctx.res.cookie("__Host-spotify_state", nonce, { httpOnly: true, secure: true, sameSite: "none", path: "/", maxAge: 10 * 60 * 1000 });
+      const isSecure = ctx.req.protocol === "https" || ctx.req.headers["x-forwarded-proto"] === "https";
+      const cookieName = isSecure ? "__Host-spotify_state" : "spotify_state";
+      ctx.res.cookie(cookieName, nonce, {
+        httpOnly: true,
+        secure: isSecure,
+        sameSite: isSecure ? "none" : "lax",
+        path: "/",
+        maxAge: 10 * 60 * 1000,
+      });
       return { authorizeUrl: buildSpotifyAuthorizeUrl(state, redirectUri) };
     }),
     sync: protectedProcedure.mutation(async ({ ctx }) => {

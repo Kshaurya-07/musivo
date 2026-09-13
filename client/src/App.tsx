@@ -4,6 +4,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { PlaybackProvider } from "./contexts/PlaybackContext";
 import Home from "./pages/Home";
 
 function Router() {
@@ -21,8 +22,10 @@ export default function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
-          <Toaster theme="dark" />
-          <Router />
+          <PlaybackProvider>
+            <Toaster theme="dark" />
+            <Router />
+          </PlaybackProvider>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

@@ -72,12 +72,14 @@ export function registerOAuthRoutes(app: Express) {
     }
 
     const payload = await verifySpotifyState(state);
-    const expectedNonce = parseCookieHeader(req.headers.cookie ?? "")["__Host-spotify_state"];
+    const cookies = parseCookieHeader(req.headers.cookie ?? "");
+    const expectedNonce = cookies["__Host-spotify_state"] || cookies["spotify_state"];
     if (!payload || !expectedNonce || payload.nonce !== expectedNonce) {
       res.status(403).json({ error: "invalid spotify oauth state" });
       return;
     }
     res.clearCookie("__Host-spotify_state", { path: "/", secure: true, sameSite: "none" });
+    res.clearCookie("spotify_state", { path: "/" });
 
     if (providerError || !code) {
       res.redirect(302, "/?spotify=denied");
