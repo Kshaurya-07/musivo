@@ -2,6 +2,7 @@ function cleanEnvString(val: string | undefined): string {
   if (!val) return "";
   const cleaned = val.trim().replace(/^["']|["']$/g, "");
   if (cleaned.startsWith("<") && cleaned.endsWith(">")) return "";
+  if (/^your[\s_-]+/i.test(cleaned) || /step\s+\d/i.test(cleaned) || /^placeholder/i.test(cleaned)) return "";
   return cleaned;
 }
 
