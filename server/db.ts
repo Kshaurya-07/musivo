@@ -41,7 +41,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   try {
     const values: InsertUser = { openId: user.openId };
     const updateSet: Record<string, unknown> = {};
-    const textFields = ["name", "email", "loginMethod"] as const;
+    const textFields = ["name", "email", "loginMethod", "avatarUrl"] as const;
     type TextField = (typeof textFields)[number];
 
     for (const field of textFields) {
@@ -76,6 +76,20 @@ export async function getUserByOpenId(openId: string) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db || !email) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -146,9 +160,34 @@ export async function getSpotifyConnection(userId: number) {
   return result[0];
 }
 
+export async function getSpotifyConnectionBySpotifyUserId(spotifyUserId: string) {
+  const db = await getDb();
+  if (!db || !spotifyUserId) return undefined;
+  const result = await db.select().from(spotifyConnections).where(eq(spotifyConnections.spotifyUserId, spotifyUserId)).limit(1);
+  return result[0];
+}
+
+export async function getUserSavedTracksCount(userId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select({ id: likedTracks.id }).from(likedTracks).where(eq(likedTracks.userId, userId));
+  return result.length;
+}
+
 export async function getSpotifyConnectionStatus(userId: number) {
   const connection = await getSpotifyConnection(userId);
-  if (!connection) return { connected: false as const, displayName: null, profileImageUrl: null, spotifyUserId: null, scope: null, updatedAt: null };
+  if (!connection) {
+    return {
+      connected: false as const,
+      displayName: null,
+      profileImageUrl: null,
+      spotifyUserId: null,
+      scope: null,
+      updatedAt: null,
+      savedTracksCount: 0,
+    };
+  }
+  const savedTracksCount = await getUserSavedTracksCount(userId);
   return {
     connected: true as const,
     displayName: connection.spotifyDisplayName,
@@ -156,6 +195,7 @@ export async function getSpotifyConnectionStatus(userId: number) {
     spotifyUserId: connection.spotifyUserId,
     scope: connection.scope,
     updatedAt: connection.updatedAt,
+    savedTracksCount,
   };
 }
 

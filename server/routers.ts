@@ -102,7 +102,18 @@ function getSpotifyRedirectUri(origin: string) {
 export const appRouter = router({
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    me: publicProcedure.query(async (opts) => {
+      const user = opts.ctx.user;
+      if (!user) return null;
+      const spotifyConnection = await getSpotifyConnection(user.id);
+      return {
+        ...user,
+        hasGoogle: user.loginMethod === "google" || user.openId.startsWith("google:"),
+        hasSpotify: Boolean(spotifyConnection),
+        spotifyDisplayName: spotifyConnection?.spotifyDisplayName ?? null,
+        spotifyProfileImageUrl: spotifyConnection?.spotifyProfileImageUrl ?? null,
+      };
+    }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });

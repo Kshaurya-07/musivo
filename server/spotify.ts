@@ -34,12 +34,22 @@ type SpotifyPlaylistResponse = { items?: Array<{ id?: string; name?: string; des
 type SpotifyRecentResponse = { items?: Array<{ played_at?: string; track?: SpotifyTrack | null }> };
 type SpotifyPlaylistTracksResponse = { items?: Array<{ track?: SpotifyTrack | null }> };
 
-type SpotifyStatePayload = { userId: number; nonce: string; redirectUri: string };
+type SpotifySavedTracksResponse = { total?: number; items?: Array<{ added_at?: string; track?: SpotifyTrack | null }> };
+
+export type SpotifyStatePayload = {
+  userId?: number;
+  isLogin?: boolean;
+  nonce: string;
+  redirectUri: string;
+  returnTo?: string;
+};
 
 const USER_SCOPES = [
   "streaming",
   "user-read-playback-state",
   "user-modify-playback-state",
+  "user-read-currently-playing",
+  "user-library-read",
   "playlist-read-private",
   "playlist-read-collaborative",
   "playlist-modify-private",
@@ -97,14 +107,19 @@ export async function createSpotifyState(payload: SpotifyStatePayload) {
     .sign(getSessionKey());
 }
 
-export async function verifySpotifyState(state: string) {
+export async function verifySpotifyState(state: string): Promise<SpotifyStatePayload | null> {
   try {
     const { payload } = await jwtVerify(state, getSessionKey(), { algorithms: ["HS256"] });
-    const userId = typeof payload.userId === "number" ? payload.userId : Number(payload.userId);
     const nonce = typeof payload.nonce === "string" ? payload.nonce : "";
     const redirectUri = typeof payload.redirectUri === "string" ? payload.redirectUri : "";
-    if (!Number.isInteger(userId) || !nonce || !redirectUri) return null;
-    return { userId, nonce, redirectUri };
+    if (!nonce || !redirectUri) return null;
+    const userId = typeof payload.userId === "number" && Number.isInteger(payload.userId) && payload.userId > 0
+      ? payload.userId
+      : undefined;
+    const isLogin = Boolean(payload.isLogin);
+    const returnTo = typeof payload.returnTo === "string" ? payload.returnTo : undefined;
+    if (!userId && !isLogin) return null;
+    return { userId, isLogin, nonce, redirectUri, returnTo };
   } catch {
     return null;
   }
@@ -156,8 +171,12 @@ async function getSpotifyAccessToken() {
   }
 }
 
-async function exchangeUserCode(code: string, redirectUri: string) {
+export async function exchangeUserCode(code: string, redirectUri: string) {
   return requestSpotifyToken(new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: redirectUri }));
+}
+
+export async function fetchSpotifyProfile(accessToken: string) {
+  return spotifyUserFetchWithToken<SpotifyProfile & { email?: string }>(accessToken, "/me");
 }
 
 async function refreshUserAccessToken(userId: number) {
@@ -192,7 +211,7 @@ async function spotifyUserFetch<T>(userId: number, path: string) {
 export async function completeSpotifyConnection(userId: number, code: string, redirectUri: string) {
   const payload = await exchangeUserCode(code, redirectUri);
   if (!payload.refresh_token) throw new Error("Spotify did not return a refresh token");
-  const profile = await spotifyUserFetchWithToken<SpotifyProfile>(payload.access_token!, "/me");
+  const profile = await spotifyUserFetchWithToken<SpotifyProfile & { email?: string }>(payload.access_token!, "/me");
   if (!profile.id) throw new Error("Spotify profile did not include an id");
   await db.upsertSpotifyConnection({
     userId,
@@ -204,7 +223,7 @@ export async function completeSpotifyConnection(userId: number, code: string, re
     accessTokenExpiresAt: new Date(Date.now() + Math.max(60, payload.expires_in ?? 3600) * 1000),
     scope: payload.scope ?? USER_SCOPES,
   });
-  return profile;
+  return { ...profile, accessToken: payload.access_token!, refreshToken: payload.refresh_token };
 }
 
 async function spotifyUserFetchWithToken<T>(accessToken: string, path: string) {
@@ -296,9 +315,22 @@ export async function syncSpotifyUserData(userId: number) {
     playedAt: new Date(item.played_at!),
   }));
 
+  let savedCount = 0;
+  try {
+    const savedPayload = await spotifyUserFetch<SpotifySavedTracksResponse>(userId, "/me/tracks?limit=50");
+    savedCount = savedPayload.total ?? (savedPayload.items?.length || 0);
+  } catch (err) {
+    console.warn("[Spotify] Saved tracks sync count failed:", err);
+  }
+
   await db.replaceSpotifyPlaylists(userId, playlists);
   await db.replaceSpotifyRecentTracks(userId, recentTracks);
-  return { playlists: playlists.length, recentlyPlayed: recentTracks.length, syncedAt: new Date() };
+  return {
+    playlists: playlists.length,
+    recentlyPlayed: recentTracks.length,
+    savedTracks: savedCount,
+    syncedAt: new Date(),
+  };
 }
 
 export async function getSpotifyPlaylistDetail(userId: number, externalId: string, query = "") {

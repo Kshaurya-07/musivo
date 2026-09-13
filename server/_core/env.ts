@@ -18,5 +18,8 @@ export const ENV = {
   spotifyClientSecret: cleanEnvString(process.env.SPOTIFY_CLIENT_SECRET),
   spotifyMarket: cleanEnvString(process.env.SPOTIFY_MARKET) || "US",
   spotifyRedirectUri: cleanEnvString(process.env.SPOTIFY_REDIRECT_URI),
+  googleClientId: cleanEnvString(process.env.GOOGLE_CLIENT_ID),
+  googleClientSecret: cleanEnvString(process.env.GOOGLE_CLIENT_SECRET),
+  googleRedirectUri: cleanEnvString(process.env.GOOGLE_REDIRECT_URI),
 };
 

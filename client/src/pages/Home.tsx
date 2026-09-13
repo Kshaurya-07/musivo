@@ -438,6 +438,9 @@ function SpotifyPanel({
   buildingAiMix,
   recommendations,
   isPremium,
+  user,
+  savedTracksCount,
+  syncStepText,
 }: {
   connected: boolean;
   displayName: string | null;
@@ -459,9 +462,35 @@ function SpotifyPanel({
   buildingAiMix: boolean;
   recommendations: AiRecommendation[];
   isPremium: boolean | null;
+  user?: any;
+  savedTracksCount?: number;
+  syncStepText?: string;
 }) {
   return (
     <section>
+      <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+        {user?.hasGoogle ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 font-medium text-emerald-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            Google connected {user.email ? `(${user.email})` : ""}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 font-medium text-[#7c8779]">
+            Google not connected
+          </span>
+        )}
+        {connected ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#d8ff57]/25 bg-[#d8ff57]/10 px-3 py-1 font-medium text-[#d8ff57]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#d8ff57]" />
+            Spotify connected {displayName ? `(${displayName})` : ""}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 font-medium text-[#7c8779]">
+            Spotify not connected
+          </span>
+        )}
+      </div>
+
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#899789]">
@@ -482,7 +511,7 @@ function SpotifyPanel({
               className="flex items-center gap-2 rounded-full bg-[#d8ff57] px-4 py-2.5 text-sm font-bold text-[#15200f] disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-              {syncing ? "Syncing playlists…" : "Sync now"}
+              {syncing ? (syncStepText || "Syncing playlists…") : "Sync now"}
             </button>
             <button
               onClick={onDisconnect}
@@ -568,6 +597,27 @@ function SpotifyPanel({
             <span className="rounded-full border border-[#d8ff57]/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[#b8d66b]">
               Account connected
             </span>
+          </div>
+
+          <div className="mb-8 grid gap-3 grid-cols-2 sm:grid-cols-4">
+            <div className="rounded-2xl border border-white/[0.08] bg-[#151815] p-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#718069]">Synced playlists</p>
+              <p className="mt-1 font-display text-2xl font-semibold text-[#f0f4e9]">{playlists.length}</p>
+            </div>
+            <div className="rounded-2xl border border-white/[0.08] bg-[#151815] p-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#718069]">Saved tracks</p>
+              <p className="mt-1 font-display text-2xl font-semibold text-[#f0f4e9]">{savedTracksCount ?? 0}</p>
+            </div>
+            <div className="rounded-2xl border border-white/[0.08] bg-[#151815] p-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#718069]">Recent tracks</p>
+              <p className="mt-1 font-display text-2xl font-semibold text-[#f0f4e9]">{recentTracks.length}</p>
+            </div>
+            <div className="rounded-2xl border border-white/[0.08] bg-[#151815] p-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#718069]">Playback SDK</p>
+              <p className="mt-1 text-sm font-semibold text-[#d8ff57]">
+                {isPremium === false ? "Preview Mode" : streamingEnabled ? "Active in Musivo" : "Connecting"}
+              </p>
+            </div>
           </div>
 
           <div className="mb-8 grid gap-3 md:grid-cols-2">
@@ -778,7 +828,10 @@ function SpotifyConnectSection({
   displayName,
   syncing,
   playlistCount,
+  savedTracksCount,
   recentCount,
+  syncStepText,
+  user,
   onConnect,
   onSync,
   onOpen,
@@ -788,13 +841,39 @@ function SpotifyConnectSection({
   displayName: string | null;
   syncing: boolean;
   playlistCount: number;
+  savedTracksCount: number;
   recentCount: number;
+  syncStepText?: string;
+  user?: any;
   onConnect: () => void;
   onSync: () => void;
   onOpen: () => void;
 }) {
   return (
     <section className="mt-10 overflow-hidden rounded-3xl border border-[#d8ff57]/15 bg-gradient-to-br from-[#1b2815] via-[#151c13] to-[#121512] p-5 md:p-7">
+      <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+        {user?.hasGoogle ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 font-medium text-emerald-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            Google connected {user.email ? `(${user.email})` : ""}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 font-medium text-[#7c8779]">
+            Google not connected
+          </span>
+        )}
+        {connected ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#d8ff57]/25 bg-[#d8ff57]/10 px-3 py-1 font-medium text-[#d8ff57]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#d8ff57]" />
+            Spotify connected {displayName ? `(${displayName})` : ""}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 font-medium text-[#7c8779]">
+            Spotify not connected
+          </span>
+        )}
+      </div>
+
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-start gap-4">
           <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#d8ff57] text-[#17200f] shadow-[0_0_28px_rgba(216,255,87,0.16)]">
@@ -825,7 +904,7 @@ function SpotifyConnectSection({
                 className="flex items-center gap-2 rounded-full bg-[#d8ff57] px-4 py-2.5 text-sm font-bold text-[#15200f] disabled:opacity-60"
               >
                 <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-                {syncing ? "Syncing account…" : "Sync account"}
+                {syncing ? (syncStepText || "Syncing account…") : "Sync account"}
               </button>
               <button
                 onClick={onOpen}
@@ -845,13 +924,21 @@ function SpotifyConnectSection({
         </div>
       </div>
       {connected ? (
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <div className="mt-6 grid gap-3 grid-cols-2 sm:grid-cols-4">
           <div className="rounded-2xl border border-white/[0.07] bg-black/10 px-4 py-3">
             <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#718069]">
               Synced playlists
             </p>
             <p className="mt-1 font-display text-2xl font-semibold text-[#f0f4e9]">
               {playlistCount}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/[0.07] bg-black/10 px-4 py-3">
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#718069]">
+              Saved tracks
+            </p>
+            <p className="mt-1 font-display text-2xl font-semibold text-[#f0f4e9]">
+              {savedTracksCount}
             </p>
           </div>
           <div className="rounded-2xl border border-white/[0.07] bg-black/10 px-4 py-3">
@@ -1002,6 +1089,12 @@ export default function Home() {
   const [newSpotifyPlaylistName, setNewSpotifyPlaylistName] = useState("My Musivo favorites");
   const [includeLikedInSpotifyPlaylist, setIncludeLikedInSpotifyPlaylist] = useState(true);
   const [aiRecommendations, setAiRecommendations] = useState<AiRecommendation[]>([]);
+  const [syncStepText, setSyncStepText] = useState("");
+  const [lastSyncStats, setLastSyncStats] = useState<{
+    playlists: number;
+    recentlyPlayed: number;
+    savedTracks: number;
+  } | null>(null);
 
   // Centralized playback hook
   const {
@@ -1057,8 +1150,16 @@ export default function Home() {
         spotifyPlaylistsQuery.refetch(),
         spotifyRecentQuery.refetch(),
         spotifyStatusQuery.refetch(),
+        likedQuery.refetch(),
       ]);
-      toast.success(`Synced ${result.playlists} playlists and ${result.recentlyPlayed} recent tracks`);
+      setLastSyncStats({
+        playlists: result.playlists,
+        recentlyPlayed: result.recentlyPlayed,
+        savedTracks: result.savedTracks,
+      });
+      toast.success(
+        `Synced ${result.playlists} playlists, ${result.savedTracks} saved tracks, and ${result.recentlyPlayed} recent tracks`
+      );
     },
     onError: (error) => toast.error(error.message),
   });
@@ -1222,7 +1323,26 @@ export default function Home() {
       startLogin();
       return;
     }
-    spotifySyncMutation.mutate();
+    const steps = [
+      "Connecting Spotify…",
+      "Syncing your library…",
+      "Syncing playlists…",
+      "Syncing listening history…",
+      "Almost ready…",
+    ];
+    let stepIndex = 0;
+    setSyncStepText(steps[0]);
+    const interval = setInterval(() => {
+      stepIndex = (stepIndex + 1) % steps.length;
+      setSyncStepText(steps[stepIndex]);
+    }, 1200);
+
+    spotifySyncMutation.mutate(undefined, {
+      onSettled: () => {
+        clearInterval(interval);
+        setSyncStepText("");
+      },
+    });
   };
 
   const openSpotifyPlaylistDialog = () => {
@@ -1519,6 +1639,9 @@ export default function Home() {
                 buildingAiMix={spotifyAiMixMutation.isPending}
                 recommendations={aiRecommendations}
                 isPremium={isPremium}
+                user={user}
+                savedTracksCount={lastSyncStats?.savedTracks ?? spotifyStatusQuery.data?.savedTracksCount ?? (likedTracks ?? []).length}
+                syncStepText={syncStepText}
               />
             ) : activeView === "liked" ? (
               <section>
@@ -1672,7 +1795,10 @@ export default function Home() {
                   displayName={spotifyStatusQuery.data?.displayName ?? null}
                   syncing={spotifySyncMutation.isPending}
                   playlistCount={(spotifyPlaylistsQuery.data ?? []).length}
+                  savedTracksCount={lastSyncStats?.savedTracks ?? spotifyStatusQuery.data?.savedTracksCount ?? (likedTracks ?? []).length}
                   recentCount={(spotifyRecentQuery.data ?? []).length}
+                  syncStepText={syncStepText}
+                  user={user}
                   onConnect={connectSpotify}
                   onSync={syncSpotify}
                   onOpen={() => setActiveView("spotify")}
