@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertPlaylist, InsertPlaylistTrack, InsertUser, playlistTracks, playlists, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,37 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+export async function listUserPlaylists(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(playlists).where(eq(playlists.userId, userId)).orderBy(desc(playlists.updatedAt));
+}
+
+export async function createUserPlaylist(values: InsertPlaylist) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  const result = await db.insert(playlists).values(values);
+  return { ...values, id: Number(result[0].insertId) };
+}
+
+export async function getUserPlaylist(userId: number, playlistId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(playlists).where(and(eq(playlists.id, playlistId), eq(playlists.userId, userId))).limit(1);
+  return result[0];
+}
+
+export async function listPlaylistTracks(userId: number, playlistId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const ownedPlaylist = await getUserPlaylist(userId, playlistId);
+  if (!ownedPlaylist) return [];
+  return db.select().from(playlistTracks).where(eq(playlistTracks.playlistId, playlistId)).orderBy(desc(playlistTracks.createdAt));
+}
+
+export async function addTrackToPlaylist(values: InsertPlaylistTrack) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  await db.insert(playlistTracks).values(values).onDuplicateKeyUpdate({ set: { externalId: values.externalId } });
+  return values;
+}

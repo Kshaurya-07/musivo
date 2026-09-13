@@ -85,6 +85,14 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ring); outl
 
 @keyframes pulse { to { transform: scaleY(0.45); opacity: 0.55; } }
 
+.player-eq { display: flex; align-items: end; gap: 2px; height: 18px; width: 18px; }
+.player-eq span { display: block; width: 3px; border-radius: 99px; background: var(--primary); transform-origin: bottom; animation: eq-bounce 0.72s ease-in-out infinite alternate; }
+.player-eq span:nth-child(1) { height: 7px; animation-delay: -0.15s; }
+.player-eq span:nth-child(2) { height: 15px; animation-delay: -0.55s; }
+.player-eq span:nth-child(3) { height: 10px; animation-delay: -0.35s; }
+.player-eq.paused span { animation-play-state: paused; opacity: 0.4; }
+@keyframes eq-bounce { to { transform: scaleY(0.38); opacity: 0.62; } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
 }

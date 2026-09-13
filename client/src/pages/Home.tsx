@@ -33,9 +33,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatTime, getNextTrackIndex, matchesTrackQuery } from "@/lib/musivo";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { startLogin } from "@/const";
+import { trpc } from "@/lib/trpc";
 
 type Track = {
-  id: number;
+  id: number | string;
   title: string;
   artist: string;
   album: string;
@@ -44,6 +47,9 @@ type Track = {
   audio: string;
   accent: string;
   badge?: string;
+  storeUrl?: string;
+  durationMs?: number | null;
+  source?: string;
 };
 
 type NavItem = {
@@ -99,7 +105,7 @@ const libraryItems: NavItem[] = [
   { id: "playlists", label: "Your playlists", icon: ListMusic },
 ];
 
-function TrackRow({ track, onPlay, active }: { track: Track; onPlay: (track: Track) => void; active: boolean }) {
+function TrackRow({ track, onPlay, onSave, active }: { track: Track; onPlay: (track: Track) => void; onSave: (track: Track) => void; active: boolean }) {
   return (
     <div className={`group grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-white/[0.055] ${active ? "bg-white/[0.07]" : ""}`}>
       <button aria-label={`Play ${track.title}`} onClick={() => onPlay(track)} className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg">
@@ -112,7 +118,8 @@ function TrackRow({ track, onPlay, active }: { track: Track; onPlay: (track: Tra
       </button>
       <div className="flex items-center gap-3 text-xs text-[#7f877e]">
         <span className="hidden sm:inline">{track.duration}</span>
-        <button aria-label={`More options for ${track.title}`} onClick={() => toast.info("Track actions are ready for your catalog integration.")} className="opacity-0 transition-opacity hover:text-white group-hover:opacity-100"><MoreHorizontal className="h-4 w-4" /></button>
+        <button aria-label={`Add ${track.title} to a playlist`} onClick={() => onSave(track)} className="opacity-0 transition-opacity hover:text-[#d8ff57] group-hover:opacity-100"><Plus className="h-4 w-4" /></button>
+        <button aria-label={`More options for ${track.title}`} onClick={() => toast.info(track.storeUrl ? "Open the store link from the track details when your catalog is connected." : "Track actions are ready for your catalog integration.")} className="opacity-0 transition-opacity hover:text-white group-hover:opacity-100"><MoreHorizontal className="h-4 w-4" /></button>
       </div>
     </div>
   );
@@ -131,6 +138,8 @@ function SectionHeading({ eyebrow, title, action }: { eyebrow?: string; title: s
 }
 
 export default function Home() {
+  const { isAuthenticated } = useAuth();
+  const playlistUtils = trpc.useUtils();
   const [activeView, setActiveView] = useState("home");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentTrack, setCurrentTrack] = useState(tracks[0]);
@@ -139,14 +148,43 @@ export default function Home() {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(72);
+  const [showPlaylistDialog, setShowPlaylistDialog] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState("");
+  const [trackToSave, setTrackToSave] = useState<Track | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const catalog = useMemo(() => [...tracks, ...tracks.map((track) => ({ ...track, id: track.id + 100, title: `${track.title} (radio edit)` }))], []);
+  const catalog = useMemo(() => [...tracks, ...tracks.map((track) => ({ ...track, id: Number(track.id) + 100, title: `${track.title} (radio edit)` }))], []);
+  const liveSearchTerm = searchQuery.trim();
+  const liveSearchQuery = trpc.music.search.useQuery({ query: liveSearchTerm || "music", limit: 12 }, { enabled: liveSearchTerm.length > 0, staleTime: 1000 * 60 * 5, retry: 1 });
+  const playlistsQuery = trpc.playlists.list.useQuery(undefined, { enabled: isAuthenticated, retry: false });
+  const createPlaylistMutation = trpc.playlists.create.useMutation({
+    onSuccess: async (playlist) => {
+      await playlistUtils.playlists.list.invalidate();
+      setNewPlaylistName("");
+      toast.success(`Created ${playlist.name}`);
+      if (trackToSave) {
+        await addTrackMutation.mutateAsync({ playlistId: playlist.id, track: { ...trackToSave, id: String(trackToSave.id) } });
+        setTrackToSave(null);
+      }
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const addTrackMutation = trpc.playlists.addTrack.useMutation({
+    onSuccess: async () => {
+      await playlistUtils.playlists.list.invalidate();
+      toast.success("Saved to playlist");
+      setTrackToSave(null);
+      setShowPlaylistDialog(false);
+    },
+    onError: (error) => toast.error(error.message),
+  });
   const searchResults = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return [];
     return catalog.filter((track) => matchesTrackQuery(track, query));
   }, [catalog, searchQuery]);
+  const liveResults: Track[] = useMemo(() => (liveSearchQuery.data ?? []).map((item) => ({ ...item, duration: item.durationMs ? formatTime(item.durationMs / 1000) : "Preview" })), [liveSearchQuery.data]);
+  const visibleSearchResults = liveResults.length > 0 ? liveResults : searchResults;
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume / 100;
@@ -179,7 +217,8 @@ export default function Home() {
   };
 
   const skip = (direction: 1 | -1) => {
-    const nextIndex = getNextTrackIndex(tracks, currentTrack.id, direction);
+    const queueId = typeof currentTrack.id === "number" ? currentTrack.id : tracks[0].id;
+    const nextIndex = getNextTrackIndex(tracks, queueId, direction);
     if (nextIndex < 0) return;
     playTrack(tracks[nextIndex]);
   };
@@ -187,6 +226,20 @@ export default function Home() {
   const handleNav = (id: string) => {
     setActiveView(id);
     setSearchQuery("");
+  };
+
+  const openPlaylistDialog = (track?: Track) => {
+    if (!isAuthenticated) {
+      startLogin();
+      return;
+    }
+    setTrackToSave(track ?? null);
+    setShowPlaylistDialog(true);
+  };
+
+  const createPlaylist = () => {
+    if (!newPlaylistName.trim()) return;
+    createPlaylistMutation.mutate({ name: newPlaylistName.trim() });
   };
 
   const showSearch = searchQuery.trim().length > 0;
@@ -221,6 +274,8 @@ export default function Home() {
                 </button>
               ))}
             </nav>
+            <button onClick={() => openPlaylistDialog()} className="mt-3 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#d8ff57] transition-colors hover:bg-white/[0.05]"><Plus className="h-[17px] w-[17px]" />New playlist</button>
+            {isAuthenticated && (playlistsQuery.data ?? []).length > 0 && <div className="mt-4 border-t border-white/[0.06] pt-3">{(playlistsQuery.data ?? []).slice(0, 4).map((playlist) => <button key={playlist.id} onClick={() => toast.info(`${playlist.name} is ready for track additions.`)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-xs text-[#7f8a7c] hover:bg-white/[0.04] hover:text-[#f5f4ec]"><Disc3 className="h-3.5 w-3.5" />{playlist.name}</button>)}</div>}
           </div>
 
           <div className="mt-auto rounded-2xl border border-white/[0.08] bg-[#171b15] p-4">
@@ -252,8 +307,8 @@ export default function Home() {
           <div className="px-5 py-7 md:px-8 lg:px-12 lg:py-9">
             {showSearch ? (
               <section>
-                <div className="mb-8 flex items-end justify-between gap-4"><div><p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#899789]">Search results</p><h1 className="font-display text-3xl font-semibold tracking-[-0.05em] md:text-4xl">Results for “{searchQuery}”</h1></div><span className="font-mono text-xs text-[#7c8779]">{searchResults.length} matches</span></div>
-                {searchResults.length > 0 ? <div className="max-w-3xl space-y-1">{searchResults.map((track) => <TrackRow key={track.id} track={track} onPlay={playTrack} active={currentTrack.id === track.id && isPlaying} />)}</div> : <div className="rounded-2xl border border-dashed border-white/[0.12] px-6 py-16 text-center"><Search className="mx-auto mb-4 h-7 w-7 text-[#7a856f]" /><p className="font-display text-lg font-semibold">No tracks found yet</p><p className="mt-1 text-sm text-[#7f887d]">Try an artist, album, or a different mood.</p></div>}
+                <div className="mb-8 flex items-end justify-between gap-4"><div><p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#899789]">Live catalog search · iTunes</p><h1 className="font-display text-3xl font-semibold tracking-[-0.05em] md:text-4xl">Results for “{searchQuery}”</h1></div><span className="font-mono text-xs text-[#7c8779]">{liveSearchQuery.isFetching ? "Searching…" : `${visibleSearchResults.length} matches`}</span></div>
+                {visibleSearchResults.length > 0 ? <div className="max-w-3xl space-y-1">{visibleSearchResults.map((track) => <TrackRow key={track.id} track={track} onPlay={playTrack} onSave={openPlaylistDialog} active={currentTrack.id === track.id && isPlaying} />)}</div> : <div className="rounded-2xl border border-dashed border-white/[0.12] px-6 py-16 text-center"><Search className="mx-auto mb-4 h-7 w-7 text-[#7a856f]" /><p className="font-display text-lg font-semibold">No tracks found yet</p><p className="mt-1 text-sm text-[#7f887d]">Try an artist, album, or a different mood.</p></div>}
               </section>
             ) : (
               <>
@@ -286,12 +341,13 @@ export default function Home() {
       <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/[0.09] bg-[#10130f]/95 shadow-[0_-16px_50px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
         <div className="mx-auto max-w-[1600px] px-4 py-3 md:px-8 lg:px-12">
           <div className="flex items-center gap-3 md:gap-5">
-            <div className="flex min-w-0 flex-1 items-center gap-3 md:w-[28%] md:flex-none"><img src={currentTrack.art} alt="" className="h-11 w-11 shrink-0 rounded-lg object-cover" /><div className="min-w-0"><p className="truncate text-[13px] font-semibold text-[#f0f2e9]">{currentTrack.title}</p><p className="truncate text-xs text-[#899388]">{currentTrack.artist}</p></div><button aria-label="Like current song" onClick={() => setIsLiked((value) => !value)} className={`ml-1 hidden sm:block ${isLiked ? "text-[#d8ff57]" : "text-[#727c70] hover:text-white"}`}><Heart className="h-4 w-4" fill={isLiked ? "currentColor" : "none"} /></button></div>
+            <div className="flex min-w-0 flex-1 items-center gap-3 md:w-[28%] md:flex-none"><img src={currentTrack.art} alt="" className="h-11 w-11 shrink-0 rounded-lg object-cover" /><div className="min-w-0"><p className="truncate text-[13px] font-semibold text-[#f0f2e9]">{currentTrack.title}</p><p className="truncate text-xs text-[#899388]">{currentTrack.artist}</p></div><div className={`player-eq ${isPlaying ? "" : "paused"}`} aria-label={isPlaying ? "Playing" : "Paused"}><span /><span /><span /></div><button aria-label="Like current song" onClick={() => setIsLiked((value) => !value)} className={`ml-1 hidden sm:block ${isLiked ? "text-[#d8ff57]" : "text-[#727c70] hover:text-white"}`}><Heart className="h-4 w-4" fill={isLiked ? "currentColor" : "none"} /></button></div>
             <div className="flex flex-1 flex-col items-center gap-1.5 md:max-w-[520px]"><div className="flex items-center gap-4 text-[#7f8a7b]"><button aria-label="Shuffle" onClick={() => toast.info("Shuffle is on deck for the full queue.")} className="hidden sm:block hover:text-[#d8ff57]"><Shuffle className="h-3.5 w-3.5" /></button><button aria-label="Previous track" onClick={() => skip(-1)} className="hover:text-white"><SkipBack className="h-4 w-4 fill-current" /></button><button aria-label={isPlaying ? "Pause" : "Play"} onClick={togglePlay} className="grid h-8 w-8 place-items-center rounded-full bg-[#f2f5e8] text-[#131811] hover:bg-[#d8ff57]">{isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="ml-0.5 h-4 w-4 fill-current" />}</button><button aria-label="Next track" onClick={() => skip(1)} className="hover:text-white"><SkipForward className="h-4 w-4 fill-current" /></button><button aria-label="Repeat" onClick={() => toast.info("Repeat will apply when the queue is connected.")} className="hidden sm:block hover:text-[#d8ff57]"><Repeat2 className="h-3.5 w-3.5" /></button></div><div className="hidden w-full items-center gap-2 sm:flex"><span className="w-8 text-right font-mono text-[9px] text-[#6e786d]">{formatTime(progress)}</span><input aria-label="Seek" type="range" min="0" max={duration || 100} value={progress} onChange={(event) => { const next = Number(event.target.value); setProgress(next); if (audioRef.current) audioRef.current.currentTime = next; }} className="h-1 w-full cursor-pointer accent-[#d8ff57]" /><span className="w-8 font-mono text-[9px] text-[#6e786d]">{duration ? formatTime(duration) : currentTrack.duration}</span></div></div>
             <div className="hidden w-[28%] items-center justify-end gap-3 md:flex"><button onClick={() => toast.info("Queue view is ready for your next iteration.")} className="text-[#788376] hover:text-white"><ListMusic className="h-4 w-4" /></button><button onClick={() => toast.info("Device picker will connect to your provider SDK.")} className="text-[#788376] hover:text-white"><Headphones className="h-4 w-4" /></button><Volume2 className="h-4 w-4 text-[#788376]" /><input aria-label="Volume" type="range" min="0" max="100" value={volume} onChange={(event) => setVolume(Number(event.target.value))} className="w-20 cursor-pointer accent-[#d8ff57]" /></div>
           </div>
         </div>
       </div>
+      {showPlaylistDialog && <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 px-5 backdrop-blur-sm"><div className="w-full max-w-md rounded-3xl border border-white/[0.1] bg-[#171b15] p-5 shadow-2xl"><div className="mb-5 flex items-start justify-between"><div><p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#899789]">Your library</p><h2 className="mt-1 font-display text-2xl font-semibold tracking-[-0.05em]">{trackToSave ? "Save to playlist" : "Create a playlist"}</h2>{trackToSave && <p className="mt-1 max-w-[270px] truncate text-xs text-[#7f8b7c]">{trackToSave.title} · {trackToSave.artist}</p>}</div><button aria-label="Close playlist dialog" onClick={() => setShowPlaylistDialog(false)} className="rounded-xl p-2 text-[#7b8779] hover:bg-white/[0.06] hover:text-white"><X className="h-4 w-4" /></button></div>{isAuthenticated && trackToSave && <div className="mb-5 max-h-44 space-y-1 overflow-y-auto">{(playlistsQuery.data ?? []).map((playlist) => <button key={playlist.id} disabled={addTrackMutation.isPending} onClick={() => addTrackMutation.mutate({ playlistId: playlist.id, track: { ...trackToSave, id: String(trackToSave.id) } })} className="flex w-full items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-3 text-left text-sm text-[#e8eee1] hover:border-[#7d9634] hover:bg-white/[0.06]"><span className="flex items-center gap-2"><ListMusic className="h-4 w-4 text-[#d8ff57]" />{playlist.name}</span><Plus className="h-4 w-4 text-[#85947e]" /></button>)}{(playlistsQuery.data ?? []).length === 0 && <p className="rounded-xl border border-dashed border-white/[0.1] px-4 py-6 text-center text-xs text-[#7e897b]">Create your first playlist below.</p>}</div>}<div className="border-t border-white/[0.08] pt-4"><p className="mb-2 text-xs font-semibold text-[#b8c1b1]">New playlist</p><div className="flex gap-2"><input autoFocus value={newPlaylistName} onChange={(event) => setNewPlaylistName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") createPlaylist(); }} placeholder="e.g. Sunday morning" className="h-11 min-w-0 flex-1 rounded-xl border border-white/[0.08] bg-black/20 px-3 text-sm text-white placeholder:text-[#6e796d] outline-none focus:border-[#a2c23e]" /><button disabled={!newPlaylistName.trim() || createPlaylistMutation.isPending} onClick={createPlaylist} className="rounded-xl bg-[#d8ff57] px-4 text-sm font-bold text-[#17200f] disabled:cursor-not-allowed disabled:opacity-40">Create</button></div></div>{!isAuthenticated && <button onClick={() => startLogin()} className="mt-4 w-full rounded-xl border border-white/[0.1] px-4 py-3 text-sm font-semibold text-[#d8ff57] hover:bg-white/[0.05]">Sign in to save playlists</button>}</div></div>}
       <audio ref={audioRef} onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)} onTimeUpdate={() => setProgress(audioRef.current?.currentTime ?? 0)} onEnded={() => skip(1)} preload="none" />
     </main>
   );

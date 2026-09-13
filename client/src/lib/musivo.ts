@@ -1,5 +1,5 @@
 export type CatalogTrack = {
-  id: number;
+  id: number | string;
   title: string;
   artist: string;
   album: string;
@@ -18,7 +18,7 @@ export function matchesTrackQuery(track: CatalogTrack, query: string) {
   return `${track.title} ${track.artist} ${track.album}`.toLowerCase().includes(normalized);
 }
 
-export function getNextTrackIndex<T extends { id: number }>(tracks: T[], currentId: number, direction: 1 | -1) {
+export function getNextTrackIndex<T extends { id: number | string }>(tracks: T[], currentId: number | string, direction: 1 | -1) {
   if (tracks.length === 0) return -1;
   const currentIndex = tracks.findIndex((track) => track.id === currentId);
   const safeIndex = currentIndex < 0 ? 0 : currentIndex;
