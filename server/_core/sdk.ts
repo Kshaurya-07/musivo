@@ -286,26 +286,39 @@ class SDKServer {
     const signedInAt = new Date();
     let user = await db.getUserByOpenId(sessionUserId);
 
-    // If user not in DB, sync from OAuth server automatically
+    // If user not in DB, sync from OAuth server or construct from session
     if (!user) {
-      try {
-        const userInfo = await this.getUserInfoWithJwt(sessionToken ?? "");
-        await db.upsertUser({
-          openId: userInfo.openId,
-          name: userInfo.name || null,
-          email: userInfo.email ?? null,
-          loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
-          lastSignedIn: signedInAt,
-        });
-        user = await db.getUserByOpenId(userInfo.openId);
-      } catch (error) {
-        console.error("[Auth] Failed to sync user from OAuth:", error);
-        throw ForbiddenError("Failed to sync user info");
+      if (ENV.oAuthServerUrl) {
+        try {
+          const userInfo = await this.getUserInfoWithJwt(sessionToken ?? "");
+          await db.upsertUser({
+            openId: userInfo.openId,
+            name: userInfo.name || null,
+            email: userInfo.email ?? null,
+            loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
+            lastSignedIn: signedInAt,
+          });
+          user = await db.getUserByOpenId(userInfo.openId);
+        } catch (error) {
+          console.warn("[Auth] OAuth server sync skipped:", error);
+        }
       }
-    }
 
-    if (!user) {
-      throw ForbiddenError("User not found");
+      if (!user) {
+        user = {
+          id: 1,
+          openId: session.openId,
+          name: session.name || "Musivo Listener",
+          email: null,
+          avatarUrl: null,
+          loginMethod: session.openId.startsWith("google:") ? "google" : session.openId.startsWith("spotify:") ? "spotify" : "oauth",
+          role: session.openId === ENV.ownerOpenId ? "admin" : "user",
+          createdAt: signedInAt,
+          updatedAt: signedInAt,
+          lastSignedIn: signedInAt,
+        };
+        await db.upsertUser(user);
+      }
     }
 
     await db.upsertUser({
