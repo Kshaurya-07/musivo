@@ -72,6 +72,77 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--ring); outl
   backdrop-filter: blur(22px);
 }
 
+.glass-panel {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%), rgba(16, 18, 17, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45), inset 0 1px 1px 0 rgba(255, 255, 255, 0.24);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+}
+
+.glass-pill {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 100%), rgba(26, 30, 26, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(16px);
+}
+
+.gloss-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.065) 0%, rgba(255, 255, 255, 0.015) 100%), rgba(18, 20, 18, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(24px);
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+}
+.gloss-card:hover {
+  border-color: rgba(255, 255, 255, 0.24);
+  box-shadow: 0 20px 52px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  transform: translateY(-2px);
+}
+
+.gloss-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.gloss-sheen::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+  transform: skewX(-25deg);
+  pointer-events: none;
+  transition: left 0.85s ease;
+}
+.gloss-sheen:hover::before {
+  left: 200%;
+}
+
+.neon-glow-lime {
+  box-shadow: 0 0 28px -4px rgba(216, 255, 87, 0.38);
+}
+.neon-glow-violet {
+  box-shadow: 0 0 28px -4px rgba(213, 185, 255, 0.38);
+}
+
+/* Polished specular scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.25);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
 .hide-scrollbar { scrollbar-width: none; }
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 

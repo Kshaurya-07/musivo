@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { createAiSpotifyMix, MOOD_PROFILES } from "./spotify";
 
 describe("Enhanced AI Mix Studio", () => {
@@ -38,5 +38,23 @@ describe("Enhanced AI Mix Studio", () => {
     expect(result).toBeDefined();
     expect(result.title).toContain("Cyberpunk rain drive");
     expect(result.description).toContain("Cyberpunk rain drive");
+    expect(result.tasteProfile).toBeDefined();
+    expect(result.tasteProfile?.learnedVibeSummary).toBeDefined();
+  });
+
+  it("trains user taste profile and extracts top affinities and summary", async () => {
+    const { trainUserAiProfile, listPastAiPlaylists } = await import("./spotify");
+    const profile = await trainUserAiProfile(999999);
+
+    expect(profile).toBeDefined();
+    expect(Array.isArray(profile.topArtists)).toBe(true);
+    expect(profile.topArtists.length).toBeGreaterThan(0);
+    expect(Array.isArray(profile.topSeedAffinities)).toBe(true);
+    expect(profile.topSeedAffinities.length).toBeGreaterThan(0);
+    expect(typeof profile.learnedVibeSummary).toBe("string");
+    expect(typeof profile.trainedAt).toBe("string");
+
+    const pastAiPlaylists = await listPastAiPlaylists(999999);
+    expect(Array.isArray(pastAiPlaylists)).toBe(true);
   });
 });

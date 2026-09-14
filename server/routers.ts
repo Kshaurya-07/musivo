@@ -22,16 +22,19 @@ import {
 import {
   buildSpotifyAuthorizeUrl,
   catalogStatus,
+  clearAiProfileCache,
   createSpotifyState,
   getSpotifyHomeTracks,
   getSpotifyPlaylistDetail,
   getUserSpotifyAccessToken,
   createSpotifyPlaylist,
   createAiSpotifyMix,
+  listPastAiPlaylists,
   searchSpotifyTracks,
   searchSpotifyWithUserToken,
   resolveSpotifyTrack,
   syncSpotifyUserData,
+  trainUserAiProfile,
 } from "./spotify";
 import { randomUUID } from "node:crypto";
 import { ENV } from "./_core/env";
@@ -202,6 +205,16 @@ export const appRouter = router({
         const videoId = await resolveFullLengthStream(input.title, input.artist);
         return { videoId };
       }),
+    getAiTasteProfile: publicProcedure.query(async ({ ctx }) => {
+      return await trainUserAiProfile(ctx.user?.id);
+    }),
+    trainAiMix: publicProcedure.mutation(async ({ ctx }) => {
+      clearAiProfileCache(ctx.user?.id);
+      return await trainUserAiProfile(ctx.user?.id);
+    }),
+    pastAiPlaylists: publicProcedure.query(async ({ ctx }) => {
+      return await listPastAiPlaylists(ctx.user?.id);
+    }),
     createAiMix: publicProcedure
       .input(
         z
@@ -210,6 +223,7 @@ export const appRouter = router({
             mood: z.string().max(50).optional(),
             count: z.number().int().min(4).max(16).default(8).optional(),
             saveToSpotify: z.boolean().default(false).optional(),
+            seedPlaylistId: z.union([z.number(), z.string()]).optional(),
           })
           .optional()
       )
@@ -287,6 +301,7 @@ export const appRouter = router({
             mood: z.string().max(50).optional(),
             count: z.number().int().min(4).max(16).default(8).optional(),
             saveToSpotify: z.boolean().default(true).optional(),
+            seedPlaylistId: z.union([z.number(), z.string()]).optional(),
           })
           .optional()
       )

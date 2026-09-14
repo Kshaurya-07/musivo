@@ -366,7 +366,242 @@ export type AiMixOptions = {
   mood?: string;
   count?: number;
   saveToSpotify?: boolean;
+  seedPlaylistId?: number | string;
 };
+
+export type UserAiTasteProfile = {
+  topArtists: string[];
+  seedGenres: string[];
+  aiPlaylistsCount: number;
+  recentTracksCount: number;
+  likedTracksCount: number;
+  trainedAt: string;
+  learnedVibeSummary: string;
+  topSeedAffinities: Array<{ name: string; weight: number }>;
+  favoriteTracks: Array<{ title: string; artist: string }>;
+};
+
+export type PastAiPlaylist = {
+  id: string | number;
+  name: string;
+  description: string | null;
+  trackCount: number;
+  source: "musivo" | "spotify";
+  imageUrl?: string | null;
+  createdAt: Date | string;
+};
+
+const aiProfileCache = new Map<number | string, { profile: UserAiTasteProfile; timestamp: number }>();
+
+export function clearAiProfileCache(userId?: number) {
+  if (userId) {
+    aiProfileCache.delete(userId);
+  } else {
+    aiProfileCache.clear();
+  }
+}
+
+export async function listPastAiPlaylists(userId?: number): Promise<PastAiPlaylist[]> {
+  if (!userId) return [];
+  const results: PastAiPlaylist[] = [];
+  try {
+    const userPlaylists = await db.listUserPlaylists(userId).catch(() => []);
+    for (const pl of userPlaylists) {
+      const isAi =
+        /ai mix|musivo mix|curated|vibe/i.test(pl.name) ||
+        (pl.description && /curated by musivo|ai mix/i.test(pl.description));
+      if (isAi) {
+        const tracks = await db.listPlaylistTracks(userId, pl.id).catch(() => []);
+        results.push({
+          id: pl.id,
+          name: pl.name,
+          description: pl.description,
+          trackCount: tracks.length,
+          source: "musivo",
+          createdAt: pl.createdAt,
+        });
+      }
+    }
+
+    const spotifyPlaylists = await db.listSpotifyPlaylists(userId).catch(() => []);
+    for (const sp of spotifyPlaylists) {
+      const isAi =
+        /ai mix|musivo mix|curated/i.test(sp.name) ||
+        (sp.description && /curated by musivo|ai mix/i.test(sp.description));
+      if (isAi) {
+        results.push({
+          id: sp.externalId,
+          name: sp.name,
+          description: sp.description,
+          trackCount: sp.trackCount,
+          source: "spotify",
+          imageUrl: sp.imageUrl,
+          createdAt: sp.syncedAt,
+        });
+      }
+    }
+  } catch (err) {
+    console.warn("[AI Mix] listPastAiPlaylists error:", err);
+  }
+
+  return results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export async function trainUserAiProfile(userId?: number): Promise<UserAiTasteProfile> {
+  const cacheKey = userId || "anonymous";
+  const cached = aiProfileCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < 300_000) {
+    return cached.profile;
+  }
+
+  if (!userId) {
+    const defaultProfile: UserAiTasteProfile = {
+      topArtists: ["M83", "Fred again..", "Tycho", "Dua Lipa", "Bonobo", "Tame Impala", "Disclosure", "Max Richter"],
+      seedGenres: ["Electronic & Dance", "Ambient Lo-Fi", "Indie Dream Pop", "Deep Focus Minimal"],
+      aiPlaylistsCount: 0,
+      recentTracksCount: 0,
+      likedTracksCount: 0,
+      trainedAt: new Date().toISOString(),
+      learnedVibeSummary: "Default aesthetic calibrated for high-fidelity electronic, ambient, and modern synthscapes.",
+      topSeedAffinities: [
+        { name: "Electronic & Dance", weight: 94 },
+        { name: "Ambient Lo-Fi", weight: 89 },
+        { name: "Indie Dream Pop", weight: 84 },
+        { name: "Deep Focus Minimal", weight: 78 },
+        { name: "Modern Synthwave", weight: 72 },
+      ],
+      favoriteTracks: [
+        { title: "Midnight City", artist: "M83" },
+        { title: "Adore U", artist: "Fred again.." },
+        { title: "Awake", artist: "Tycho" },
+      ],
+    };
+    aiProfileCache.set(cacheKey, { profile: defaultProfile, timestamp: Date.now() });
+    return defaultProfile;
+  }
+
+  const [recentTracks, likedTracks, pastAiPlaylists] = await Promise.all([
+    db.listSpotifyRecentTracks(userId).catch(() => []),
+    db.listLikedTracks(userId).catch(() => []),
+    listPastAiPlaylists(userId).catch(() => []),
+  ]);
+
+  const pastAiPlaylistTracks: Array<{ title: string; artist: string }> = [];
+  for (const pl of pastAiPlaylists.slice(0, 5)) {
+    if (pl.source === "musivo") {
+      const tracks = await db.listPlaylistTracks(userId, Number(pl.id)).catch(() => []);
+      for (const t of tracks) {
+        pastAiPlaylistTracks.push({ title: t.title, artist: t.artist });
+      }
+    }
+  }
+
+  const artistWeights = new Map<string, number>();
+  const trackFavorites: Array<{ title: string; artist: string }> = [];
+
+  const addArtistWeight = (artist: string | undefined, weight: number) => {
+    if (!artist) return;
+    const clean = artist.trim();
+    if (!clean || clean.toLowerCase() === "unknown artist") return;
+    artistWeights.set(clean, (artistWeights.get(clean) || 0) + weight);
+  };
+
+  for (const r of recentTracks) {
+    addArtistWeight(r.artist, 1.5);
+  }
+
+  for (const l of likedTracks) {
+    addArtistWeight(l.artist, 2.0);
+    trackFavorites.push({ title: l.title, artist: l.artist });
+  }
+
+  for (const p of pastAiPlaylistTracks) {
+    addArtistWeight(p.artist, 2.5);
+    trackFavorites.push({ title: p.title, artist: p.artist });
+  }
+
+  const fallbackArtists = ["M83", "Fred again..", "Tycho", "Dua Lipa", "Bonobo", "Tame Impala", "Disclosure", "Max Richter"];
+  if (artistWeights.size === 0) {
+    fallbackArtists.forEach((a) => artistWeights.set(a, 1.0));
+  }
+
+  const sortedArtists = Array.from(artistWeights.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([artist]) => artist);
+
+  const topArtists = sortedArtists.slice(0, 10);
+
+  const genreWeights: Record<string, number> = {
+    "Electronic & Dance": 60,
+    "Ambient Lo-Fi": 55,
+    "Indie Dream Pop": 50,
+    "Deep Focus Minimal": 45,
+    "Retro & Synthwave": 40,
+    "Warm Acoustic & Folk": 35,
+  };
+
+  const checkArtistAffinity = (artistList: string[], keywords: string[]) => {
+    let score = 0;
+    for (const art of topArtists) {
+      const lower = art.toLowerCase();
+      if (artistList.some((a) => lower.includes(a.toLowerCase()))) score += 15;
+      if (keywords.some((k) => lower.includes(k.toLowerCase()))) score += 10;
+    }
+    return score;
+  };
+
+  genreWeights["Electronic & Dance"] += checkArtistAffinity(
+    ["Fred again..", "Daft Punk", "Disclosure", "Calvin Harris", "Skrillex", "Deadmau5", "Peggy Gou"],
+    ["dance", "house", "edm", "electro"]
+  );
+  genreWeights["Ambient Lo-Fi"] += checkArtistAffinity(
+    ["Tycho", "Bonobo", "Khruangbin", "Men I Trust", "Jinsang", "Cigarettes After Sex"],
+    ["lo-fi", "ambient", "chill", "downtempo"]
+  );
+  genreWeights["Indie Dream Pop"] += checkArtistAffinity(
+    ["M83", "Beach House", "Tame Impala", "The xx", "Phoenix", "MGMT"],
+    ["indie", "pop", "dream", "alternative"]
+  );
+  genreWeights["Deep Focus Minimal"] += checkArtistAffinity(
+    ["Max Richter", "Nils Frahm", "Kiasmos", "Jon Hopkins", "Olafur Arnalds", "Brian Eno"],
+    ["minimal", "piano", "classical", "flow"]
+  );
+  genreWeights["Retro & Synthwave"] += checkArtistAffinity(
+    ["New Order", "Tears for Fears", "Depeche Mode", "The Cure", "Fleetwood Mac"],
+    ["retro", "synth", "80s", "90s"]
+  );
+  genreWeights["Warm Acoustic & Folk"] += checkArtistAffinity(
+    ["Iron & Wine", "Bon Iver", "Phoebe Bridgers", "Sufjan Stevens", "Fleet Foxes", "Vance Joy"],
+    ["acoustic", "folk", "coffee", "indie folk"]
+  );
+
+  const totalPoints = Object.values(genreWeights).reduce((a, b) => a + b, 0) || 1;
+  const topSeedAffinities = Object.entries(genreWeights)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, score]) => ({
+      name,
+      weight: Math.min(99, Math.max(68, Math.round((score / totalPoints) * 100 + 55))),
+    }));
+
+  const seedGenres = topSeedAffinities.slice(0, 4).map((a) => a.name);
+
+  const learnedVibeSummary = `Learned from ${recentTracks.length} history plays, ${likedTracks.length} liked tracks, and ${pastAiPlaylists.length} AI playlists. Top affinities: ${topSeedAffinities.slice(0, 2).map((a) => `${a.name} (${a.weight}%)`).join(", ")}.`;
+
+  const profile: UserAiTasteProfile = {
+    topArtists,
+    seedGenres,
+    aiPlaylistsCount: pastAiPlaylists.length,
+    recentTracksCount: recentTracks.length,
+    likedTracksCount: likedTracks.length,
+    trainedAt: new Date().toISOString(),
+    learnedVibeSummary,
+    topSeedAffinities,
+    favoriteTracks: trackFavorites.slice(0, 10),
+  };
+
+  aiProfileCache.set(cacheKey, { profile, timestamp: Date.now() });
+  return profile;
+}
 
 export const MOOD_PROFILES: Record<
   string,
@@ -431,6 +666,30 @@ function formatSeconds(sec: number): string {
 export async function createAiSpotifyMix(userId?: number, options?: AiMixOptions) {
   const recent = userId ? await db.listSpotifyRecentTracks(userId).catch(() => []) : [];
   const liked = userId ? await db.listLikedTracks(userId).catch(() => []) : [];
+  const userProfile = await trainUserAiProfile(userId);
+
+  // Load tracks from user's chosen past AI playlist if seedPlaylistId is provided
+  let seedPlaylistTracks: Array<{ title: string; artist: string }> = [];
+  let seedPlaylistName = "";
+  if (userId && options?.seedPlaylistId !== undefined && options.seedPlaylistId !== "") {
+    try {
+      const plIdNum = Number(options.seedPlaylistId);
+      if (!Number.isNaN(plIdNum) && plIdNum > 0) {
+        const pl = await db.getUserPlaylist(userId, plIdNum).catch(() => null);
+        if (pl) seedPlaylistName = pl.name;
+        const tracks = await db.listPlaylistTracks(userId, plIdNum).catch(() => []);
+        seedPlaylistTracks = tracks.map((t) => ({ title: t.title, artist: t.artist }));
+      } else {
+        const detail = await getSpotifyPlaylistDetail(userId, String(options.seedPlaylistId)).catch(() => null);
+        if (detail) {
+          seedPlaylistName = detail.playlist.name;
+          seedPlaylistTracks = detail.tracks.map((t) => ({ title: t.title, artist: t.artist }));
+        }
+      }
+    } catch (err) {
+      console.warn("[AI Mix] Loading seed playlist failed:", err);
+    }
+  }
 
   const rawMood = (options?.mood || "").toLowerCase().trim();
   const selectedMood = MOOD_PROFILES[rawMood] ? rawMood : options?.prompt ? "custom" : "chill";
@@ -439,6 +698,8 @@ export async function createAiSpotifyMix(userId?: number, options?: AiMixOptions
 
   const mixTitle = options?.prompt
     ? `AI Mix · ${options.prompt.slice(0, 24)}`
+    : seedPlaylistName
+    ? `AI Mix · Inspired by ${seedPlaylistName.replace(/^Musivo · /i, "").slice(0, 20)}`
     : `AI Mix · ${moodConfig.name}`;
 
   let matches: AiMixTrack[] = [];
@@ -448,13 +709,19 @@ export async function createAiSpotifyMix(userId?: number, options?: AiMixOptions
   if (ENV.forgeApiKey) {
     try {
       const seedContext = [
-        ...recent.slice(0, 10).map((t) => `${t.title} by ${t.artist}`),
-        ...liked.slice(0, 10).map((t) => `${t.title} by ${t.artist}`),
-      ].join(", ");
+        ...seedPlaylistTracks.slice(0, 8).map((t) => `${t.title} by ${t.artist}`),
+        ...userProfile.favoriteTracks.slice(0, 8).map((t) => `${t.title} by ${t.artist}`),
+        ...recent.slice(0, 6).map((t) => `${t.title} by ${t.artist}`),
+        ...liked.slice(0, 6).map((t) => `${t.title} by ${t.artist}`),
+      ].filter(Boolean).join(", ");
 
       const promptContext = options?.prompt
         ? `The user requested the vibe: "${options.prompt}".`
+        : seedPlaylistName
+        ? `The user chose to evolve the vibe from their past AI playlist "${seedPlaylistName}".`
         : `The user selected the mood: "${moodConfig.name}" (${moodConfig.description}).`;
+
+      const trainingSummary = `User learned profile: top affinities are ${userProfile.topSeedAffinities.slice(0, 3).map((a) => `${a.name} (${a.weight}%)`).join(", ")}, top artists: ${userProfile.topArtists.slice(0, 5).join(", ")}.`;
 
       const result = await invokeLLM({
         model: "gpt-4o-mini",
@@ -463,12 +730,12 @@ export async function createAiSpotifyMix(userId?: number, options?: AiMixOptions
           {
             role: "system",
             content:
-              "You are an expert music curator for Musivo. Suggest musically cohesive songs that fit the user's requested vibe and listening profile. Return only JSON.",
+              "You are an expert music curator for Musivo. Suggest musically cohesive songs matching the user's aesthetic, taking into account their trained music taste profile. Return only JSON.",
           },
           {
             role: "user",
-            content: `${promptContext}\n${
-              seedContext ? `User's seed library: ${seedContext}\n` : ""
+            content: `${promptContext}\n${trainingSummary}\n${
+              seedContext ? `User's seed library & chosen mix: ${seedContext}\n` : ""
             }Suggest ${targetCount} distinct songs that fit this aesthetic. Include title, artist, and a compelling, concise reason (under 15 words) explaining why it fits.`,
           },
         ],
@@ -558,6 +825,8 @@ export async function createAiSpotifyMix(userId?: number, options?: AiMixOptions
   // 2. Algorithmic Mix Curator (Seed Artists & Keywords)
   if (matches.length < targetCount) {
     const candidateArtists = [
+      ...seedPlaylistTracks.map((t) => t.artist),
+      ...userProfile.topArtists,
       ...moodConfig.seedArtists,
       ...recent.map((r) => r.artist),
       ...liked.map((l) => l.artist),
@@ -699,7 +968,8 @@ export async function createAiSpotifyMix(userId?: number, options?: AiMixOptions
     recommendations: matches,
     mood: selectedMood,
     title: mixTitle,
-    description: options?.prompt || moodConfig.description,
+    description: options?.prompt || (seedPlaylistName ? `Evolved from ${seedPlaylistName}` : moodConfig.description),
+    tasteProfile: userProfile,
   };
 }
 

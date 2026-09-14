@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Album,
   ArrowRight,
+  Brain,
   ChevronDown,
   CheckCircle2,
   AlertCircle,
+  Cpu,
   Loader2,
   Compass,
   Disc3,
@@ -13,7 +15,9 @@ import {
   Heart,
   History,
   Home as HomeIcon,
+  Layers,
   ListMusic,
+  ListPlus,
   Link2,
   Menu,
   MoreHorizontal,
@@ -22,6 +26,7 @@ import {
   Plus,
   Podcast,
   Radio,
+  Repeat1,
   Repeat2,
   RefreshCw,
   Search,
@@ -30,6 +35,7 @@ import {
   SkipBack,
   SkipForward,
   Sparkles,
+  Trash2,
   Unlink,
   Volume2,
   X,
@@ -183,6 +189,7 @@ function TrackRow({
   onPlay,
   onSave,
   onLike,
+  onAddToQueue,
   active,
   liked,
 }: {
@@ -190,6 +197,7 @@ function TrackRow({
   onPlay: (track: Track) => void;
   onSave: (track: Track) => void;
   onLike: (track: Track) => void;
+  onAddToQueue?: (track: Track) => void;
   active: boolean;
   liked: boolean;
 }) {
@@ -238,21 +246,32 @@ function TrackRow({
           {track.artist} · {track.album}
         </p>
       </button>
-      <div className="flex items-center gap-3 text-xs text-[#7f877e]">
+      <div className="flex items-center gap-2.5 text-xs text-[#7f877e]">
         <span className="hidden sm:inline">{track.duration}</span>
+        {onAddToQueue && (
+          <button
+            type="button"
+            title="Add to playback queue"
+            aria-label={`Add ${track.title} to queue`}
+            onClick={() => onAddToQueue(track)}
+            className="opacity-0 transition-opacity hover:text-[#d8ff57] group-hover:opacity-100 p-1"
+          >
+            <ListPlus className="h-4 w-4" />
+          </button>
+        )}
         <button
           aria-label={`${liked ? "Remove" : "Like"} ${track.title}`}
           onClick={() => onLike(track)}
           className={`${
             liked ? "text-[#d8ff57]" : "opacity-0 group-hover:opacity-100"
-          } transition-opacity hover:text-[#d8ff57]`}
+          } transition-opacity hover:text-[#d8ff57] p-1`}
         >
           <Heart className="h-4 w-4" fill={liked ? "currentColor" : "none"} />
         </button>
         <button
           aria-label={`Add ${track.title} to a playlist`}
           onClick={() => onSave(track)}
-          className="opacity-0 transition-opacity hover:text-[#d8ff57] group-hover:opacity-100"
+          className="opacity-0 transition-opacity hover:text-[#d8ff57] group-hover:opacity-100 p-1"
         >
           <Plus className="h-4 w-4" />
         </button>
@@ -262,7 +281,7 @@ function TrackRow({
             onClick={() =>
               toast.info("Spotify attribution is available in your connected account.")
             }
-            className="opacity-0 transition-opacity hover:text-white group-hover:opacity-100"
+            className="opacity-0 transition-opacity hover:text-white group-hover:opacity-100 p-1"
           >
             <MoreHorizontal className="h-4 w-4" />
           </button>
@@ -386,12 +405,14 @@ function SpotifyPlaylistDetail({
   likedIds,
   activeTrackId,
   isPlaying,
+  onAddToQueue,
 }: {
   externalId: string;
   onBack: () => void;
   onPlay: (track: Track) => void;
   onSave: (track: Track) => void;
   onLike: (track: Track) => void;
+  onAddToQueue?: (track: Track) => void;
   likedIds: Set<string>;
   activeTrackId: string | number;
   isPlaying: boolean;
@@ -479,6 +500,7 @@ function SpotifyPlaylistDetail({
                   onPlay={onPlay}
                   onSave={onSave}
                   onLike={onLike}
+                  onAddToQueue={onAddToQueue}
                   active={String(track.id) === String(activeTrackId) && isPlaying}
                   liked={likedIds.has(String(track.id))}
                 />
@@ -496,6 +518,253 @@ function SpotifyPlaylistDetail({
         </>
       )}
     </section>
+  );
+}
+
+function QueueDrawer({
+  isOpen,
+  onClose,
+  currentTrack,
+  isPlaying,
+  queue,
+  repeatMode,
+  onToggleRepeat,
+  onPlayTrack,
+  onRemoveFromQueue,
+  onClearQueue,
+  onShuffleQueue,
+  onLoadAiMixToQueue,
+  hasAiMix,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  currentTrack: Track;
+  isPlaying: boolean;
+  queue: Track[];
+  repeatMode: "off" | "all" | "one";
+  onToggleRepeat: () => void;
+  onPlayTrack: (track: Track) => void;
+  onRemoveFromQueue: (index: number) => void;
+  onClearQueue: () => void;
+  onShuffleQueue: () => void;
+  onLoadAiMixToQueue?: () => void;
+  hasAiMix?: boolean;
+}) {
+  if (!isOpen) return null;
+
+  const curIdx = queue.findIndex((t) => String(t.id) === String(currentTrack.id));
+  const upcoming =
+    curIdx >= 0
+      ? queue.slice(curIdx + 1)
+      : queue.filter((t) => String(t.id) !== String(currentTrack.id));
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/65 backdrop-blur-md transition-all duration-300">
+      <div className="relative flex h-full w-full max-w-md flex-col glass-panel border-l border-white/15 bg-[#121413]/95 shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <Layers className="h-5 w-5 text-[#d8ff57]" />
+            <h3 className="font-display text-base font-bold text-white tracking-wide">
+              Playback Queue
+            </h3>
+            <span className="glass-pill px-2 py-0.5 text-[11px] font-mono font-semibold text-[#d8ff57]">
+              {queue.length} {queue.length === 1 ? "track" : "tracks"}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={onToggleRepeat}
+              title={`Repeat mode: ${repeatMode}`}
+              className={`rounded-full p-2 transition ${
+                repeatMode !== "off"
+                  ? "bg-[#d8ff57]/20 text-[#d8ff57]"
+                  : "text-[#9da59c] hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              {repeatMode === "one" ? <Repeat1 className="h-4 w-4" /> : <Repeat2 className="h-4 w-4" />}
+            </button>
+            <button
+              type="button"
+              onClick={onShuffleQueue}
+              title="Shuffle upcoming queue"
+              className="rounded-full p-2 text-[#9da59c] hover:bg-white/10 hover:text-[#d8ff57] transition"
+            >
+              <Shuffle className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onClearQueue}
+              title="Clear queue"
+              className="rounded-full p-2 text-[#9da59c] hover:bg-white/10 hover:text-[#ef6b5e] transition"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full p-2 text-[#9da59c] hover:bg-white/10 hover:text-white transition"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
+          {/* Now Playing section */}
+          <div className="space-y-2.5">
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#8e978d]">
+              Now Playing
+            </p>
+            <div className="gloss-card flex items-center gap-3.5 rounded-2xl p-3.5 border border-[#d8ff57]/25 shadow-lg">
+              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-black/40">
+                <img
+                  src={currentTrack.art}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+                {isPlaying && (
+                  <div className="absolute inset-0 grid place-items-center bg-black/35 backdrop-blur-[1px]">
+                    <div className="player-eq">
+                      <span />
+                      <span />
+                      <span />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <p className="truncate text-sm font-bold text-[#d8ff57]">
+                  {currentTrack.title}
+                </p>
+                <p className="truncate text-xs text-[#a9b3a7]">
+                  {currentTrack.artist}
+                </p>
+                <div className="flex items-center gap-2 pt-0.5 text-[11px] text-[#788376]">
+                  <span>{currentTrack.duration}</span>
+                  <span>·</span>
+                  <span className="font-mono text-[10px] uppercase text-[#c4f447]">
+                    {currentTrack.source === "Spotify" ? "Spotify Stream" : "Full Length Audio"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Up Next section */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#8e978d]">
+                Up Next ({upcoming.length})
+              </p>
+              {upcoming.length > 0 && (
+                <span className="text-[11px] text-[#7a8479]">
+                  Auto-advances smoothly
+                </span>
+              )}
+            </div>
+
+            {upcoming.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center space-y-3">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/[0.04] text-[#899388] mx-auto">
+                  <ListMusic className="h-5 w-5" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-[#d4dcd2]">Queue is empty</p>
+                  <p className="text-[11px] text-[#7a8579] leading-relaxed max-w-[260px] mx-auto">
+                    Hover over any song and click "+ Add to Queue", or load your curated AI Mix.
+                  </p>
+                </div>
+                {hasAiMix && onLoadAiMixToQueue && (
+                  <button
+                    type="button"
+                    onClick={onLoadAiMixToQueue}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[#d5b9ff]/20 hover:bg-[#d5b9ff]/30 px-3.5 py-1.5 text-xs font-semibold text-[#d5b9ff] transition border border-[#d5b9ff]/30"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    Load Curated AI Mix into Queue
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {upcoming.map((track, uIdx) => {
+                  const absoluteIdx =
+                    curIdx >= 0
+                      ? curIdx + 1 + uIdx
+                      : queue.findIndex((t) => String(t.id) === String(track.id));
+                  return (
+                    <div
+                      key={`${track.id}-${uIdx}`}
+                      className="group flex items-center justify-between gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2 hover:border-white/15 hover:bg-white/[0.06] transition"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <span className="w-4 font-mono text-[11px] text-[#6b756a] text-center shrink-0">
+                          {uIdx + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => onPlayTrack(track)}
+                          className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-black/30"
+                        >
+                          <img src={track.art} alt="" className="h-full w-full object-cover" />
+                          <div className="absolute inset-0 grid place-items-center bg-black/40 opacity-0 group-hover:opacity-100 transition">
+                            <Play className="h-3.5 w-3.5 fill-white text-white" />
+                          </div>
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-semibold text-[#f0ede6]">
+                            {track.title}
+                          </p>
+                          <p className="truncate text-[11px] text-[#869085]">
+                            {track.artist}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[11px] font-mono text-[#6c766b] mr-1">
+                          {track.duration}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => onRemoveFromQueue(absoluteIdx)}
+                          title="Remove from queue"
+                          className="rounded-lg p-1.5 text-[#6c766b] hover:bg-white/10 hover:text-[#ef6b5e] transition"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Quick AI Mix Queue Injection Banner */}
+          {hasAiMix && onLoadAiMixToQueue && upcoming.length > 0 && (
+            <div className="rounded-2xl border border-[#d5b9ff]/20 bg-gradient-to-r from-[#241733]/60 to-[#161220]/60 p-3.5 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Sparkles className="h-4 w-4 text-[#d5b9ff] shrink-0" />
+                <p className="text-xs text-[#d2c2e5] truncate">
+                  Append AI Mix to queue?
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onLoadAiMixToQueue}
+                className="shrink-0 rounded-full bg-[#d5b9ff] hover:bg-[#e4d2ff] px-3 py-1 text-[11px] font-bold text-[#1f132e] transition shadow"
+              >
+                Add Mix
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -518,6 +787,14 @@ function AiMixStudio({
   isPlaying,
   likedIds,
   onLike,
+  tasteProfile,
+  trainingModel,
+  onRetrainModel,
+  pastAiPlaylists,
+  selectedSeedPlaylistId,
+  onSelectSeedPlaylist,
+  onAddToQueue,
+  onAddAllToQueue,
 }: {
   recommendations: AiRecommendation[];
   meta: { title: string; description: string; mood: string } | null;
@@ -537,26 +814,171 @@ function AiMixStudio({
   isPlaying: boolean;
   likedIds: Set<string>;
   onLike: (track: Track) => void;
+  tasteProfile?: any;
+  trainingModel?: boolean;
+  onRetrainModel?: () => void;
+  pastAiPlaylists?: any[];
+  selectedSeedPlaylistId?: string | number | null;
+  onSelectSeedPlaylist?: (id: string | number | null) => void;
+  onAddToQueue?: (track: Track) => void;
+  onAddAllToQueue?: () => void;
 }) {
   const currentMoodObj = MOOD_OPTIONS.find((m) => m.id === selectedMood) || MOOD_OPTIONS[0];
 
   return (
     <section className="space-y-8">
       {/* Header */}
-      <div className="rounded-3xl border border-[#c09cff]/20 bg-gradient-to-br from-[#271b38] via-[#1a1524] to-[#121413] p-6 sm:p-8 relative overflow-hidden shadow-2xl">
-        <div className="absolute right-0 top-0 -mr-16 -mt-16 h-64 w-64 rounded-full bg-[#c09cff]/10 blur-3xl pointer-events-none" />
+      <div className="glass-panel gloss-sheen rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-2xl border border-[#c09cff]/25">
+        <div className="absolute right-0 top-0 -mr-16 -mt-16 h-64 w-64 rounded-full bg-[#c09cff]/15 blur-3xl pointer-events-none" />
         <div className="relative z-10 max-w-2xl space-y-3">
           <div className="inline-flex items-center gap-2 rounded-full border border-[#d5b9ff]/30 bg-[#d5b9ff]/10 px-3 py-1 text-xs font-semibold text-[#d5b9ff]">
             <Sparkles className="h-3.5 w-3.5 animate-pulse" />
-            <span>AI MIX STUDIO</span>
+            <span>AI MIX STUDIO · NEURAL CURATION</span>
           </div>
           <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#f7f1ff]">
             Curate your vibe with intelligence.
           </h1>
           <p className="text-sm sm:text-base text-[#b8a7cc] leading-relaxed">
-            Select a crafted mood or describe your ideal soundtrack. Musivo analyzes music attributes, harmonic vibes, and artist connections to curate a full-length, uninterrupted playlist.
+            Musivo continuously trains on your playback history, liked tracks, and past AI-made playlists to generate perfectly cohesive, full-length listening journeys.
           </p>
         </div>
+      </div>
+
+      {/* AI Taste Intelligence & Training Center Card */}
+      <div className="glass-panel rounded-3xl p-5 sm:p-7 border border-[#d5b9ff]/20 bg-gradient-to-br from-[#1d1628]/80 via-[#15131c]/80 to-[#101114]/80 shadow-xl space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Brain className="h-4 w-4 text-[#d5b9ff] animate-pulse" />
+              <span className="font-mono text-xs uppercase tracking-[0.16em] text-[#d5b9ff] font-semibold">
+                AI Taste Intelligence Engine
+              </span>
+              <span className="glass-pill px-2 py-0.5 text-[10px] font-mono text-[#d8ff57]">
+                Live Profile
+              </span>
+            </div>
+            <p className="text-xs text-[#b3a6c4]">
+              {tasteProfile?.learnedVibeSummary ||
+                "Model actively learned from your library, history, and AI mix sessions."}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0">
+            {onRetrainModel && (
+              <button
+                type="button"
+                onClick={onRetrainModel}
+                disabled={trainingModel}
+                className="flex items-center gap-2 rounded-full border border-[#d5b9ff]/40 bg-[#d5b9ff]/10 hover:bg-[#d5b9ff]/20 px-3.5 py-1.5 text-xs font-semibold text-[#f0e8fc] transition shadow disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 text-[#d5b9ff] ${trainingModel ? "animate-spin" : ""}`} />
+                {trainingModel ? "Training AI Model…" : "Re-train AI Model"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Training Stats & Affinities */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 space-y-1">
+            <p className="font-mono text-[10px] uppercase tracking-wider text-[#8b8496]">History Analyzed</p>
+            <p className="font-display text-xl font-bold text-white">
+              {tasteProfile?.recentTracksCount ?? 0} <span className="text-xs font-normal text-[#9b93a6]">plays</span>
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 space-y-1">
+            <p className="font-mono text-[10px] uppercase tracking-wider text-[#8b8496]">Liked Tracks</p>
+            <p className="font-display text-xl font-bold text-[#d8ff57]">
+              {tasteProfile?.likedTracksCount ?? 0} <span className="text-xs font-normal text-[#9b93a6]">tracks</span>
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 space-y-1">
+            <p className="font-mono text-[10px] uppercase tracking-wider text-[#8b8496]">Past AI Playlists</p>
+            <p className="font-display text-xl font-bold text-[#d5b9ff]">
+              {tasteProfile?.aiPlaylistsCount ?? 0} <span className="text-xs font-normal text-[#9b93a6]">mixes</span>
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 space-y-1">
+            <p className="font-mono text-[10px] uppercase tracking-wider text-[#8b8496]">Engine Calibrated</p>
+            <p className="font-display text-base font-semibold text-[#8ce28a] truncate">
+              Continuous Vibe
+            </p>
+          </div>
+        </div>
+
+        {/* Detected Top Affinities Pills */}
+        {tasteProfile?.topSeedAffinities && tasteProfile.topSeedAffinities.length > 0 && (
+          <div className="space-y-2 pt-1">
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#91879f]">
+              Detected Genre & Mood Affinities
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {tasteProfile.topSeedAffinities.map((aff: { name: string; weight: number }) => (
+                <div
+                  key={aff.name}
+                  className="glass-pill flex items-center gap-2 px-3 py-1 text-xs rounded-full"
+                >
+                  <span className="text-[#eee7f7] font-medium">{aff.name}</span>
+                  <span className="font-mono font-bold text-[11px] text-[#d8ff57]">
+                    {aff.weight}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Past AI Mixes Selector (Seed & Evolve) */}
+        {pastAiPlaylists && pastAiPlaylists.length > 0 && onSelectSeedPlaylist && (
+          <div className="space-y-2 pt-2 border-t border-white/10">
+            <div className="flex items-center justify-between">
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#91879f]">
+                Seed From Past AI-Made Playlist
+              </p>
+              {selectedSeedPlaylistId && (
+                <button
+                  type="button"
+                  onClick={() => onSelectSeedPlaylist(null)}
+                  className="text-xs text-[#d5b9ff] hover:underline"
+                >
+                  Clear Selection
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-1">
+              <button
+                type="button"
+                onClick={() => onSelectSeedPlaylist(null)}
+                className={`rounded-xl border px-3 py-1.5 text-xs transition ${
+                  !selectedSeedPlaylistId
+                    ? "border-[#d8ff57] bg-[#d8ff57]/15 text-[#d8ff57] font-semibold"
+                    : "border-white/10 bg-white/[0.04] text-[#b4a9c2] hover:bg-white/[0.08]"
+                }`}
+              >
+                Pure Fresh Generation
+              </button>
+              {pastAiPlaylists.map((pl) => {
+                const isSelected = String(selectedSeedPlaylistId) === String(pl.id);
+                return (
+                  <button
+                    key={pl.id}
+                    type="button"
+                    onClick={() => onSelectSeedPlaylist(isSelected ? null : pl.id)}
+                    className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs transition ${
+                      isSelected
+                        ? "border-[#d5b9ff] bg-[#d5b9ff]/20 text-[#f5efff] font-semibold shadow-md ring-1 ring-[#d5b9ff]/40"
+                        : "border-white/10 bg-white/[0.04] text-[#b4a9c2] hover:border-white/20 hover:bg-white/[0.08]"
+                    }`}
+                  >
+                    <Sparkles className={`h-3 w-3 ${isSelected ? "text-[#d5b9ff]" : "text-[#8e859a]"}`} />
+                    <span className="truncate max-w-[160px]">{pl.name}</span>
+                    <span className="font-mono text-[10px] text-[#7f788b]">({pl.trackCount})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Mood Selector Grid */}
@@ -575,15 +997,15 @@ function AiMixStudio({
                 key={mood.id}
                 type="button"
                 onClick={() => onSelectMood(mood.id)}
-                className={`group flex items-start gap-3.5 rounded-2xl border p-4 text-left transition-all ${
+                className={`group gloss-card flex items-start gap-3.5 rounded-2xl p-4 text-left transition-all ${
                   isSelected
-                    ? "border-[#d5b9ff] bg-[#2d1e42] shadow-lg ring-1 ring-[#d5b9ff]/40"
-                    : "border-white/[0.08] bg-[#16141a] hover:border-white/[0.18] hover:bg-[#1f1b25]"
+                    ? "border-[#d5b9ff] bg-[#2d1e42] shadow-xl ring-1 ring-[#d5b9ff]/50"
+                    : "border-white/[0.08] bg-[#16141a] hover:border-white/[0.22] hover:bg-[#1f1b25]"
                 }`}
               >
                 <div
                   className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg ${
-                    isSelected ? "bg-[#d5b9ff]/20" : "bg-white/[0.05]"
+                    isSelected ? "bg-[#d5b9ff]/25" : "bg-white/[0.05]"
                   }`}
                 >
                   {mood.emoji}
@@ -608,7 +1030,7 @@ function AiMixStudio({
       </div>
 
       {/* Custom Prompt & Generator */}
-      <div className="rounded-2xl border border-white/[0.08] bg-[#151419] p-5 sm:p-6 space-y-4">
+      <div className="glass-panel rounded-2xl border border-white/[0.12] p-5 sm:p-6 space-y-4 shadow-xl">
         <div className="flex items-center justify-between">
           <p className="font-mono text-xs uppercase tracking-[0.16em] text-[#8e859a]">
             2. Or Describe a Custom Vibe (Optional)
@@ -624,7 +1046,7 @@ function AiMixStudio({
               if (e.key === "Enter" && !buildingMix) onBuildMix();
             }}
             placeholder={`e.g. ${currentMoodObj.name}: ${currentMoodObj.vibe}...`}
-            className="w-full rounded-xl border border-white/[0.1] bg-black/30 px-4 py-3 text-sm text-[#f5f4ec] placeholder:text-[#6e6878] outline-none focus:border-[#d5b9ff] focus:ring-1 focus:ring-[#d5b9ff]/50"
+            className="w-full rounded-xl border border-white/[0.12] bg-black/40 px-4 py-3 text-sm text-[#f5f4ec] placeholder:text-[#6e6878] outline-none focus:border-[#d5b9ff] focus:ring-1 focus:ring-[#d5b9ff]/50 backdrop-blur"
           />
         </div>
 
@@ -636,7 +1058,7 @@ function AiMixStudio({
               key={tag}
               type="button"
               onClick={() => onChangePrompt(tag)}
-              className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[11px] text-[#c1b5cf] hover:border-[#d5b9ff]/40 hover:bg-[#d5b9ff]/10 hover:text-white transition"
+              className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[11px] text-[#c1b5cf] hover:border-[#d5b9ff]/40 hover:bg-[#d5b9ff]/15 hover:text-white transition"
             >
               {tag}
             </button>
@@ -649,7 +1071,7 @@ function AiMixStudio({
             type="button"
             onClick={onBuildMix}
             disabled={buildingMix}
-            className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#d5b9ff] to-[#d8ff57] hover:opacity-95 px-6 py-2.5 text-xs font-bold text-[#141217] shadow-lg transition hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#d5b9ff] via-[#e4d2ff] to-[#d8ff57] hover:opacity-95 px-6 py-2.5 text-xs font-bold text-[#141217] shadow-xl transition hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Sparkles className={`h-4 w-4 ${buildingMix ? "animate-spin" : ""}`} />
             {buildingMix ? "Curating your AI Mix…" : "Generate AI Mix"}
@@ -661,10 +1083,10 @@ function AiMixStudio({
       {recommendations.length > 0 && (
         <div className="space-y-6 pt-2">
           {/* Hero Mix Banner */}
-          <div className="rounded-3xl border border-[#d5b9ff]/25 bg-gradient-to-br from-[#271d37] via-[#1a1523] to-[#121315] p-6 sm:p-7 shadow-2xl">
+          <div className="glass-panel gloss-sheen rounded-3xl border border-[#d5b9ff]/30 bg-gradient-to-br from-[#271d37]/90 via-[#1a1523]/90 to-[#121315]/90 p-6 sm:p-7 shadow-2xl">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
               <div className="flex items-center gap-4 sm:gap-5">
-                <div className="h-20 w-20 sm:h-24 sm:w-24 shrink-0 overflow-hidden rounded-2xl bg-[#322346] shadow-md">
+                <div className="h-20 w-20 sm:h-24 sm:w-24 shrink-0 overflow-hidden rounded-2xl bg-[#322346] shadow-md border border-white/10">
                   {recommendations[0]?.art ? (
                     <img
                       src={recommendations[0].art}
@@ -708,6 +1130,17 @@ function AiMixStudio({
                   <Play className="h-4 w-4 fill-current" />
                   Play Entire Mix
                 </button>
+                {onAddAllToQueue && (
+                  <button
+                    type="button"
+                    onClick={onAddAllToQueue}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 px-4 py-2.5 text-xs font-semibold text-[#f0eff5] transition"
+                    title="Append all mix tracks to queue"
+                  >
+                    <ListPlus className="h-3.5 w-3.5" />
+                    Add All to Queue
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={onSaveToLibrary}
@@ -745,10 +1178,10 @@ function AiMixStudio({
               return (
                 <div
                   key={rec.id || idx}
-                  className={`group flex items-center justify-between gap-3 rounded-2xl border px-3.5 py-2.5 transition-colors ${
+                  className={`group gloss-card flex items-center justify-between gap-3 rounded-2xl border px-3.5 py-2.5 transition-colors ${
                     isCurrentPlaying
-                      ? "border-[#d8ff57]/40 bg-[#1e2719]"
-                      : "border-white/[0.06] bg-[#151419] hover:border-white/[0.14] hover:bg-[#1d1b22]"
+                      ? "border-[#d8ff57]/50 bg-[#1e2719]/90 shadow-lg"
+                      : "border-white/[0.08] bg-[#151419]/70 hover:border-white/[0.18] hover:bg-[#1d1b22]"
                   }`}
                 >
                   <div className="flex items-center gap-3.5 min-w-0 flex-1">
@@ -790,7 +1223,17 @@ function AiMixStudio({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
+                    {onAddToQueue && (
+                      <button
+                        type="button"
+                        title="Add to queue"
+                        onClick={() => onAddToQueue(track)}
+                        className="rounded-full p-1.5 text-[#8e859a] hover:bg-white/10 hover:text-[#d8ff57] transition"
+                      >
+                        <ListPlus className="h-4 w-4" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       aria-label="Like song"
@@ -1553,12 +1996,23 @@ export default function Home() {
     isSpotifyConnected,
     error: playbackError,
     autoplayBlocked,
+    queue,
+    repeatMode,
+    toggleRepeatMode,
+    addToQueue,
+    playNextInQueue,
+    removeFromQueue,
+    clearQueue,
+    shuffleQueue,
     playTrack,
     togglePlay,
     seek,
     setVolume,
     skip,
   } = usePlayback();
+
+  const [isQueueOpen, setIsQueueOpen] = useState(false);
+  const [selectedSeedPlaylistId, setSelectedSeedPlaylistId] = useState<string | number | null>(null);
 
   const statusQuery = trpc.music.status.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
   const homeQuery = trpc.music.home.useQuery(undefined, { staleTime: 1000 * 60 * 10, retry: 1 });
@@ -1577,6 +2031,22 @@ export default function Home() {
   const spotifyRecentQuery = trpc.spotify.recentlyPlayed.useQuery(undefined, {
     enabled: isAuthenticated && Boolean(spotifyStatusQuery.data?.connected),
     retry: false,
+  });
+  const aiTasteProfileQuery = trpc.music.getAiTasteProfile.useQuery(undefined, {
+    staleTime: 1000 * 60 * 5,
+  });
+  const pastAiPlaylistsQuery = trpc.music.pastAiPlaylists.useQuery(undefined, {
+    enabled: isAuthenticated,
+    staleTime: 1000 * 60 * 5,
+  });
+  const trainAiMixMutation = trpc.music.trainAiMix.useMutation({
+    onSuccess: (profile) => {
+      playlistUtils.music.getAiTasteProfile.setData(undefined, profile);
+      toast.success("AI Taste Engine updated from your latest library & history!");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to update AI model.");
+    },
   });
 
   useEffect(() => {
@@ -1661,15 +2131,31 @@ export default function Home() {
     onError: (error) => toast.error(error.message),
   });
 
-  const handleBuildAiMix = (moodOverride?: string, promptOverride?: string) => {
+  const handleBuildAiMix = (
+    moodOverride?: string,
+    promptOverride?: string,
+    seedPlaylistOverride?: string | number | null
+  ) => {
     const mood = moodOverride ?? selectedMood;
     const prompt = promptOverride ?? customPrompt.trim();
+    const seedId =
+      seedPlaylistOverride !== undefined ? seedPlaylistOverride : selectedSeedPlaylistId;
     aiMixMutation.mutate({
       mood,
       prompt: prompt || undefined,
       count: 8,
       saveToSpotify: Boolean(spotifyStatusQuery.data?.connected),
+      seedPlaylistId: seedId ? seedId : undefined,
     });
+  };
+
+  const handleLoadAiMixToQueue = () => {
+    if (!aiRecommendations.length) return;
+    const mixTracks = aiRecommendations.map(aiRecommendationToTrack);
+    for (const track of mixTracks) {
+      addToQueue(track);
+    }
+    toast.success(`Added ${mixTracks.length} tracks from AI Mix to queue`);
   };
 
   const handlePlayAiMix = () => {
@@ -2119,6 +2605,7 @@ export default function Home() {
                         onPlay={(t) => void playTrack(t, visibleSearchResults)}
                         onSave={openPlaylistDialog}
                         onLike={toggleLike}
+                        onAddToQueue={(t) => addToQueue(t)}
                         active={String(currentTrack.id) === String(track.id) && isPlaying}
                         liked={likedIds.has(String(track.id))}
                       />
@@ -2140,6 +2627,7 @@ export default function Home() {
                 onPlay={(t) => void playTrack(t)}
                 onSave={openPlaylistDialog}
                 onLike={toggleLike}
+                onAddToQueue={(t) => addToQueue(t)}
                 likedIds={likedIds}
                 activeTrackId={currentTrack.id}
                 isPlaying={isPlaying}
@@ -2199,6 +2687,17 @@ export default function Home() {
                 isPlaying={isPlaying}
                 likedIds={likedIds}
                 onLike={toggleLike}
+                tasteProfile={aiTasteProfileQuery.data}
+                trainingModel={trainAiMixMutation.isPending}
+                onRetrainModel={() => trainAiMixMutation.mutate()}
+                pastAiPlaylists={pastAiPlaylistsQuery.data ?? []}
+                selectedSeedPlaylistId={selectedSeedPlaylistId}
+                onSelectSeedPlaylist={(id) => {
+                  setSelectedSeedPlaylistId(id);
+                  handleBuildAiMix(undefined, undefined, id);
+                }}
+                onAddToQueue={(track) => addToQueue(track)}
+                onAddAllToQueue={handleLoadAiMixToQueue}
               />
             ) : activeView === "liked" ? (
               <section>
@@ -2217,6 +2716,7 @@ export default function Home() {
                         onPlay={(t) => void playTrack(t, likedTracks)}
                         onSave={openPlaylistDialog}
                         onLike={toggleLike}
+                        onAddToQueue={(t) => addToQueue(t)}
                         active={String(currentTrack.id) === String(track.id) && isPlaying}
                         liked
                       />
@@ -2400,7 +2900,7 @@ export default function Home() {
                     {catalog.slice(0, 4).map((track) => (
                       <div
                         key={track.id}
-                        className="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-white/[0.07] bg-[#151815] p-2.5 transition-colors hover:border-white/[0.15] hover:bg-[#1b201a]"
+                        className="group gloss-card relative flex items-center gap-3 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#151815] p-2.5 transition-colors hover:border-white/[0.18] hover:bg-[#1b201a]"
                       >
                         <div className="relative h-[62px] w-[62px] shrink-0 overflow-hidden rounded-xl">
                           <img
@@ -2415,25 +2915,35 @@ export default function Home() {
                             <Play className="h-4 w-4 fill-current" />
                           </button>
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold text-[#ebeee4]">
                             {track.title}
                           </p>
                           <p className="mt-0.5 truncate text-xs text-[#848e82]">{track.artist}</p>
                         </div>
-                        <button
-                          onClick={() => toggleLike(track)}
-                          className={`ml-auto self-start p-1.5 ${
-                            likedIds.has(String(track.id))
-                              ? "text-[#d8ff57]"
-                              : "text-[#697468] opacity-0 group-hover:opacity-100"
-                          }`}
-                        >
-                          <Heart
-                            className="h-4 w-4"
-                            fill={likedIds.has(String(track.id)) ? "currentColor" : "none"}
-                          />
-                        </button>
+                        <div className="ml-auto flex items-center gap-1 self-center">
+                          <button
+                            type="button"
+                            title="Add to queue"
+                            onClick={() => addToQueue(track)}
+                            className="p-1.5 text-[#848e82] hover:text-[#d8ff57] transition"
+                          >
+                            <ListPlus className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => toggleLike(track)}
+                            className={`p-1.5 ${
+                              likedIds.has(String(track.id))
+                                ? "text-[#d8ff57]"
+                                : "text-[#697468] opacity-0 group-hover:opacity-100"
+                            }`}
+                          >
+                            <Heart
+                              className="h-4 w-4"
+                              fill={likedIds.has(String(track.id)) ? "currentColor" : "none"}
+                            />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -2511,6 +3021,15 @@ export default function Home() {
                           {track.duration}
                         </span>
                         <button
+                          type="button"
+                          title="Add to queue"
+                          onClick={() => addToQueue(track)}
+                          className="grid h-8 w-8 place-items-center rounded-full text-[#86917f] hover:bg-white/10 hover:text-[#d8ff57] transition"
+                        >
+                          <ListPlus className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          aria-label="Play track"
                           onClick={() => void playTrack(track, displayTracks)}
                           className="grid h-8 w-8 place-items-center rounded-full text-[#86917f] hover:bg-[#d8ff57] hover:text-[#17210f]"
                         >
@@ -2583,9 +3102,10 @@ export default function Home() {
             <div className="flex flex-1 flex-col items-center gap-1.5 md:max-w-[520px]">
               <div className="flex items-center gap-4 text-[#7f8a7b]">
                 <button
-                  aria-label="Shuffle"
-                  onClick={() => toast.info("Shuffle is on deck for the full queue.")}
-                  className="hidden sm:block hover:text-[#d8ff57]"
+                  aria-label="Shuffle queue"
+                  onClick={shuffleQueue}
+                  className="hidden sm:block text-[#7f8a7b] hover:text-[#d8ff57] transition"
+                  title="Shuffle queue"
                 >
                   <Shuffle className="h-3.5 w-3.5" />
                 </button>
@@ -2628,11 +3148,33 @@ export default function Home() {
                 )}
 
                 <button
-                  aria-label="Repeat"
-                  onClick={() => toast.info("Repeat will apply when the queue is connected.")}
-                  className="hidden sm:block hover:text-[#d8ff57]"
+                  aria-label={`Repeat mode: ${repeatMode}`}
+                  onClick={toggleRepeatMode}
+                  className={`hidden sm:flex items-center gap-1 transition ${
+                    repeatMode !== "off"
+                      ? "text-[#d8ff57] drop-shadow-[0_0_8px_rgba(216,255,87,0.4)]"
+                      : "text-[#7f8a7b] hover:text-[#d8ff57]"
+                  }`}
+                  title={`Repeat: ${repeatMode.toUpperCase()}`}
                 >
-                  <Repeat2 className="h-3.5 w-3.5" />
+                  {repeatMode === "one" ? (
+                    <Repeat1 className="h-3.5 w-3.5" />
+                  ) : (
+                    <Repeat2 className="h-3.5 w-3.5" />
+                  )}
+                  {repeatMode !== "off" && (
+                    <span className="font-mono text-[9px] font-bold">
+                      {repeatMode === "one" ? "1" : "ALL"}
+                    </span>
+                  )}
+                </button>
+                <button
+                  aria-label="Toggle playback queue"
+                  onClick={() => setIsQueueOpen((prev) => !prev)}
+                  className="sm:hidden text-[#788376] hover:text-[#d8ff57]"
+                  title="Queue"
+                >
+                  <ListMusic className="h-3.5 w-3.5" />
                 </button>
                 <button
                   aria-label="Playback diagnostics"
@@ -2666,10 +3208,21 @@ export default function Home() {
             {/* Right Tools & Volume */}
             <div className="hidden w-[28%] items-center justify-end gap-3 md:flex">
               <button
-                onClick={() => toast.info("Queue view is ready for your next iteration.")}
-                className="text-[#788376] hover:text-white"
+                aria-label="Toggle playback queue"
+                onClick={() => setIsQueueOpen((prev) => !prev)}
+                className={`relative rounded-xl p-1.5 transition ${
+                  isQueueOpen
+                    ? "bg-[#d8ff57]/20 text-[#d8ff57]"
+                    : "text-[#788376] hover:bg-white/[0.06] hover:text-white"
+                }`}
+                title="Playback Queue"
               >
                 <ListMusic className="h-4 w-4" />
+                {queue.length > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#d8ff57] px-1 font-mono text-[9px] font-bold text-[#10130f]">
+                    {queue.length}
+                  </span>
+                )}
               </button>
               <button
                 aria-label="Playback diagnostics"
@@ -2694,6 +3247,23 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Playback Queue Drawer */}
+      <QueueDrawer
+        isOpen={isQueueOpen}
+        onClose={() => setIsQueueOpen(false)}
+        currentTrack={currentTrack}
+        isPlaying={isPlaying}
+        queue={queue}
+        repeatMode={repeatMode}
+        onToggleRepeat={toggleRepeatMode}
+        onPlayTrack={(track) => void playTrack(track, queue)}
+        onRemoveFromQueue={removeFromQueue}
+        onClearQueue={clearQueue}
+        onShuffleQueue={shuffleQueue}
+        onLoadAiMixToQueue={handleLoadAiMixToQueue}
+        hasAiMix={aiRecommendations.length > 0}
+      />
 
       {/* Playlist Dialog */}
       {showPlaylistDialog && (

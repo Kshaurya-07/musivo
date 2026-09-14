@@ -46,6 +46,7 @@ export type PlaybackTrack = {
 };
 
 export type PlaybackMode = "spotify" | "full" | "preview" | "idle";
+export type RepeatMode = "off" | "all" | "one";
 
 export interface PlaybackContextType {
   currentTrack: PlaybackTrack;
@@ -62,6 +63,13 @@ export interface PlaybackContextType {
   error: string | null;
   autoplayBlocked: boolean;
   queue: PlaybackTrack[];
+  repeatMode: RepeatMode;
+  toggleRepeatMode: () => void;
+  addToQueue: (track: PlaybackTrack) => void;
+  playNextInQueue: (track: PlaybackTrack) => void;
+  removeFromQueue: (index: number) => void;
+  clearQueue: () => void;
+  shuffleQueue: () => void;
   playTrack: (track: PlaybackTrack, newQueue?: PlaybackTrack[]) => Promise<void>;
   togglePlay: () => Promise<void>;
   pause: () => Promise<void>;
@@ -109,7 +117,10 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [queue, setQueue] = useState<PlaybackTrack[]>([]);
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>("off");
   const [userError, setUserError] = useState<string | null>(null);
+
+  const skipRef = useRef<(direction: 1 | -1) => Promise<void>>(() => Promise.resolve());
 
   // Hidden HTML5 audio element for preview/demo tracks
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -230,7 +241,7 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
             duration: 8000,
           });
         }
-        void skip(1);
+        void skipRef.current(1);
       }
     };
 
@@ -245,20 +256,7 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
       audio.pause();
       audio.src = "";
     };
-  }, [playbackMode]);
-
-  // Skip track forward or backward
-  const skip = useCallback(
-    async (direction: 1 | -1) => {
-      const activeQueue = queue.length > 0 ? queue : [currentTrack];
-      const nextIndex = getNextTrackIndex(activeQueue, currentTrack.id, direction);
-      if (nextIndex >= 0 && activeQueue[nextIndex]) {
-        await playTrack(activeQueue[nextIndex]);
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [queue, currentTrack]
-  );
+  }, [playbackMode, isSpotifyConnected]);
 
   // Background YouTube audio player setup for full-length song playback
   useEffect(() => {
@@ -314,7 +312,7 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
               } else if (event.data === 2) {
                 setIsPlaying(false);
               } else if (event.data === 0) {
-                void skip(1);
+                void skipRef.current(1);
               }
             },
             onError: (err: any) => {
@@ -342,7 +340,7 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
         initYt();
       };
     }
-  }, [skip, volume]);
+  }, [volume]);
 
   // Track position and full duration while in full streaming mode
   useEffect(() => {
@@ -566,6 +564,132 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
     [spotifyPlayer]
   );
 
+  const toggleRepeatMode = useCallback(() => {
+    setRepeatMode((prev) => {
+      if (prev === "off") {
+        toast.success("Repeat all enabled");
+        return "all";
+      }
+      if (prev === "all") {
+        toast.success("Repeat track enabled");
+        return "one";
+      }
+      toast.info("Repeat disabled");
+      return "off";
+    });
+  }, []);
+
+  const addToQueue = useCallback(
+    (track: PlaybackTrack) => {
+      setQueue((prev) => {
+        if (prev.length === 0) {
+          return [currentTrack, track];
+        }
+        return [...prev, track];
+      });
+      toast.success(`Added "${track.title}" to queue`);
+    },
+    [currentTrack]
+  );
+
+  const playNextInQueue = useCallback(
+    (track: PlaybackTrack) => {
+      setQueue((prev) => {
+        const idx = prev.findIndex((t) => String(t.id) === String(currentTrack.id));
+        if (idx >= 0) {
+          const copy = [...prev];
+          copy.splice(idx + 1, 0, track);
+          return copy;
+        }
+        return [currentTrack, track, ...prev];
+      });
+      toast.success(`Playing "${track.title}" next`);
+    },
+    [currentTrack]
+  );
+
+  const removeFromQueue = useCallback((index: number) => {
+    setQueue((prev) => prev.filter((_, idx) => idx !== index));
+    toast.info("Removed track from queue");
+  }, []);
+
+  const clearQueue = useCallback(() => {
+    setQueue([currentTrack]);
+    toast.info("Queue cleared");
+  }, [currentTrack]);
+
+  const shuffleQueue = useCallback(() => {
+    setQueue((prev) => {
+      if (prev.length <= 1) {
+        toast.info("Not enough tracks in queue to shuffle");
+        return prev;
+      }
+      const curIdx = prev.findIndex((t) => String(t.id) === String(currentTrack.id));
+      const current = curIdx >= 0 ? prev[curIdx] : currentTrack;
+      const others = prev.filter((_, i) => i !== curIdx);
+      for (let i = others.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [others[i], others[j]] = [others[j], others[i]];
+      }
+      toast.success("Upcoming queue shuffled");
+      return [current, ...others];
+    });
+  }, [currentTrack]);
+
+  const skip = useCallback(
+    async (direction: 1 | -1) => {
+      if (repeatMode === "one" && direction === 1) {
+        if (playbackMode === "full" && ytPlayerRef.current?.seekTo) {
+          ytPlayerRef.current.seekTo(0, true);
+          ytPlayerRef.current.playVideo();
+        } else if (audioRef.current) {
+          audioRef.current.currentTime = 0;
+          await audioRef.current.play().catch(() => undefined);
+        }
+        setProgress(0);
+        setIsPlaying(true);
+        return;
+      }
+
+      const activeQueue = queue.length > 0 ? queue : [currentTrack];
+      const curIndex = activeQueue.findIndex((t) => String(t.id) === String(currentTrack.id));
+
+      if (direction === 1) {
+        if (curIndex >= 0 && curIndex < activeQueue.length - 1) {
+          await playTrack(activeQueue[curIndex + 1]);
+        } else if (repeatMode === "all" && activeQueue.length > 0) {
+          await playTrack(activeQueue[0]);
+        } else {
+          // Reached end of queue without repeat: stay at last track
+          if (playbackMode === "full" && ytPlayerRef.current?.pauseVideo) {
+            ytPlayerRef.current.pauseVideo();
+          } else if (audioRef.current) {
+            audioRef.current.pause();
+          }
+          setIsPlaying(false);
+        }
+      } else {
+        if (curIndex > 0) {
+          await playTrack(activeQueue[curIndex - 1]);
+        } else if (repeatMode === "all" && activeQueue.length > 0) {
+          await playTrack(activeQueue[activeQueue.length - 1]);
+        } else {
+          if (playbackMode === "full" && ytPlayerRef.current?.seekTo) {
+            ytPlayerRef.current.seekTo(0, true);
+          } else if (audioRef.current) {
+            audioRef.current.currentTime = 0;
+          }
+          setProgress(0);
+        }
+      }
+    },
+    [queue, currentTrack, repeatMode, playbackMode, playTrack]
+  );
+
+  useEffect(() => {
+    skipRef.current = skip;
+  }, [skip]);
+
   const clearError = useCallback(() => {
     setUserError(null);
   }, []);
@@ -590,6 +714,13 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
       error: userError || spotifyPlayer.error,
       autoplayBlocked: spotifyPlayer.autoplayFailed,
       queue,
+      repeatMode,
+      toggleRepeatMode,
+      addToQueue,
+      playNextInQueue,
+      removeFromQueue,
+      clearQueue,
+      shuffleQueue,
       playTrack,
       togglePlay,
       pause,
@@ -617,6 +748,13 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
       isSpotifyConnected,
       userError,
       queue,
+      repeatMode,
+      toggleRepeatMode,
+      addToQueue,
+      playNextInQueue,
+      removeFromQueue,
+      clearQueue,
+      shuffleQueue,
       playTrack,
       togglePlay,
       pause,
@@ -624,6 +762,7 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
       seek,
       setVolume,
       skip,
+      setQueue,
       clearError,
       connectSpotify,
     ]
