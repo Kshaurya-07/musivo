@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "./_core/env";
 import * as db from "./db";
+import { invokeLLM } from "./_core/llm";
 
 export type CatalogTrack = {
   id: string;
@@ -28,19 +29,30 @@ type SpotifyTrack = {
 
 type SpotifySearchResponse = { tracks?: { items?: SpotifyTrack[] } };
 type SpotifyTokenResponse = { access_token?: string; refresh_token?: string; expires_in?: number; scope?: string; token_type?: string };
-type SpotifyProfile = { id?: string; display_name?: string | null };
+type SpotifyProfile = { id?: string; display_name?: string | null; images?: Array<{ url?: string }> };
 type SpotifyPlaylistResponse = { items?: Array<{ id?: string; name?: string; description?: string | null; images?: Array<{ url?: string }>; external_urls?: { spotify?: string }; tracks?: { total?: number } }> };
 type SpotifyRecentResponse = { items?: Array<{ played_at?: string; track?: SpotifyTrack | null }> };
 type SpotifyPlaylistTracksResponse = { items?: Array<{ track?: SpotifyTrack | null }> };
 
-type SpotifyStatePayload = { userId: number; nonce: string; redirectUri: string };
+type SpotifySavedTracksResponse = { total?: number; items?: Array<{ added_at?: string; track?: SpotifyTrack | null }> };
+
+export type SpotifyStatePayload = {
+  userId?: number;
+  isLogin?: boolean;
+  nonce: string;
+  redirectUri: string;
+  returnTo?: string;
+};
 
 const USER_SCOPES = [
   "streaming",
   "user-read-playback-state",
   "user-modify-playback-state",
+  "user-read-currently-playing",
+  "user-library-read",
   "playlist-read-private",
   "playlist-read-collaborative",
+  "playlist-modify-private",
   "user-read-recently-played",
   "user-read-private",
   "user-read-email",
@@ -95,14 +107,19 @@ export async function createSpotifyState(payload: SpotifyStatePayload) {
     .sign(getSessionKey());
 }
 
-export async function verifySpotifyState(state: string) {
+export async function verifySpotifyState(state: string): Promise<SpotifyStatePayload | null> {
   try {
     const { payload } = await jwtVerify(state, getSessionKey(), { algorithms: ["HS256"] });
-    const userId = typeof payload.userId === "number" ? payload.userId : Number(payload.userId);
     const nonce = typeof payload.nonce === "string" ? payload.nonce : "";
     const redirectUri = typeof payload.redirectUri === "string" ? payload.redirectUri : "";
-    if (!Number.isInteger(userId) || !nonce || !redirectUri) return null;
-    return { userId, nonce, redirectUri };
+    if (!nonce || !redirectUri) return null;
+    const userId = typeof payload.userId === "number" && Number.isInteger(payload.userId) && payload.userId > 0
+      ? payload.userId
+      : undefined;
+    const isLogin = Boolean(payload.isLogin);
+    const returnTo = typeof payload.returnTo === "string" ? payload.returnTo : undefined;
+    if (!userId && !isLogin) return null;
+    return { userId, isLogin, nonce, redirectUri, returnTo };
   } catch {
     return null;
   }
@@ -116,7 +133,7 @@ export function buildSpotifyAuthorizeUrl(state: string, redirectUri: string) {
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("scope", USER_SCOPES);
   url.searchParams.set("state", state);
-  url.searchParams.set("show_dialog", "false");
+  url.searchParams.set("show_dialog", "true");
   return url.toString();
 }
 
@@ -130,9 +147,10 @@ async function requestSpotifyToken(body: URLSearchParams) {
     },
     body,
   });
-  const payload = (await response.json()) as SpotifyTokenResponse;
+  const payload = (await response.json()) as SpotifyTokenResponse & { error?: string; error_description?: string };
   if (!response.ok || !payload.access_token) {
-    throw new Error(`Spotify token request failed with ${response.status}`);
+    const detail = payload.error_description || payload.error || `HTTP ${response.status}`;
+    throw new Error(`Spotify token request failed with ${response.status}: ${detail}`);
   }
   return payload;
 }
@@ -140,16 +158,25 @@ async function requestSpotifyToken(body: URLSearchParams) {
 async function getSpotifyAccessToken() {
   if (!hasSpotifyCredentials()) return null;
   if (cachedToken && cachedToken.expiresAt > Date.now() + 30_000) return cachedToken.value;
-  const payload = await requestSpotifyToken(new URLSearchParams({ grant_type: "client_credentials" }));
-  cachedToken = {
-    value: payload.access_token!,
-    expiresAt: Date.now() + Math.max(60, payload.expires_in ?? 3600) * 1000,
-  };
-  return cachedToken.value;
+  try {
+    const payload = await requestSpotifyToken(new URLSearchParams({ grant_type: "client_credentials" }));
+    cachedToken = {
+      value: payload.access_token!,
+      expiresAt: Date.now() + Math.max(60, payload.expires_in ?? 3600) * 1000,
+    };
+    return cachedToken.value;
+  } catch (error) {
+    console.warn("[Spotify] Client credentials grant failed:", error instanceof Error ? error.message : error);
+    return null;
+  }
 }
 
-async function exchangeUserCode(code: string, redirectUri: string) {
+export async function exchangeUserCode(code: string, redirectUri: string) {
   return requestSpotifyToken(new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: redirectUri }));
+}
+
+export async function fetchSpotifyProfile(accessToken: string) {
+  return spotifyUserFetchWithToken<SpotifyProfile & { email?: string }>(accessToken, "/me");
 }
 
 async function refreshUserAccessToken(userId: number) {
@@ -181,21 +208,33 @@ async function spotifyUserFetch<T>(userId: number, path: string) {
   return (await response.json()) as T;
 }
 
-export async function completeSpotifyConnection(userId: number, code: string, redirectUri: string) {
-  const payload = await exchangeUserCode(code, redirectUri);
-  if (!payload.refresh_token) throw new Error("Spotify did not return a refresh token");
-  const profile = await spotifyUserFetchWithToken<SpotifyProfile>(payload.access_token!, "/me");
+export async function saveSpotifyConnectionFromTokens(
+  userId: number,
+  tokens: { access_token: string; refresh_token?: string; expires_in?: number; scope?: string },
+  profile: SpotifyProfile & { email?: string }
+) {
   if (!profile.id) throw new Error("Spotify profile did not include an id");
+  const existing = await db.getSpotifyConnection(userId);
+  const refreshToken = tokens.refresh_token || (existing ? decryptSpotifyToken(existing.refreshTokenEncrypted) : "") || tokens.access_token;
+
   await db.upsertSpotifyConnection({
     userId,
     spotifyUserId: profile.id,
     spotifyDisplayName: profile.display_name ?? null,
-    accessTokenEncrypted: encryptSpotifyToken(payload.access_token!),
-    refreshTokenEncrypted: encryptSpotifyToken(payload.refresh_token),
-    accessTokenExpiresAt: new Date(Date.now() + Math.max(60, payload.expires_in ?? 3600) * 1000),
-    scope: payload.scope ?? USER_SCOPES,
+    spotifyProfileImageUrl: profile.images?.[0]?.url ?? null,
+    accessTokenEncrypted: encryptSpotifyToken(tokens.access_token),
+    refreshTokenEncrypted: encryptSpotifyToken(refreshToken),
+    accessTokenExpiresAt: new Date(Date.now() + Math.max(60, tokens.expires_in ?? 3600) * 1000),
+    scope: tokens.scope ?? USER_SCOPES,
   });
-  return profile;
+  return { ...profile, accessToken: tokens.access_token, refreshToken };
+}
+
+export async function completeSpotifyConnection(userId: number, code: string, redirectUri: string) {
+  const payload = await exchangeUserCode(code, redirectUri);
+  if (!payload.access_token) throw new Error("Spotify did not return an access token");
+  const profile = await spotifyUserFetchWithToken<SpotifyProfile & { email?: string }>(payload.access_token, "/me");
+  return saveSpotifyConnectionFromTokens(userId, payload as { access_token: string; refresh_token?: string; expires_in?: number; scope?: string }, profile);
 }
 
 async function spotifyUserFetchWithToken<T>(accessToken: string, path: string) {
@@ -204,6 +243,133 @@ async function spotifyUserFetchWithToken<T>(accessToken: string, path: string) {
   });
   if (!response.ok) throw new Error(`Spotify user API request failed with ${response.status}`);
   return (await response.json()) as T;
+}
+
+async function spotifyUserRequest<T>(userId: number, path: string, init: RequestInit) {
+  const accessToken = await getUserSpotifyAccessToken(userId);
+  const response = await fetch(`https://api.spotify.com/v1${path}`, {
+    ...init,
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", ...(init.headers ?? {}) },
+  });
+  if (!response.ok) throw new Error(`Spotify user API request failed with ${response.status}`);
+  return (await response.json()) as T;
+}
+
+async function searchSpotifyUserTrack(userId: number, title: string, artist: string) {
+  const payload = await spotifyUserFetch<SpotifySearchResponse>(userId, `/search?q=${encodeURIComponent(`track:${title} artist:${artist}`)}&type=track&limit=1&market=${encodeURIComponent(ENV.spotifyMarket || "US")}`);
+  return payload.tracks?.items?.[0];
+}
+
+export async function createSpotifyPlaylist(userId: number, name: string, description: string, trackIds: string[]) {
+  const connection = await db.getSpotifyConnection(userId);
+  if (!connection) throw new Error("Spotify account is not connected");
+  const playlist = await spotifyUserRequest<{ id?: string; external_urls?: { spotify?: string }; name?: string }>(userId, `/users/${encodeURIComponent(connection.spotifyUserId)}/playlists`, { method: "POST", body: JSON.stringify({ name, description, public: false, collaborative: false }) });
+  if (!playlist.id) throw new Error("Spotify did not create the playlist");
+  const uniqueIds = Array.from(new Set(trackIds.map((id) => id.replace(/^spotify-/, "")).filter(Boolean)));
+  for (let offset = 0; offset < uniqueIds.length; offset += 100) {
+    await spotifyUserRequest(userId, `/playlists/${encodeURIComponent(playlist.id)}/tracks`, { method: "POST", body: JSON.stringify({ uris: uniqueIds.slice(offset, offset + 100).map((id) => `spotify:track:${id}`) }) });
+  }
+  return { id: playlist.id, name: playlist.name ?? name, storeUrl: playlist.external_urls?.spotify ?? `https://open.spotify.com/playlist/${playlist.id}`, trackCount: uniqueIds.length };
+}
+
+export async function createAiSpotifyMix(userId: number) {
+  const recent = await db.listSpotifyRecentTracks(userId);
+  if (!recent.length) throw new Error("Sync your recently played tracks before building an AI mix.");
+
+  let matches: Array<{ title: string; artist: string; reason: string; id: string; art: string | null }> = [];
+
+  // 1. If an AI key (OpenAI or Forge) is configured, attempt GPT curation
+  if (ENV.forgeApiKey) {
+    try {
+      const seedTracks = recent.slice(0, 20).map((track) => `${track.title} — ${track.artist} — ${track.album ?? "single"}`).join("\n");
+      const result = await invokeLLM({
+        model: "gpt-4o-mini",
+        maxTokens: 1200,
+        messages: [
+          { role: "system", content: "You are a music discovery assistant. Analyze recently played tracks and suggest musically similar songs. Return only the requested JSON." },
+          { role: "user", content: `Recently played tracks:\n${seedTracks}\nSuggest 8 distinct songs not already in the list. Favor adjacent genres, moods, and artists. Include a concise reason for each.` },
+        ],
+        responseFormat: { type: "json_schema", json_schema: { name: "music_recommendations", strict: true, schema: { type: "object", properties: { recommendations: { type: "array", items: { type: "object", properties: { title: { type: "string" }, artist: { type: "string" }, reason: { type: "string" } }, required: ["title", "artist", "reason"], additionalProperties: false } } }, required: ["recommendations"], additionalProperties: false } } },
+      });
+      const content = result.choices[0]?.message.content;
+      const parsed = typeof content === "string" ? JSON.parse(content) as { recommendations?: Array<{ title: string; artist: string; reason: string }> } : { recommendations: [] };
+      const recommendations = (parsed.recommendations ?? []).slice(0, 8);
+      for (const recommendation of recommendations) {
+        const match = await searchSpotifyUserTrack(userId, recommendation.title, recommendation.artist);
+        if (match?.id) matches.push({ ...recommendation, id: match.id, art: match.album?.images?.[0]?.url ?? null });
+      }
+    } catch (llmErr) {
+      console.warn("[AI Mix] LLM curation skipped/failed; generating algorithmic Spotify mix:", llmErr);
+      matches = [];
+    }
+  }
+
+  // 2. Fallback: Intelligent Spotify Catalog Recommendation using recent listening profile
+  if (!matches.length) {
+    const recentTrackIds = new Set(recent.map((r) => r.externalId.replace(/^spotify-/, "")));
+    const recentTitles = new Set(recent.map((r) => r.title.toLowerCase().trim()));
+    const artists = Array.from(new Set(recent.map((r) => r.artist).filter(Boolean))).slice(0, 6);
+
+    for (const artist of artists) {
+      if (matches.length >= 8) break;
+      try {
+        const searchRes = await spotifyUserFetch<SpotifySearchResponse>(
+          userId,
+          `/search?q=${encodeURIComponent(`artist:${artist}`)}&type=track&limit=5&market=${encodeURIComponent(ENV.spotifyMarket || "US")}`
+        );
+        const candidateTracks = searchRes.tracks?.items ?? [];
+        for (const cand of candidateTracks) {
+          if (matches.length >= 8) break;
+          if (!cand.id || recentTrackIds.has(cand.id)) continue;
+          if (recentTitles.has(cand.name.toLowerCase().trim())) continue;
+          if (matches.some((m) => m.id === cand.id)) continue;
+
+          matches.push({
+            id: cand.id,
+            title: cand.name,
+            artist: cand.artists?.[0]?.name || artist,
+            reason: `Top recommendation based on ${artist}`,
+            art: cand.album?.images?.[0]?.url ?? null,
+          });
+        }
+      } catch (err) {
+        console.warn(`[Smart Mix] Search failed for artist ${artist}:`, err);
+      }
+    }
+  }
+
+  // 3. Safety net: if artist search was exhausted, fill from current popular tracks
+  if (!matches.length) {
+    try {
+      const topHits = await spotifyUserFetch<SpotifySearchResponse>(
+        userId,
+        `/search?q=${encodeURIComponent("year:2024-2025")}&type=track&limit=10&market=${encodeURIComponent(ENV.spotifyMarket || "US")}`
+      );
+      for (const cand of topHits.tracks?.items ?? []) {
+        if (matches.length >= 8) break;
+        if (cand.id && !matches.some((m) => m.id === cand.id)) {
+          matches.push({
+            id: cand.id,
+            title: cand.name,
+            artist: cand.artists?.[0]?.name || "Featured Artist",
+            reason: "Trending discovery track",
+            art: cand.album?.images?.[0]?.url ?? null,
+          });
+        }
+      }
+    } catch {}
+  }
+
+  if (!matches.length) throw new Error("Could not find matching tracks. Please sync your library again.");
+
+  const playlist = await createSpotifyPlaylist(
+    userId,
+    `Musivo AI Mix · ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+    "Curated by Musivo based on your recently played tracks.",
+    matches.map((match) => match.id)
+  );
+
+  return { playlist, recommendations: matches };
 }
 
 export async function syncSpotifyUserData(userId: number) {
@@ -234,9 +400,22 @@ export async function syncSpotifyUserData(userId: number) {
     playedAt: new Date(item.played_at!),
   }));
 
+  let savedCount = 0;
+  try {
+    const savedPayload = await spotifyUserFetch<SpotifySavedTracksResponse>(userId, "/me/tracks?limit=50");
+    savedCount = savedPayload.total ?? (savedPayload.items?.length || 0);
+  } catch (err) {
+    console.warn("[Spotify] Saved tracks sync count failed:", err);
+  }
+
   await db.replaceSpotifyPlaylists(userId, playlists);
   await db.replaceSpotifyRecentTracks(userId, recentTracks);
-  return { playlists: playlists.length, recentlyPlayed: recentTracks.length, syncedAt: new Date() };
+  return {
+    playlists: playlists.length,
+    recentlyPlayed: recentTracks.length,
+    savedTracks: savedCount,
+    syncedAt: new Date(),
+  };
 }
 
 export async function getSpotifyPlaylistDetail(userId: number, externalId: string, query = "") {

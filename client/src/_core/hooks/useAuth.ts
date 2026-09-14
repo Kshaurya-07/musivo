@@ -43,7 +43,10 @@ export function useAuth(options?: UseAuthOptions) {
       // header-based sessions (Safari ITP / WebView) are logged out too. The
       // backend cookie is cleared by the logout mutation.
       try {
+        localStorage.removeItem("musivo_token");
+        sessionStorage.removeItem("musivo_token");
         sessionStorage.removeItem("manus-cookie");
+        localStorage.removeItem("manus-runtime-user-info");
       } catch {}
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();

@@ -37,17 +37,36 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+// Extract and persist auth token from OAuth redirects if present
+try {
+  if (typeof window !== "undefined") {
+    const urlParams = new URLSearchParams(window.location.search);
+    const authToken = urlParams.get("auth_token");
+    if (authToken) {
+      localStorage.setItem("musivo_token", authToken);
+      sessionStorage.setItem("musivo_token", authToken);
+      sessionStorage.setItem("manus-cookie", `${COOKIE_NAME}=${authToken}`);
+      urlParams.delete("auth_token");
+      const remainingSearch = urlParams.toString() ? `?${urlParams.toString()}` : "";
+      window.history.replaceState({}, document.title, `${window.location.pathname}${remainingSearch}${window.location.hash}`);
+    }
+  }
+} catch (e) {
+  console.warn("[Auth] Token extraction skipped:", e);
+}
+
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
       headers() {
-        // Preview auto-login fallback: when the browser blocks iframe cookies
-        // (Safari ITP / private browsing / WebView), the runtime mirrors the
-        // session into sessionStorage so we can forward it as a Bearer token.
-        // The regular OAuth cookie flow keeps working and takes priority server-side.
+        // Dual storage authentication: check direct token first, then fallback to cookie mirror
         try {
+          const directToken = localStorage.getItem("musivo_token") || sessionStorage.getItem("musivo_token");
+          if (directToken) {
+            return { Authorization: `Bearer ${directToken}` };
+          }
           const raw = sessionStorage.getItem("manus-cookie");
           if (raw) {
             const prefix = `${COOKIE_NAME}=`;
@@ -58,7 +77,7 @@ const trpcClient = trpc.createClient({
             }
           }
         } catch {
-          // sessionStorage unavailable
+          // storage unavailable
         }
         return {};
       },

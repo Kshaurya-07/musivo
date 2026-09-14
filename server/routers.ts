@@ -26,6 +26,8 @@ import {
   getSpotifyHomeTracks,
   getSpotifyPlaylistDetail,
   getUserSpotifyAccessToken,
+  createSpotifyPlaylist,
+  createAiSpotifyMix,
   searchSpotifyTracks,
   syncSpotifyUserData,
 } from "./spotify";
@@ -100,7 +102,18 @@ function getSpotifyRedirectUri(origin: string) {
 export const appRouter = router({
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    me: publicProcedure.query(async (opts) => {
+      const user = opts.ctx.user;
+      if (!user) return null;
+      const spotifyConnection = await getSpotifyConnection(user.id);
+      return {
+        ...user,
+        hasGoogle: user.loginMethod === "google" || user.openId.startsWith("google:"),
+        hasSpotify: Boolean(spotifyConnection),
+        spotifyDisplayName: spotifyConnection?.spotifyDisplayName ?? null,
+        spotifyProfileImageUrl: spotifyConnection?.spotifyProfileImageUrl ?? null,
+      };
+    }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -111,10 +124,16 @@ export const appRouter = router({
     status: publicProcedure.query(() => catalogStatus()),
     home: publicProcedure.query(async () => {
       try {
-        return await getSpotifyHomeTracks();
+        const spotifyTracks = await getSpotifyHomeTracks();
+        if (spotifyTracks && spotifyTracks.length > 0) return spotifyTracks;
+        return await searchItunesTracks("top hits", 12);
       } catch (error) {
-        console.error("[Music] Spotify home feed failed:", error);
-        return null;
+        console.warn("[Music] Spotify home feed fallback active:", error instanceof Error ? error.message : error);
+        try {
+          return await searchItunesTracks("top hits", 12);
+        } catch {
+          return null;
+        }
       }
     }),
     search: publicProcedure
@@ -148,7 +167,15 @@ export const appRouter = router({
       const redirectUri = getSpotifyRedirectUri(input.origin);
       const nonce = randomUUID();
       const state = await createSpotifyState({ userId: ctx.user.id, nonce, redirectUri });
-      ctx.res.cookie("__Host-spotify_state", nonce, { httpOnly: true, secure: true, sameSite: "none", path: "/", maxAge: 10 * 60 * 1000 });
+      const isSecure = ctx.req.protocol === "https" || ctx.req.headers["x-forwarded-proto"] === "https";
+      const cookieName = isSecure ? "__Host-spotify_state" : "spotify_state";
+      ctx.res.cookie(cookieName, nonce, {
+        httpOnly: true,
+        secure: isSecure,
+        sameSite: isSecure ? "none" : "lax",
+        path: "/",
+        maxAge: 10 * 60 * 1000,
+      });
       return { authorizeUrl: buildSpotifyAuthorizeUrl(state, redirectUri) };
     }),
     sync: protectedProcedure.mutation(async ({ ctx }) => {
@@ -173,6 +200,22 @@ export const appRouter = router({
       }
     }),
     recentlyPlayed: protectedProcedure.query(({ ctx }) => listSpotifyRecentTracks(ctx.user.id)),
+    createPlaylist: protectedProcedure.input(z.object({ name: z.string().trim().min(1).max(100), description: z.string().trim().max(300).optional(), trackIds: z.array(z.string().min(1)).max(500).default([]) })).mutation(async ({ ctx, input }) => {
+      try {
+        return await createSpotifyPlaylist(ctx.user.id, input.name, input.description ?? "Created in Musivo", input.trackIds);
+      } catch (error) {
+        console.error("[Spotify] Playlist creation failed:", error);
+        throw new TRPCError({ code: "BAD_GATEWAY", message: "Spotify playlist could not be created. Please reconnect and try again." });
+      }
+    }),
+    createAiMix: protectedProcedure.mutation(async ({ ctx }) => {
+      try {
+        return await createAiSpotifyMix(ctx.user.id);
+      } catch (error) {
+        console.error("[Spotify] AI mix failed:", error);
+        throw new TRPCError({ code: "BAD_GATEWAY", message: error instanceof Error ? error.message : "The AI mix could not be created right now." });
+      }
+    }),
   }),
   playlists: router({
     list: protectedProcedure.query(({ ctx }) => listUserPlaylists(ctx.user.id)),
