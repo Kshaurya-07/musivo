@@ -45,6 +45,10 @@ self.addEventListener("fetch", (event) => {
     url.pathname.startsWith("/api/") ||
     url.pathname.startsWith("/trpc/") ||
     request.destination === "audio" ||
+    request.headers.get("range") ||
+    url.pathname.endsWith(".mp3") ||
+    url.pathname.endsWith(".m4a") ||
+    url.pathname.endsWith(".wav") ||
     url.origin !== self.location.origin
   ) {
     return;

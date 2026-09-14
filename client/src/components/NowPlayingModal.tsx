@@ -57,7 +57,7 @@ export function NowPlayingModal({
   const progressPercent = duration > 0 ? (progress / duration) * 100 : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-between bg-[#0d0a07] px-6 py-6 sm:px-10 sm:py-8 text-[#faf5ee] animate-in slide-in-from-bottom duration-300">
+    <div className="fixed inset-0 z-50 flex flex-col justify-between bg-[#0d0a07] px-5 py-5 sm:px-10 sm:py-8 text-[#faf5ee] animate-in slide-in-from-bottom duration-300 safe-area-pt safe-area-pb">
       {/* Ambient background glows */}
       <div
         className="pointer-events-none absolute inset-0 opacity-25 blur-[100px]"
@@ -96,7 +96,7 @@ export function NowPlayingModal({
       </div>
 
       {/* Center Artwork */}
-      <div className="relative z-10 mx-auto my-auto w-full max-w-[340px] sm:max-w-[380px] aspect-square">
+      <div className="relative z-10 mx-auto my-auto w-full max-w-[270px] xs:max-w-[310px] sm:max-w-[380px] aspect-square">
         <div className="relative h-full w-full overflow-hidden rounded-3xl border border-[#f5ba42]/20 bg-[#16100a] shadow-[0_20px_60px_rgba(0,0,0,0.7)]">
           <img
             src={currentTrack.art}

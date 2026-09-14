@@ -2638,7 +2638,7 @@ export default function Home() {
             </div>
           </header>
 
-          <div className="px-5 py-7 md:px-8 lg:px-12 lg:py-9">
+          <div className="px-3.5 py-5 sm:px-6 sm:py-7 md:px-8 lg:px-12 lg:py-9 pb-32 sm:pb-36 lg:pb-28">
             {autoplayBlocked && (
               <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-[#f5ba42]/30 bg-[#22160d] p-4 text-xs text-[#f5ba42]">
                 <span>Browser audio autoplay was restricted. Press play to start playback in this browser.</span>
@@ -2915,21 +2915,21 @@ export default function Home() {
                 </div>
 
                 {/* Spotify Signature 6-Item Quick-Access Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-9">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 mb-6 sm:mb-9">
                   {/* Tile 1: Liked Songs */}
                   <div
                     onClick={() => setActiveView("liked")}
-                    className="group relative flex items-center gap-3.5 rounded-xl overflow-hidden bg-white/[0.05] hover:bg-white/[0.11] transition duration-200 cursor-pointer border border-white/[0.04]"
+                    className="group relative flex items-center gap-2 sm:gap-3.5 h-12 sm:h-14 rounded-xl overflow-hidden bg-white/[0.05] hover:bg-white/[0.11] transition duration-200 cursor-pointer border border-white/[0.04]"
                   >
-                    <div className="h-16 w-16 shrink-0 bg-gradient-to-br from-[#ffd064] via-[#f5ba42] to-[#c88719] flex items-center justify-center text-[#140f07] shadow-md">
-                      <Heart className="h-7 w-7 fill-current" />
+                    <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 bg-gradient-to-br from-[#ffd064] via-[#f5ba42] to-[#c88719] flex items-center justify-center text-[#140f07] shadow-md">
+                      <Heart className="h-5 w-5 sm:h-6 sm:w-6 fill-current" />
                     </div>
-                    <div className="min-w-0 flex-1 pr-2">
-                      <p className="font-semibold text-sm text-[#faf5ee] truncate">
+                    <div className="min-w-0 flex-1 pr-1.5 sm:pr-2">
+                      <p className="font-semibold text-xs sm:text-sm text-[#faf5ee] truncate">
                         Liked Songs
                       </p>
-                      <p className="text-[11px] text-[#9a8976] truncate">
-                        {likedTracks.length} saved tracks
+                      <p className="text-[10px] sm:text-[11px] text-[#9a8976] truncate hidden xs:block">
+                        {likedTracks.length} saved
                       </p>
                     </div>
                     <button
@@ -2940,26 +2940,26 @@ export default function Home() {
                         if (likedTracks.length) void playTrack(likedTracks[0], likedTracks);
                         else setActiveView("liked");
                       }}
-                      className="mr-3.5 h-10 w-10 rounded-full bg-[#f5ba42] text-[#140f07] shadow-xl flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:scale-100 scale-90 transition-all duration-200 hover:scale-105 shrink-0"
+                      className="mr-2 sm:mr-3.5 h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-[#f5ba42] text-[#140f07] shadow-xl flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:scale-100 scale-90 transition-all duration-200 hover:scale-105 shrink-0"
                     >
-                      <Play className="h-4 w-4 fill-current ml-0.5" />
+                      <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current ml-0.5" />
                     </button>
                   </div>
 
                   {/* Tile 2: AI Mix Studio */}
                   <div
                     onClick={() => setActiveView("aimix")}
-                    className="group relative flex items-center gap-3.5 rounded-xl overflow-hidden bg-white/[0.05] hover:bg-white/[0.11] transition duration-200 cursor-pointer border border-white/[0.04]"
+                    className="group relative flex items-center gap-2 sm:gap-3.5 h-12 sm:h-14 rounded-xl overflow-hidden bg-white/[0.05] hover:bg-white/[0.11] transition duration-200 cursor-pointer border border-white/[0.04]"
                   >
-                    <div className="h-16 w-16 shrink-0 bg-gradient-to-br from-[#ffd064] via-[#f5ba42] to-[#c88719] flex items-center justify-center text-[#140f07] shadow-md">
-                      <Sparkles className="h-7 w-7" />
+                    <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 bg-gradient-to-br from-[#ffd064] via-[#f5ba42] to-[#c88719] flex items-center justify-center text-[#140f07] shadow-md">
+                      <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" />
                     </div>
-                    <div className="min-w-0 flex-1 pr-2">
-                      <p className="font-semibold text-sm text-[#faf5ee] truncate">
+                    <div className="min-w-0 flex-1 pr-1.5 sm:pr-2">
+                      <p className="font-semibold text-xs sm:text-sm text-[#faf5ee] truncate">
                         AI Mix Studio
                       </p>
-                      <p className="text-[11px] text-[#9a8976] truncate">
-                        Curated neural soundscapes
+                      <p className="text-[10px] sm:text-[11px] text-[#9a8976] truncate hidden xs:block">
+                        Curated neural
                       </p>
                     </div>
                     <button
@@ -2969,9 +2969,9 @@ export default function Home() {
                         e.stopPropagation();
                         setActiveView("aimix");
                       }}
-                      className="mr-3.5 h-10 w-10 rounded-full bg-[#f5ba42] text-[#140f07] shadow-xl flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:scale-100 scale-90 transition-all duration-200 hover:scale-105 shrink-0"
+                      className="mr-2 sm:mr-3.5 h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-[#f5ba42] text-[#140f07] shadow-xl flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:scale-100 scale-90 transition-all duration-200 hover:scale-105 shrink-0"
                     >
-                      <Play className="h-4 w-4 fill-current ml-0.5" />
+                      <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current ml-0.5" />
                     </button>
                   </div>
 
@@ -2980,18 +2980,18 @@ export default function Home() {
                     <div
                       key={`quick-${track.id}`}
                       onClick={() => void playTrack(track, catalog)}
-                      className="group relative flex items-center gap-3.5 rounded-xl overflow-hidden bg-white/[0.05] hover:bg-white/[0.11] transition duration-200 cursor-pointer border border-white/[0.04]"
+                      className="group relative flex items-center gap-2 sm:gap-3.5 h-12 sm:h-14 rounded-xl overflow-hidden bg-white/[0.05] hover:bg-white/[0.11] transition duration-200 cursor-pointer border border-white/[0.04]"
                     >
                       <img
                         src={track.art}
                         alt=""
-                        className="h-16 w-16 shrink-0 object-cover"
+                        className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 object-cover"
                       />
-                      <div className="min-w-0 flex-1 pr-2">
-                        <p className="font-semibold text-sm text-[#faf5ee] truncate">
+                      <div className="min-w-0 flex-1 pr-1.5 sm:pr-2">
+                        <p className="font-semibold text-xs sm:text-sm text-[#faf5ee] truncate">
                           {track.title}
                         </p>
-                        <p className="text-[11px] text-[#9a8976] truncate">
+                        <p className="text-[10px] sm:text-[11px] text-[#9a8976] truncate hidden xs:block">
                           {track.artist}
                         </p>
                       </div>
@@ -3002,16 +3002,16 @@ export default function Home() {
                           e.stopPropagation();
                           void playTrack(track, catalog);
                         }}
-                        className="mr-3.5 h-10 w-10 rounded-full bg-[#f5ba42] text-[#140f07] shadow-xl flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:scale-100 scale-90 transition-all duration-200 hover:scale-105 shrink-0"
+                        className="mr-2 sm:mr-3.5 h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-[#f5ba42] text-[#140f07] shadow-xl flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:scale-100 scale-90 transition-all duration-200 hover:scale-105 shrink-0"
                       >
-                        <Play className="h-4 w-4 fill-current ml-0.5" />
+                        <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current ml-0.5" />
                       </button>
                     </div>
                   ))}
                 </div>
 
                 {/* Spotify-Style Editorial Hero Banner (Pure sleek album vinyl graphics, zero uploaded photo!) */}
-                <section className="relative overflow-hidden rounded-[26px] border border-[#f5ba42]/20 bg-[#24170c] shadow-[0_24px_80px_rgba(0,0,0,0.4)]">
+                <section className="relative overflow-hidden rounded-2xl sm:rounded-[26px] border border-[#f5ba42]/20 bg-[#24170c] shadow-[0_16px_60px_rgba(0,0,0,0.4)]">
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(245,186,66,0.32),transparent_32%),linear-gradient(105deg,#24170c_0%,#352010_45%,#150e08_100%)]" />
                   <div className="absolute -right-20 -top-32 h-[420px] w-[420px] rounded-full border border-[#f5ba42]/25 bg-[#f5ba42]/15 blur-3xl pointer-events-none" />
                   
@@ -3052,38 +3052,38 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="relative max-w-[650px] px-6 py-8 md:px-9 md:py-10 lg:px-11 lg:py-12">
-                    <div className="mb-6 flex items-center gap-3">
-                      <span className="rounded-full bg-[#f5ba42] px-2.5 py-1 font-mono text-[9px] font-medium tracking-[0.16em] text-[#140f07] shadow-sm">
+                  <div className="relative max-w-[650px] px-4 py-5 sm:px-8 sm:py-8 md:px-9 md:py-10 lg:px-11 lg:py-12">
+                    <div className="mb-3 sm:mb-6 flex items-center gap-2.5 sm:gap-3">
+                      <span className="rounded-full bg-[#f5ba42] px-2 py-0.5 sm:px-2.5 sm:py-1 font-mono text-[9px] font-medium tracking-[0.16em] text-[#140f07] shadow-sm">
                         {isSpotifyConnected ? "SPOTIFY CONNECTED" : "PREVIEW MODE"}
                       </span>
-                      <span className="font-mono text-[10px] tracking-[0.16em] text-[#d8c9a8]">
+                      <span className="font-mono text-[9px] sm:text-[10px] tracking-[0.16em] text-[#d8c9a8]">
                         {catalog.length} TRACKS
                       </span>
                     </div>
-                    <h2 className="font-display max-w-[570px] text-4xl font-semibold leading-[0.98] tracking-[-0.07em] text-[#faf5ee] md:text-5xl lg:text-6xl">
+                    <h2 className="font-display max-w-[570px] text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.05] tracking-[-0.05em] text-[#faf5ee]">
                       Stream your favorite music with Musivo<span className="text-[#f5ba42]">.</span>
                     </h2>
-                    <p className="mt-5 max-w-[440px] text-sm leading-6 text-[#d6c8b6] md:text-[15px]">
+                    <p className="mt-2.5 sm:mt-5 max-w-[440px] text-xs sm:text-sm leading-5 sm:leading-6 text-[#d6c8b6] md:text-[15px]">
                       Discover a world of sound with Musivo (integrated with Spotify), where every genre and artist is at your fingertips, ready to be explored.
                     </p>
-                    <div className="mt-8 flex flex-wrap items-center gap-3">
+                    <div className="mt-4 sm:mt-8 flex flex-wrap items-center gap-2.5 sm:gap-3">
                       <button
                         onClick={() => void playTrack(featuredTrack, catalog)}
-                        className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#ffd064] via-[#f5ba42] to-[#e09b26] px-6 py-3 text-sm font-bold text-[#140f07] shadow-[0_8px_28px_rgba(245,186,66,0.35)] hover:opacity-95 hover:scale-[1.02] transition"
+                        className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#ffd064] via-[#f5ba42] to-[#e09b26] px-4 py-2 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold text-[#140f07] shadow-[0_8px_28px_rgba(245,186,66,0.35)] hover:opacity-95 hover:scale-[1.02] transition"
                       >
-                        <Play className="h-4 w-4 fill-current" /> Start listening
+                        <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" /> Start listening
                       </button>
                       <button
                         onClick={() => setActiveView("discover")}
-                        className="rounded-full border border-white/20 px-5 py-3 text-sm font-semibold text-[#faf5ee] hover:bg-white/10 transition"
+                        className="rounded-full border border-white/20 px-3.5 py-2 sm:px-5 sm:py-3 text-xs sm:text-sm font-semibold text-[#faf5ee] hover:bg-white/10 transition"
                       >
                         Explore the mix
                       </button>
                     </div>
                   </div>
 
-                  <div className="relative flex items-center gap-3 border-t border-white/[0.09] bg-black/20 px-6 py-3 md:px-9 lg:px-11">
+                  <div className="relative flex items-center gap-3 border-t border-white/[0.09] bg-black/20 px-4 py-2.5 sm:px-8 sm:py-3 lg:px-11">
                     <div className="waveform">
                       <span />
                       <span />
@@ -3091,7 +3091,7 @@ export default function Home() {
                       <span />
                       <span />
                     </div>
-                    <p className="text-xs text-[#cbbca8]">
+                    <p className="text-[11px] sm:text-xs text-[#cbbca8]">
                       Your daily mix is ready{" "}
                       <span className="text-[#8a7a67]">· refreshed just now</span>
                     </p>
@@ -3113,17 +3113,17 @@ export default function Home() {
                   onOpen={() => setActiveView("spotify")}
                 />
 
-                <div className="mt-8 overflow-hidden rounded-3xl border border-[#f5ba42]/20 bg-gradient-to-br from-[#291e14] via-[#1f160e] to-[#140e08] p-6 sm:p-7 shadow-xl relative">
+                <div className="mt-6 sm:mt-8 overflow-hidden rounded-2xl sm:rounded-3xl border border-[#f5ba42]/20 bg-gradient-to-br from-[#291e14] via-[#1f160e] to-[#140e08] p-4 sm:p-7 shadow-xl relative">
                   <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-[#f5ba42]/10 blur-3xl pointer-events-none" />
-                  <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-                    <div className="space-y-1.5 max-w-xl">
+                  <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-5">
+                    <div className="space-y-1 sm:space-y-1.5 max-w-xl">
                       <div className="flex items-center gap-2 text-[#f5ba42]">
-                        <Sparkles className="h-4 w-4 animate-pulse" />
-                        <span className="font-mono text-[10px] uppercase tracking-[0.16em] font-semibold">
+                        <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-pulse" />
+                        <span className="font-mono text-[9px] sm:text-[10px] uppercase tracking-[0.16em] font-semibold">
                           AI Mix Studio
                         </span>
                       </div>
-                      <h2 className="font-display text-xl sm:text-2xl font-bold text-[#faf5ee] tracking-tight">
+                      <h2 className="font-display text-lg sm:text-2xl font-bold text-[#faf5ee] tracking-tight">
                         Curate your personal soundscape with AI
                       </h2>
                       <p className="text-xs sm:text-sm text-[#cbbca8] leading-relaxed">
@@ -3133,7 +3133,7 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={() => setActiveView("aimix")}
-                      className="flex items-center gap-2 rounded-full bg-[#f5ba42] hover:bg-[#ffd064] px-5 py-2.5 text-xs font-bold text-[#140f07] shadow-lg transition hover:scale-[1.03] shrink-0"
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-full bg-[#f5ba42] hover:bg-[#ffd064] px-5 py-2.5 text-xs font-bold text-[#140f07] shadow-lg transition hover:scale-[1.03] shrink-0"
                     >
                       <Sparkles className="h-3.5 w-3.5" />
                       Open AI Mix Studio
@@ -3141,22 +3141,22 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Spotify "Made For You" Square Album Cards Grid */}
-                <section className="mt-10">
+                {/* Spotify "Made For You" Square Album Cards */}
+                <section className="mt-8 sm:mt-10">
                   <SectionHeading
                     eyebrow="Made For You"
                     title="Jump back in"
                     action="See all"
                     onAction={() => setActiveView("discover")}
                   />
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4">
+                  <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-3 sm:gap-4 snap-x pb-2 hide-scrollbar sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4">
                     {catalog.slice(0, 4).map((track) => (
                       <div
                         key={`made-for-you-${track.id}`}
                         onClick={() => void playTrack(track, catalog)}
-                        className="group gloss-card flex flex-col p-3.5 rounded-2xl bg-[#17110a] hover:bg-[#231a10] border border-white/[0.06] hover:border-white/[0.14] transition-all duration-300 cursor-pointer"
+                        className="group gloss-card flex flex-col p-3 sm:p-3.5 rounded-2xl bg-[#17110a] hover:bg-[#231a10] border border-white/[0.06] hover:border-white/[0.14] transition-all duration-300 cursor-pointer min-w-[150px] w-[150px] sm:min-w-0 sm:w-auto snap-start shrink-0 sm:shrink"
                       >
-                        <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-3 bg-[#24170c] shadow-md">
+                        <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-2.5 sm:mb-3 bg-[#24170c] shadow-md">
                           <img
                             src={track.art}
                             alt=""
@@ -3170,18 +3170,18 @@ export default function Home() {
                               e.stopPropagation();
                               void playTrack(track, catalog);
                             }}
-                            className="absolute bottom-2.5 right-2.5 h-11 w-11 rounded-full bg-[#f5ba42] text-[#140f07] shadow-2xl flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:scale-105"
+                            className="absolute bottom-2 right-2 sm:bottom-2.5 sm:right-2.5 h-9 w-9 sm:h-11 sm:w-11 rounded-full bg-[#f5ba42] text-[#140f07] shadow-2xl flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:scale-105"
                           >
-                            <Play className="h-5 w-5 fill-current ml-0.5" />
+                            <Play className="h-4 w-4 sm:h-5 sm:w-5 fill-current ml-0.5" />
                           </button>
                         </div>
-                        <p className="font-semibold text-sm text-[#faf5ee] truncate">
+                        <p className="font-semibold text-xs sm:text-sm text-[#faf5ee] truncate">
                           {track.title}
                         </p>
-                        <p className="text-xs text-[#9a8976] truncate mt-0.5">
+                        <p className="text-[11px] sm:text-xs text-[#9a8976] truncate mt-0.5">
                           {track.artist}
                         </p>
-                        <div className="mt-2.5 flex items-center justify-between pt-2 border-t border-white/[0.05]">
+                        <div className="mt-2 sm:mt-2.5 flex items-center justify-between pt-1.5 sm:pt-2 border-t border-white/[0.05]">
                           <span className="font-mono text-[10px] text-[#7d6e5d]">
                             {track.duration}
                           </span>
@@ -3222,14 +3222,14 @@ export default function Home() {
                   </div>
                 </section>
 
-                <section className="mt-10">
+                <section className="mt-8 sm:mt-10">
                   <SectionHeading
                     eyebrow="Your sound, expanded"
                     title="Made for your next move"
                     action="View all"
                     onAction={() => setActiveView("discover")}
                   />
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-3 sm:gap-4 snap-x pb-2 hide-scrollbar sm:grid-cols-2 lg:grid-cols-3">
                     {mixes.map((mix, index) => (
                       <button
                         key={mix.title}
@@ -3239,23 +3239,23 @@ export default function Home() {
                           void playTrack(target, catalog);
                           toast.success(`${mix.title} is now playing`);
                         }}
-                        className={`group relative min-h-[178px] overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br ${mix.gradient} p-5 text-left transition-transform duration-300 hover:-translate-y-1`}
+                        className={`group relative min-h-[150px] sm:min-h-[178px] min-w-[230px] w-[230px] sm:min-w-0 sm:w-auto snap-start shrink-0 sm:shrink overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br ${mix.gradient} p-4 sm:p-5 text-left transition-transform duration-300 hover:-translate-y-1`}
                       >
                         <img
                           src={mix.art}
                           alt=""
-                          className="absolute -bottom-8 -right-8 h-40 w-40 rotate-6 rounded-2xl object-cover opacity-70 shadow-2xl transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110"
+                          className="absolute -bottom-8 -right-8 h-36 w-36 sm:h-40 sm:w-40 rotate-6 rounded-2xl object-cover opacity-70 shadow-2xl transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110"
                         />
                         <div className="relative z-10 max-w-[170px]">
                           <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-white/45">
                             MUSIVO MIX
                           </span>
-                          <p className="mt-4 font-display text-xl font-semibold tracking-[-0.05em] text-white">
+                          <p className="mt-3 sm:mt-4 font-display text-lg sm:text-xl font-semibold tracking-[-0.05em] text-white">
                             {mix.title}
                           </p>
                           <p className="mt-1 text-xs leading-5 text-white/55">{mix.detail}</p>
                         </div>
-                        <span className="absolute bottom-4 left-5 grid h-8 w-8 place-items-center rounded-full bg-white/10 text-[#f5ba42] opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100">
+                        <span className="absolute bottom-3.5 left-4 sm:bottom-4 sm:left-5 grid h-8 w-8 place-items-center rounded-full bg-white/10 text-[#f5ba42] opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100">
                           <Play className="h-3.5 w-3.5 fill-current" />
                         </span>
                       </button>
@@ -3263,48 +3263,48 @@ export default function Home() {
                   </div>
                 </section>
 
-                <section className="mt-10">
+                <section className="mt-8 sm:mt-10">
                   <SectionHeading
                     eyebrow={activeView === "home" ? "Right now" : "Spotify catalog"}
                     title={activeView === "home" ? "Trending near you" : "Explore the catalog"}
                     action="Open charts"
                     onAction={() => setActiveView("discover")}
                   />
-                  <div className="grid gap-1 rounded-2xl border border-white/[0.07] bg-[#140e08] p-2 md:grid-cols-2">
+                  <div className="grid gap-1 rounded-2xl border border-white/[0.07] bg-[#140e08] p-1.5 sm:p-2 md:grid-cols-2">
                     {displayTracks.map((track, index) => (
                       <div
                         key={track.id}
-                        className="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-white/[0.045]"
+                        className="flex items-center gap-2.5 sm:gap-3 rounded-xl px-2.5 py-2 sm:px-3 sm:py-3 hover:bg-white/[0.045] transition-colors"
                       >
-                        <span className="w-5 font-mono text-xs text-[#7b6c5b]">
+                        <span className="w-4 sm:w-5 font-mono text-[11px] sm:text-xs text-[#7b6c5b] shrink-0">
                           {String(index + 1).padStart(2, "0")}
                         </span>
                         <img
                           src={track.art}
                           alt=""
-                          className="h-11 w-11 rounded-lg object-cover"
+                          className="h-10 w-10 sm:h-11 sm:w-11 rounded-lg object-cover shrink-0"
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-[#faf5ee]">
+                          <p className="truncate text-xs sm:text-sm font-semibold text-[#faf5ee]">
                             {track.title}
                           </p>
-                          <p className="truncate text-xs text-[#948472]">{track.artist}</p>
+                          <p className="truncate text-[11px] sm:text-xs text-[#948472]">{track.artist}</p>
                         </div>
-                        <span className="font-mono text-[10px] text-[#7b6c5b]">
+                        <span className="font-mono text-[9px] sm:text-[10px] text-[#7b6c5b] hidden xs:inline shrink-0">
                           {track.duration}
                         </span>
                         <button
                           type="button"
                           title="Add to queue"
                           onClick={() => addToQueue(track)}
-                          className="grid h-8 w-8 place-items-center rounded-full text-[#9a8b79] hover:bg-white/10 hover:text-[#f5ba42] transition"
+                          className="grid h-7 w-7 sm:h-8 sm:w-8 place-items-center rounded-full text-[#9a8b79] hover:bg-white/10 hover:text-[#f5ba42] transition shrink-0"
                         >
                           <ListPlus className="h-3.5 w-3.5" />
                         </button>
                         <button
                           aria-label="Play track"
                           onClick={() => void playTrack(track, displayTracks)}
-                          className="grid h-8 w-8 place-items-center rounded-full text-[#9a8b79] hover:bg-[#f5ba42] hover:text-[#140f07]"
+                          className="grid h-7 w-7 sm:h-8 sm:w-8 place-items-center rounded-full text-[#9a8b79] hover:bg-[#f5ba42] hover:text-[#140f07] transition shrink-0"
                         >
                           <Play className="h-3.5 w-3.5 fill-current" />
                         </button>

@@ -217,7 +217,15 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
       audio.setAttribute("playsinline", "true");
       audio.setAttribute("webkit-playsinline", "true");
       audio.preload = "auto";
-      audio.style.display = "none";
+      Object.assign(audio.style, {
+        position: "fixed",
+        bottom: "-100px",
+        left: "-100px",
+        width: "1px",
+        height: "1px",
+        opacity: "0.01",
+        pointerEvents: "none",
+      });
       document.body.appendChild(audio);
     }
     audioRef.current = audio;
@@ -705,20 +713,72 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
 
   // Media Session API & Background Audio Focus for Mobile/Tablet/Desktop lock screen and background streaming
   const backgroundAudioKeeperRef = useRef<HTMLAudioElement | null>(null);
+  const preloadAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Hidden whisper audio element to retain native audio focus and OS media pipeline when app is backgrounded
-    const bgAudio = new Audio();
-    bgAudio.loop = true;
-    bgAudio.volume = 0.01;
-    bgAudio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+    if (typeof window === "undefined") return;
+
+    // Attached off-screen keeper audio element to retain native audio focus and OS media pipeline when app is backgrounded
+    let bgAudio = document.getElementById("musivo-background-keeper") as HTMLAudioElement;
+    if (!bgAudio) {
+      bgAudio = document.createElement("audio");
+      bgAudio.id = "musivo-background-keeper";
+      bgAudio.loop = true;
+      bgAudio.volume = 0.001;
+      bgAudio.setAttribute("playsinline", "true");
+      bgAudio.setAttribute("webkit-playsinline", "true");
+      Object.assign(bgAudio.style, {
+        position: "fixed",
+        bottom: "-100px",
+        left: "-100px",
+        width: "1px",
+        height: "1px",
+        opacity: "0.01",
+        pointerEvents: "none",
+      });
+      bgAudio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+      document.body.appendChild(bgAudio);
+    }
     backgroundAudioKeeperRef.current = bgAudio;
 
     return () => {
       bgAudio.pause();
-      bgAudio.src = "";
     };
   }, []);
+
+  // Preload next track audio for seamless, zero-gap background streaming transition
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const activeQueue = queue.length > 0 ? queue : [currentTrack];
+    const curIndex = activeQueue.findIndex((t) => String(t.id) === String(currentTrack.id));
+    const nextTrack =
+      curIndex >= 0 && curIndex < activeQueue.length - 1
+        ? activeQueue[curIndex + 1]
+        : repeatMode === "all" && activeQueue.length > 0
+        ? activeQueue[0]
+        : null;
+
+    if (nextTrack?.audio) {
+      if (!preloadAudioRef.current) {
+        const pAudio = document.createElement("audio");
+        pAudio.preload = "auto";
+        pAudio.setAttribute("playsinline", "true");
+        pAudio.setAttribute("webkit-playsinline", "true");
+        Object.assign(pAudio.style, {
+          position: "fixed",
+          bottom: "-100px",
+          left: "-100px",
+          width: "1px",
+          height: "1px",
+          opacity: "0.01",
+          pointerEvents: "none",
+        });
+        document.body.appendChild(pAudio);
+        preloadAudioRef.current = pAudio;
+      }
+      preloadAudioRef.current.src = nextTrack.audio;
+    }
+  }, [currentTrack, queue, repeatMode]);
 
   // Sync background audio keeper with playing state for full streaming & PWA background playback
   useEffect(() => {
