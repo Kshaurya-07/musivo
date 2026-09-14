@@ -44,6 +44,8 @@ import {
 import { toast } from "sonner";
 import { formatTime, matchesTrackQuery } from "@/lib/musivo";
 import { MobileNavDrawer } from "@/components/MobileNavDrawer";
+import { BottomNavBar } from "@/components/BottomNavBar";
+import { NowPlayingModal } from "@/components/NowPlayingModal";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
@@ -1984,6 +1986,7 @@ export default function Home() {
 
   // Responsive mobile/tablet nav state & PWA installation hook
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isNowPlayingModalOpen, setIsNowPlayingModalOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [canInstallPwa, setCanInstallPwa] = useState(false);
 
@@ -2444,7 +2447,7 @@ export default function Home() {
   const isSpotifyCatalog = statusQuery.data?.provider === "spotify";
 
   return (
-    <main className="noise min-h-screen bg-[#0d0f0d] pb-28 text-[#f5f4ec]">
+    <main className="noise min-h-screen bg-[#0d0f0d] pb-40 lg:pb-28 text-[#f5f4ec]">
       <div className="mx-auto flex min-h-screen max-w-[1600px]">
         {/* Left Sidebar */}
         <aside className="hidden w-[240px] shrink-0 flex-col border-r border-white/[0.065] px-5 py-6 lg:flex">
@@ -3316,7 +3319,7 @@ export default function Home() {
       </div>
 
       {/* Persistent Bottom Musivo Player */}
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/[0.09] bg-[#100c08]/95 shadow-[0_-16px_50px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
+      <div className="fixed inset-x-0 bottom-[50px] sm:bottom-[54px] lg:bottom-0 z-40 lg:z-50 border-t border-white/[0.09] bg-[#100c08]/95 shadow-[0_-16px_50px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition-all">
         {/* Mobile Top Progress Line Indicator (Spotify Mobile Style) */}
         <div className="absolute top-0 inset-x-0 h-[2.5px] bg-white/[0.08] sm:hidden overflow-hidden">
           <div
@@ -3325,7 +3328,7 @@ export default function Home() {
           />
         </div>
 
-        <div className="relative mx-auto max-w-[1600px] px-3.5 py-2.5 sm:px-6 sm:py-3 md:px-8 lg:px-12">
+        <div className="relative mx-auto max-w-[1600px] px-3.5 py-2 sm:px-6 sm:py-3 md:px-8 lg:px-12">
           {showPlaybackDiagnostics && (
             <PlaybackDiagnostics
               connected={isSpotifyConnected}
@@ -3339,15 +3342,18 @@ export default function Home() {
           )}
 
           <div className="flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 md:gap-5">
-            {/* Left Track Info */}
-            <div className="flex min-w-0 max-w-[56%] sm:max-w-none sm:w-[28%] sm:flex-none items-center gap-2.5 sm:gap-3">
+            {/* Left Track Info (Click to open Now Playing view on mobile) */}
+            <div
+              onClick={() => setIsNowPlayingModalOpen(true)}
+              className="flex min-w-0 max-w-[56%] sm:max-w-none sm:w-[28%] sm:flex-none items-center gap-2.5 sm:gap-3 cursor-pointer group/track"
+            >
               <img
                 src={currentTrack.art}
                 alt=""
-                className="h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-lg object-cover shadow-md"
+                className="h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-lg object-cover shadow-md group-hover/track:scale-105 transition-transform"
               />
               <div className="min-w-0">
-                <p className="truncate text-xs sm:text-[13px] font-semibold text-[#faf5ee]">
+                <p className="truncate text-xs sm:text-[13px] font-semibold text-[#faf5ee] group-hover/track:text-[#f5ba42] transition-colors">
                   {currentTrack.title}
                 </p>
                 <p className="truncate text-[11px] sm:text-xs text-[#a2927f]">{currentTrack.artist}</p>
@@ -3362,7 +3368,10 @@ export default function Home() {
               </div>
               <button
                 aria-label="Like current song"
-                onClick={() => toggleLike(currentTrack)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleLike(currentTrack);
+                }}
                 className={`ml-1 hidden sm:block ${
                   likedIds.has(String(currentTrack.id))
                     ? "text-[#f5ba42]"
@@ -3713,6 +3722,33 @@ export default function Home() {
         isSpotifyConnected={isSpotifyConnected}
         canInstallPwa={canInstallPwa}
         onInstallPwa={installPwa}
+      />
+
+      {/* Mobile Bottom Navigation Bar (Spotify mobile style) */}
+      <BottomNavBar
+        activeView={activeView}
+        onSelectView={(viewId) => handleNav(viewId)}
+        likedCount={likedTracks.length}
+      />
+
+      {/* Full-Screen Now Playing Sheet/Modal */}
+      <NowPlayingModal
+        isOpen={isNowPlayingModalOpen}
+        onClose={() => setIsNowPlayingModalOpen(false)}
+        currentTrack={currentTrack}
+        isPlaying={isPlaying}
+        progress={progress}
+        duration={duration}
+        playbackMode={playbackMode}
+        repeatMode={repeatMode}
+        isLiked={likedIds.has(String(currentTrack.id))}
+        onTogglePlay={() => void togglePlay()}
+        onSkip={(direction) => void skip(direction)}
+        onSeek={(seconds) => void seek(seconds)}
+        onToggleLike={() => toggleLike(currentTrack)}
+        onToggleRepeat={toggleRepeatMode}
+        onShuffle={shuffleQueue}
+        onOpenQueue={() => setIsQueueOpen(true)}
       />
     </main>
   );

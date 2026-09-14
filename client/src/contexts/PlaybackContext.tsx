@@ -206,10 +206,20 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
     return () => window.clearInterval(interval);
   }, [playbackMode, isPlaying]);
 
-  // Setup preview HTMLAudioElement
+  // Setup native HTML5 audio element attached to document for background streaming & lock screen audio session
   useEffect(() => {
-    const audio = new Audio();
-    audio.preload = "none";
+    if (typeof window === "undefined") return;
+
+    let audio = document.getElementById("musivo-native-audio") as HTMLAudioElement;
+    if (!audio) {
+      audio = document.createElement("audio");
+      audio.id = "musivo-native-audio";
+      audio.setAttribute("playsinline", "true");
+      audio.setAttribute("webkit-playsinline", "true");
+      audio.preload = "auto";
+      audio.style.display = "none";
+      document.body.appendChild(audio);
+    }
     audioRef.current = audio;
 
     const handleLoadedMetadata = () => {
@@ -223,26 +233,13 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
     };
 
     const handleTimeUpdate = () => {
-      if (audioRef.current && playbackMode === "preview") {
+      if (audioRef.current && (playbackMode === "full" || playbackMode === "preview")) {
         setProgress(Math.round(audioRef.current.currentTime || 0));
       }
     };
 
     const handleEnded = () => {
-      if (playbackMode === "preview") {
-        if (!isSpotifyConnected) {
-          toast.info("Preview ended. Sign in with Spotify to stream the full-length song!", {
-            action: {
-              label: "Sign in with Spotify",
-              onClick: () => {
-                window.location.href = "/api/auth/spotify";
-              },
-            },
-            duration: 8000,
-          });
-        }
-        void skipRef.current(1);
-      }
+      void skipRef.current(1);
     };
 
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
@@ -253,10 +250,8 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("timeupdate", handleTimeUpdate);
       audio.removeEventListener("ended", handleEnded);
-      audio.pause();
-      audio.src = "";
     };
-  }, [playbackMode, isSpotifyConnected]);
+  }, [playbackMode]);
 
   // Background YouTube audio player setup for full-length song playback
   useEffect(() => {
@@ -428,7 +423,33 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // 2. Full-Length Audio Stream (Streams the complete full length song!)
+      // 2. Direct High-Fidelity Audio Stream via Native HTML5 Audio (Supports Background Streaming & Lock Screen)
+      if (playTarget.audio) {
+        if (spotifyPlayer.isPlaying) void spotifyPlayer.pause().catch(() => undefined);
+        if (ytPlayerRef.current?.pauseVideo) ytPlayerRef.current.pauseVideo();
+
+        setCurrentTrack(playTarget);
+        setProgress(0);
+        setDuration(initialDuration || 0);
+        setPlaybackMode("full");
+        setIsPlaying(true);
+        setUserError(null);
+
+        if (audioRef.current) {
+          audioRef.current.src = playTarget.audio;
+          audioRef.current.volume = volume / 100;
+          try {
+            await audioRef.current.play();
+            setIsPlaying(true);
+          } catch (e) {
+            console.warn("[Musivo Native Engine] Play error:", e);
+            setIsPlaying(false);
+          }
+        }
+        return;
+      }
+
+      // 3. Full-Length Video/Audio Stream Fallback
       try {
         const fullStream = await trpcUtils.music.resolveFullStream.fetch({
           title: playTarget.title,
@@ -457,30 +478,6 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
         console.warn("[Musivo] Full-length stream resolution fallback:", streamErr);
       }
 
-      // 3. Fallback path: Preview audio via HTMLAudioElement
-      if (playTarget.audio) {
-        if (spotifyPlayer.isPlaying) void spotifyPlayer.pause().catch(() => undefined);
-        if (ytPlayerRef.current?.pauseVideo) ytPlayerRef.current.pauseVideo();
-
-        setCurrentTrack(playTarget);
-        setProgress(0);
-        setDuration(initialDuration || 0);
-        setPlaybackMode("preview");
-        setIsPlaying(true);
-        setUserError(null);
-
-        if (audioRef.current) {
-          audioRef.current.src = playTarget.audio;
-          audioRef.current.volume = volume / 100;
-          try {
-            await audioRef.current.play();
-          } catch {
-            setIsPlaying(false);
-          }
-        }
-        return;
-      }
-
       // 4. No playback available
       setCurrentTrack(playTarget);
       setIsPlaying(false);
@@ -491,10 +488,14 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
 
   const pause = useCallback(async () => {
     if (playbackMode === "spotify") {
-      await spotifyPlayer.pause();
-    } else if (playbackMode === "full" && ytPlayerRef.current?.pauseVideo) {
-      ytPlayerRef.current.pauseVideo();
-    } else if (audioRef.current) {
+      await spotifyPlayer.pause().catch(() => undefined);
+    }
+    if (ytPlayerRef.current?.pauseVideo) {
+      try {
+        ytPlayerRef.current.pauseVideo();
+      } catch {}
+    }
+    if (audioRef.current) {
       audioRef.current.pause();
     }
     setIsPlaying(false);
@@ -502,18 +503,18 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
 
   const resume = useCallback(async () => {
     if (playbackMode === "spotify") {
-      await spotifyPlayer.resume();
+      await spotifyPlayer.resume().catch(() => undefined);
       setIsPlaying(true);
-    } else if (playbackMode === "full" && ytPlayerRef.current?.playVideo) {
-      ytPlayerRef.current.playVideo();
-      setIsPlaying(true);
-    } else if (audioRef.current && currentTrack.audio) {
+    } else if (audioRef.current && (playbackMode === "full" || playbackMode === "preview") && currentTrack.audio) {
       try {
         await audioRef.current.play();
         setIsPlaying(true);
       } catch {
         setIsPlaying(false);
       }
+    } else if (playbackMode === "full" && ytPlayerRef.current?.playVideo) {
+      ytPlayerRef.current.playVideo();
+      setIsPlaying(true);
     }
   }, [playbackMode, spotifyPlayer, currentTrack]);
 
@@ -537,11 +538,15 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
       if (playbackMode === "spotify") {
         spotifyStateRef.current.positionMs = safeSeconds * 1000;
         spotifyStateRef.current.timestamp = Date.now();
-        await spotifyPlayer.seek(safeSeconds * 1000);
-      } else if (playbackMode === "full" && ytPlayerRef.current?.seekTo) {
-        ytPlayerRef.current.seekTo(safeSeconds, true);
-      } else if (audioRef.current) {
+        await spotifyPlayer.seek(safeSeconds * 1000).catch(() => undefined);
+      }
+      if (audioRef.current && (playbackMode === "full" || playbackMode === "preview")) {
         audioRef.current.currentTime = safeSeconds;
+      }
+      if (playbackMode === "full" && ytPlayerRef.current?.seekTo) {
+        try {
+          ytPlayerRef.current.seekTo(safeSeconds, true);
+        } catch {}
       }
     },
     [playbackMode, spotifyPlayer]
@@ -730,7 +735,13 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
 
     try {
-      const artUrl = currentTrack.art || "/musivo-logo.png";
+      const getAbsoluteUrl = (url?: string | null) => {
+        if (!url) return `${window.location.origin}/musivo-logo.png`;
+        if (url.startsWith("http://") || url.startsWith("https://")) return url;
+        return `${window.location.origin}${url.startsWith("/") ? "" : "/"}${url}`;
+      };
+
+      const artUrl = getAbsoluteUrl(currentTrack.art);
       navigator.mediaSession.metadata = new MediaMetadata({
         title: currentTrack.title || "Musivo",
         artist: currentTrack.artist || "Music, Reimagined",
@@ -763,8 +774,30 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
 
     const actionMap: [MediaSessionAction, MediaSessionActionHandler | null][] = [
-      ["play", () => void resume()],
-      ["pause", () => void pause()],
+      [
+        "play",
+        async () => {
+          if (audioRef.current && (playbackMode === "full" || playbackMode === "preview")) {
+            try {
+              await audioRef.current.play();
+              setIsPlaying(true);
+            } catch {
+              await resume();
+            }
+          } else {
+            await resume();
+          }
+        },
+      ],
+      [
+        "pause",
+        () => {
+          if (audioRef.current) {
+            audioRef.current.pause();
+          }
+          void pause();
+        },
+      ],
       ["previoustrack", () => void skip(-1)],
       ["nexttrack", () => void skip(1)],
       [

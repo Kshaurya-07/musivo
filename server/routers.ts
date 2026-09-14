@@ -103,7 +103,7 @@ async function searchItunesTracks(query: string, limit: number): Promise<Provide
       audio: typeof item.previewUrl === "string" ? item.previewUrl.replace(/^http:/, "https:") : "",
       storeUrl: String(item.trackViewUrl ?? item.collectionViewUrl ?? ""),
       durationMs: typeof item.trackTimeMillis === "number" ? item.trackTimeMillis : null,
-      accent: "#d8ff57",
+      accent: "#f5ba42",
       source: "iTunes" as const,
     }));
 }
