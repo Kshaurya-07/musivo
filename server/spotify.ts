@@ -260,6 +260,82 @@ async function searchSpotifyUserTrack(userId: number, title: string, artist: str
   return payload.tracks?.items?.[0];
 }
 
+export async function searchSpotifyWithUserToken(userId: number, query: string, limit = 12) {
+  try {
+    const url = `/search?q=${encodeURIComponent(query)}&type=track&limit=${Math.min(Math.max(limit, 1), 20)}&market=${encodeURIComponent(ENV.spotifyMarket || "US")}`;
+    const payload = await spotifyUserFetch<SpotifySearchResponse>(userId, url);
+    return (payload.tracks?.items ?? []).filter((track) => track.id && track.name).map(toCatalogTrack);
+  } catch (error) {
+    console.warn("[Spotify] User search failed, falling back:", error instanceof Error ? error.message : error);
+    return null;
+  }
+}
+
+export async function resolveSpotifyTrack({ userId, title, artist }: { userId?: number; title: string; artist: string }) {
+  if (userId) {
+    try {
+      const match = await searchSpotifyUserTrack(userId, title, artist);
+      if (match?.id) {
+        return {
+          spotifyTrackId: match.id,
+          spotifyUri: `spotify:track:${match.id}`,
+          durationMs: match.duration_ms || null,
+          title: match.name,
+          artist: match.artists?.[0]?.name || artist,
+          art: match.album?.images?.[0]?.url || "",
+        };
+      }
+      const broad = await spotifyUserFetch<SpotifySearchResponse>(
+        userId,
+        `/search?q=${encodeURIComponent(`${title} ${artist}`)}&type=track&limit=1&market=${encodeURIComponent(ENV.spotifyMarket || "US")}`
+      );
+      const broadMatch = broad.tracks?.items?.[0];
+      if (broadMatch?.id) {
+        return {
+          spotifyTrackId: broadMatch.id,
+          spotifyUri: `spotify:track:${broadMatch.id}`,
+          durationMs: broadMatch.duration_ms || null,
+          title: broadMatch.name,
+          artist: broadMatch.artists?.[0]?.name || artist,
+          art: broadMatch.album?.images?.[0]?.url || "",
+        };
+      }
+    } catch (err) {
+      console.warn("[Spotify] Failed to resolve track with user token:", err);
+    }
+  }
+
+  try {
+    const token = await getSpotifyAccessToken();
+    if (token) {
+      const url = new URL("https://api.spotify.com/v1/search");
+      url.searchParams.set("q", `${title} ${artist}`);
+      url.searchParams.set("type", "track");
+      url.searchParams.set("limit", "1");
+      url.searchParams.set("market", ENV.spotifyMarket || "US");
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const payload = (await res.json()) as SpotifySearchResponse;
+        const match = payload.tracks?.items?.[0];
+        if (match?.id) {
+          return {
+            spotifyTrackId: match.id,
+            spotifyUri: `spotify:track:${match.id}`,
+            durationMs: match.duration_ms || null,
+            title: match.name,
+            artist: match.artists?.[0]?.name || artist,
+            art: match.album?.images?.[0]?.url || "",
+          };
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[Spotify] Failed to resolve track with client credentials:", err);
+  }
+
+  return null;
+}
+
 export async function createSpotifyPlaylist(userId: number, name: string, description: string, trackIds: string[]) {
   const connection = await db.getSpotifyConnection(userId);
   if (!connection) throw new Error("Spotify account is not connected");

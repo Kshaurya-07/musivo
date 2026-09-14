@@ -57,6 +57,7 @@ export interface PlaybackContextType {
   skip: (direction: 1 | -1) => Promise<void>;
   setQueue: (queue: PlaybackTrack[]) => void;
   clearError: () => void;
+  connectSpotify: () => void;
 }
 
 const fallbackDefaultTrack: PlaybackTrack = {
@@ -76,6 +77,7 @@ const fallbackDefaultTrack: PlaybackTrack = {
 const PlaybackContext = createContext<PlaybackContextType | null>(null);
 
 export function PlaybackProvider({ children }: { children: React.ReactNode }) {
+  const trpcUtils = trpc.useUtils();
   const { isAuthenticated } = useAuth();
   const spotifyStatusQuery = trpc.spotify.status.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -184,7 +186,11 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
 
     const handleLoadedMetadata = () => {
       if (audioRef.current) {
-        setDuration(Math.round(audioRef.current.duration || 0));
+        setDuration((prevDuration) => {
+          if (prevDuration && prevDuration > 30) return prevDuration;
+          const audioSec = Math.round(audioRef.current?.duration || 0);
+          return audioSec || prevDuration || 0;
+        });
       }
     };
 
@@ -196,6 +202,17 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
 
     const handleEnded = () => {
       if (playbackMode === "preview") {
+        if (!isSpotifyConnected) {
+          toast.info("Preview ended. Sign in with Spotify to stream the full-length song!", {
+            action: {
+              label: "Sign in with Spotify",
+              onClick: () => {
+                window.location.href = "/api/auth/spotify";
+              },
+            },
+            duration: 8000,
+          });
+        }
         void skip(1);
       }
     };
@@ -233,79 +250,122 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
         setQueue(newQueue);
       }
 
-      const isSpotifyTrack =
-        String(track.id).startsWith("spotify-") ||
-        track.source === "Spotify" ||
-        Boolean(track.storeUrl?.includes("spotify.com"));
+      let playTarget = track;
 
       // 1. Primary path: Spotify Web Playback SDK
-      if (isSpotifyConnected && isSpotifyTrack) {
-        try {
-          // Pause HTML audio preview if playing
-          if (audioRef.current) {
-            audioRef.current.pause();
+      if (isSpotifyConnected) {
+        let isSpotifyTrack =
+          String(playTarget.id).startsWith("spotify-") ||
+          playTarget.source === "Spotify" ||
+          Boolean(playTarget.storeUrl?.includes("spotify.com"));
+
+        // If not a Spotify track (e.g. from iTunes search or catalog), resolve on Spotify!
+        if (!isSpotifyTrack && playTarget.title) {
+          try {
+            const resolved = await trpcUtils.spotify.resolveTrack.fetch({
+              title: playTarget.title,
+              artist: playTarget.artist,
+            });
+            if (resolved?.spotifyTrackId) {
+              playTarget = {
+                ...playTarget,
+                id: `spotify-${resolved.spotifyTrackId}`,
+                source: "Spotify",
+                storeUrl: `https://open.spotify.com/track/${resolved.spotifyTrackId}`,
+                durationMs: resolved.durationMs || playTarget.durationMs,
+                duration: resolved.durationMs
+                  ? formatTime(resolved.durationMs / 1000)
+                  : playTarget.duration,
+                art: resolved.art || playTarget.art,
+              };
+              isSpotifyTrack = true;
+            }
+          } catch (resErr) {
+            console.warn("[Musivo] Track resolution to Spotify skipped:", resErr);
           }
+        }
 
-          setCurrentTrack(track);
-          setProgress(0);
-          setDuration(
-            track.durationMs ? Math.round(track.durationMs / 1000) : 0
-          );
-          setPlaybackMode("spotify");
-          setUserError(null);
+        if (isSpotifyTrack) {
+          try {
+            if (audioRef.current) {
+              audioRef.current.pause();
+            }
 
-          // Start playback via SDK
-          await spotifyPlayer.playTrack(String(track.id));
-          setIsPlaying(true);
-          return;
-        } catch (err: unknown) {
-          console.warn(
-            "[Musivo] Spotify Web Playback SDK could not play track; checking fallback:",
-            err
-          );
-          const message =
-            err instanceof Error
-              ? err.message
-              : "Spotify playback failed to start.";
-
-          setUserError(message);
-
-          // Non-breaking message for Premium requirement
-          if (
-            message.includes("Premium") ||
-            spotifyPlayer.isPremium === false
-          ) {
-            toast.error(
-              "Spotify in-app playback requires Spotify Premium. Falling back to preview audio where available."
+            setCurrentTrack(playTarget);
+            setProgress(0);
+            setDuration(
+              playTarget.durationMs
+                ? Math.round(playTarget.durationMs / 1000)
+                : 0
             );
-          } else {
-            toast.info(message);
-          }
+            setPlaybackMode("spotify");
+            setUserError(null);
 
-          // If track has a preview URL, fall through to preview player
-          if (!track.audio) {
-            setIsPlaying(false);
+            await spotifyPlayer.playTrack(String(playTarget.id));
+            setIsPlaying(true);
             return;
+          } catch (err: unknown) {
+            console.warn(
+              "[Musivo] Spotify Web Playback SDK could not play track; checking fallback:",
+              err
+            );
+            const message =
+              err instanceof Error
+                ? err.message
+                : "Spotify playback failed to start.";
+
+            setUserError(message);
+
+            if (
+              message.includes("Premium") ||
+              spotifyPlayer.isPremium === false
+            ) {
+              toast.error(
+                "Spotify in-app playback requires Spotify Premium. Falling back to preview audio where available."
+              );
+            } else {
+              toast.info(message);
+            }
+
+            if (!playTarget.audio) {
+              setIsPlaying(false);
+              return;
+            }
           }
         }
       }
 
       // 2. Fallback path: Preview audio via HTMLAudioElement
-      if (track.audio) {
-        // Pause Spotify SDK if active
+      if (playTarget.audio) {
         if (spotifyPlayer.isPlaying) {
           void spotifyPlayer.pause().catch(() => undefined);
         }
 
-        setCurrentTrack(track);
+        setCurrentTrack(playTarget);
         setProgress(0);
-        setDuration(0);
+        // Preserve full song duration (e.g. 4:12) instead of capping to 30s
+        const fullDurationSec = playTarget.durationMs
+          ? Math.round(playTarget.durationMs / 1000)
+          : 0;
+        setDuration(fullDurationSec);
         setPlaybackMode("preview");
         setIsPlaying(true);
         setUserError(null);
 
+        if (!isSpotifyConnected) {
+          toast.info("Playing 30s preview. Sign in with Spotify to stream the full song!", {
+            action: {
+              label: "Sign in with Spotify",
+              onClick: () => {
+                window.location.href = "/api/auth/spotify";
+              },
+            },
+            duration: 6000,
+          });
+        }
+
         if (audioRef.current) {
-          audioRef.current.src = track.audio;
+          audioRef.current.src = playTarget.audio;
           audioRef.current.volume = volume / 100;
           try {
             await audioRef.current.play();
@@ -319,15 +379,23 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
       }
 
       // 3. No playback available
-      setCurrentTrack(track);
+      setCurrentTrack(playTarget);
       setIsPlaying(false);
       if (!isSpotifyConnected) {
-        toast.info("Connect Spotify to play full tracks in Musivo.");
+        toast.info("Sign in with Spotify to stream full-length songs.", {
+          action: {
+            label: "Sign in with Spotify",
+            onClick: () => {
+              window.location.href = "/api/auth/spotify";
+            },
+          },
+          duration: 6000,
+        });
       } else {
         toast.info("This track does not have an in-app audio stream.");
       }
     },
-    [isSpotifyConnected, spotifyPlayer, volume]
+    [isSpotifyConnected, spotifyPlayer, volume, trpcUtils]
   );
 
   const pause = useCallback(async () => {
@@ -397,6 +465,10 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
     setUserError(null);
   }, []);
 
+  const connectSpotify = useCallback(() => {
+    window.location.href = "/api/auth/spotify";
+  }, []);
+
   const value = useMemo<PlaybackContextType>(
     () => ({
       currentTrack,
@@ -422,6 +494,7 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
       skip,
       setQueue,
       clearError,
+      connectSpotify,
     }),
     [
       currentTrack,
@@ -447,6 +520,7 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
       setVolume,
       skip,
       clearError,
+      connectSpotify,
     ]
   );
 

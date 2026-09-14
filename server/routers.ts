@@ -29,6 +29,8 @@ import {
   createSpotifyPlaylist,
   createAiSpotifyMix,
   searchSpotifyTracks,
+  searchSpotifyWithUserToken,
+  resolveSpotifyTrack,
   syncSpotifyUserData,
 } from "./spotify";
 import { randomUUID } from "node:crypto";
@@ -138,10 +140,17 @@ export const appRouter = router({
     }),
     search: publicProcedure
       .input(z.object({ query: z.string().trim().min(1).max(80), limit: z.number().int().min(1).max(20).default(12) }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         try {
+          if (ctx.user) {
+            const userConnection = await getSpotifyConnection(ctx.user.id);
+            if (userConnection) {
+              const userTracks = await searchSpotifyWithUserToken(ctx.user.id, input.query, input.limit);
+              if (userTracks && userTracks.length > 0) return userTracks;
+            }
+          }
           const spotifyResults = await searchSpotifyTracks(input.query, input.limit);
-          if (spotifyResults) return spotifyResults;
+          if (spotifyResults && spotifyResults.length > 0) return spotifyResults;
           return await searchItunesTracks(input.query, input.limit);
         } catch (error) {
           console.error("[Music] Spotify catalog search failed; trying fallback:", error);
@@ -216,6 +225,21 @@ export const appRouter = router({
         throw new TRPCError({ code: "BAD_GATEWAY", message: error instanceof Error ? error.message : "The AI mix could not be created right now." });
       }
     }),
+    resolveTrack: publicProcedure
+      .input(
+        z.object({
+          title: z.string().min(1),
+          artist: z.string().min(1),
+        })
+      )
+      .query(async ({ input, ctx }) => {
+        const userId = ctx.user?.id;
+        return await resolveSpotifyTrack({
+          userId,
+          title: input.title,
+          artist: input.artist,
+        });
+      }),
   }),
   playlists: router({
     list: protectedProcedure.query(({ ctx }) => listUserPlaylists(ctx.user.id)),
