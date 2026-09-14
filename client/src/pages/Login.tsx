@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft, ShieldCheck, Sparkles } from "lucide-react";
+import { MusivoLogo } from "@/components/MusivoLogo";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -55,17 +56,14 @@ export default function Login() {
       <div className="relative w-full max-w-md rounded-3xl border border-white/[0.09] bg-[#18120c]/90 p-8 shadow-2xl backdrop-blur-2xl sm:p-10">
         {/* Brand Header */}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#f5ba42]/30 bg-[#f5ba42]/10 shadow-[0_0_30px_rgba(245,186,66,0.2)]">
-            <span className="flex h-3 w-3 items-center justify-center">
-              <span className="h-3 w-3 animate-ping rounded-full bg-[#f5ba42] opacity-75" />
-              <span className="absolute h-3 w-3 rounded-full bg-[#f5ba42]" />
-            </span>
+          <div className="mx-auto mb-4 flex justify-center">
+            <MusivoLogo size="xl" showTagline={false} glow={true} className="h-20 w-20" />
           </div>
           <h1 className="font-display text-3xl font-bold tracking-tight text-[#faf5ee] sm:text-4xl">
             Welcome to Musivo
           </h1>
-          <p className="mt-2 text-sm text-[#a89885]">
-            Sign in to continue listening
+          <p className="mt-2 text-xs font-mono uppercase tracking-[0.2em] text-[#a89885]">
+            Music, Reimagined · Since 2026
           </p>
         </div>
 

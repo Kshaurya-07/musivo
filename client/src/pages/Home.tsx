@@ -2415,13 +2415,22 @@ export default function Home() {
       <div className="mx-auto flex min-h-screen max-w-[1600px]">
         {/* Left Sidebar */}
         <aside className="hidden w-[240px] shrink-0 flex-col border-r border-white/[0.065] px-5 py-6 lg:flex">
-          <div className="flex items-center gap-2.5 px-2">
-            <div className="grid h-9 w-9 place-items-center rounded-[11px] bg-[#f5ba42] text-[#140f07] shadow-[0_0_28px_rgba(245,186,66,0.18)]">
-              <Radio className="h-[18px] w-[18px] stroke-[2.5]" />
+          <div className="flex items-center gap-3 px-2">
+            <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#f5ba42]/30 bg-[#16100a] shadow-[0_0_20px_rgba(245,186,66,0.2)]">
+              <img
+                src="/musivo-logo-transparent.png"
+                alt="Musivo Logo"
+                className="h-7 w-7 object-contain"
+              />
             </div>
-            <span className="font-display text-[22px] font-semibold tracking-[-0.06em]">
-              musivo<span className="text-[#f5ba42]">.</span>
-            </span>
+            <div>
+              <span className="block font-display text-[22px] font-bold leading-none tracking-[-0.05em] text-[#faf5ee]">
+                musivo<span className="text-[#f5ba42]">.</span>
+              </span>
+              <span className="mt-1 block font-mono text-[9px] uppercase tracking-[0.18em] text-[#8c7b68]">
+                Music, Reimagined
+              </span>
+            </div>
           </div>
 
           <div className="mt-12">
@@ -2512,13 +2521,20 @@ export default function Home() {
         {/* Main Content Area */}
         <div className="min-w-0 flex-1">
           <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-white/[0.055] bg-[#0d0f0d]/85 px-5 py-4 backdrop-blur-xl md:px-8 lg:px-12">
-            <div className="flex min-w-0 items-center gap-3">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
               <button
                 onClick={() => toast.info("Open Musivo on a wider screen for the full library rail.")}
                 className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[0.08] text-[#c2b2a0] lg:hidden"
               >
                 <Menu className="h-5 w-5" />
               </button>
+              <div className="flex items-center shrink-0 lg:hidden">
+                <img
+                  src="/musivo-logo-transparent.png"
+                  alt="Musivo"
+                  className="h-7 w-7 object-contain drop-shadow-[0_0_8px_rgba(245,186,66,0.3)]"
+                />
+              </div>
               <div className="relative w-full max-w-[390px]">
                 <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#998875]" />
                 <input
