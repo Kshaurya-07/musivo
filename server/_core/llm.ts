@@ -215,7 +215,7 @@ const normalizeToolChoice = (
 const resolveApiUrl = () =>
   ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
     ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
+    : "https://api.openai.com/v1/chat/completions";
 
 const assertApiKey = () => {
   if (!ENV.forgeApiKey) {
@@ -363,7 +363,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   };
 
   if (model) {
-    payload.model = model;
+    payload.model = model === "gpt-5-mini" && !ENV.forgeApiUrl ? "gpt-4o-mini" : model;
   }
 
   if (tools && tools.length > 0) {

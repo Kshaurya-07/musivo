@@ -275,26 +275,100 @@ export async function createSpotifyPlaylist(userId: number, name: string, descri
 export async function createAiSpotifyMix(userId: number) {
   const recent = await db.listSpotifyRecentTracks(userId);
   if (!recent.length) throw new Error("Sync your recently played tracks before building an AI mix.");
-  const seedTracks = recent.slice(0, 20).map((track) => `${track.title} — ${track.artist} — ${track.album ?? "single"}`).join("\n");
-  const result = await invokeLLM({
-    model: "gpt-5-mini",
-    maxTokens: 1200,
-    messages: [
-      { role: "system", content: "You are a music discovery assistant. Analyze recently played tracks and suggest musically similar songs. Return only the requested JSON." },
-      { role: "user", content: `Recently played tracks:\n${seedTracks}\nSuggest 8 distinct songs not already in the list. Favor adjacent genres, moods, and artists. Include a concise reason for each.` },
-    ],
-    responseFormat: { type: "json_schema", json_schema: { name: "music_recommendations", strict: true, schema: { type: "object", properties: { recommendations: { type: "array", items: { type: "object", properties: { title: { type: "string" }, artist: { type: "string" }, reason: { type: "string" } }, required: ["title", "artist", "reason"], additionalProperties: false } } }, required: ["recommendations"], additionalProperties: false } } },
-  });
-  const content = result.choices[0]?.message.content;
-  const parsed = typeof content === "string" ? JSON.parse(content) as { recommendations?: Array<{ title: string; artist: string; reason: string }> } : { recommendations: [] };
-  const recommendations = (parsed.recommendations ?? []).slice(0, 8);
-  const matches = [];
-  for (const recommendation of recommendations) {
-    const match = await searchSpotifyUserTrack(userId, recommendation.title, recommendation.artist);
-    if (match?.id) matches.push({ ...recommendation, id: match.id, art: match.album?.images?.[0]?.url ?? null });
+
+  let matches: Array<{ title: string; artist: string; reason: string; id: string; art: string | null }> = [];
+
+  // 1. If an AI key (OpenAI or Forge) is configured, attempt GPT curation
+  if (ENV.forgeApiKey) {
+    try {
+      const seedTracks = recent.slice(0, 20).map((track) => `${track.title} — ${track.artist} — ${track.album ?? "single"}`).join("\n");
+      const result = await invokeLLM({
+        model: "gpt-4o-mini",
+        maxTokens: 1200,
+        messages: [
+          { role: "system", content: "You are a music discovery assistant. Analyze recently played tracks and suggest musically similar songs. Return only the requested JSON." },
+          { role: "user", content: `Recently played tracks:\n${seedTracks}\nSuggest 8 distinct songs not already in the list. Favor adjacent genres, moods, and artists. Include a concise reason for each.` },
+        ],
+        responseFormat: { type: "json_schema", json_schema: { name: "music_recommendations", strict: true, schema: { type: "object", properties: { recommendations: { type: "array", items: { type: "object", properties: { title: { type: "string" }, artist: { type: "string" }, reason: { type: "string" } }, required: ["title", "artist", "reason"], additionalProperties: false } } }, required: ["recommendations"], additionalProperties: false } } },
+      });
+      const content = result.choices[0]?.message.content;
+      const parsed = typeof content === "string" ? JSON.parse(content) as { recommendations?: Array<{ title: string; artist: string; reason: string }> } : { recommendations: [] };
+      const recommendations = (parsed.recommendations ?? []).slice(0, 8);
+      for (const recommendation of recommendations) {
+        const match = await searchSpotifyUserTrack(userId, recommendation.title, recommendation.artist);
+        if (match?.id) matches.push({ ...recommendation, id: match.id, art: match.album?.images?.[0]?.url ?? null });
+      }
+    } catch (llmErr) {
+      console.warn("[AI Mix] LLM curation skipped/failed; generating algorithmic Spotify mix:", llmErr);
+      matches = [];
+    }
   }
-  if (!matches.length) throw new Error("Spotify could not find matching tracks for the AI mix.");
-  const playlist = await createSpotifyPlaylist(userId, `Musivo AI Mix · ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`, "An AI-curated mix based on your recently played tracks in Musivo.", matches.map((match) => match.id));
+
+  // 2. Fallback: Intelligent Spotify Catalog Recommendation using recent listening profile
+  if (!matches.length) {
+    const recentTrackIds = new Set(recent.map((r) => r.externalId.replace(/^spotify-/, "")));
+    const recentTitles = new Set(recent.map((r) => r.title.toLowerCase().trim()));
+    const artists = Array.from(new Set(recent.map((r) => r.artist).filter(Boolean))).slice(0, 6);
+
+    for (const artist of artists) {
+      if (matches.length >= 8) break;
+      try {
+        const searchRes = await spotifyUserFetch<SpotifySearchResponse>(
+          userId,
+          `/search?q=${encodeURIComponent(`artist:${artist}`)}&type=track&limit=5&market=${encodeURIComponent(ENV.spotifyMarket || "US")}`
+        );
+        const candidateTracks = searchRes.tracks?.items ?? [];
+        for (const cand of candidateTracks) {
+          if (matches.length >= 8) break;
+          if (!cand.id || recentTrackIds.has(cand.id)) continue;
+          if (recentTitles.has(cand.name.toLowerCase().trim())) continue;
+          if (matches.some((m) => m.id === cand.id)) continue;
+
+          matches.push({
+            id: cand.id,
+            title: cand.name,
+            artist: cand.artists?.[0]?.name || artist,
+            reason: `Top recommendation based on ${artist}`,
+            art: cand.album?.images?.[0]?.url ?? null,
+          });
+        }
+      } catch (err) {
+        console.warn(`[Smart Mix] Search failed for artist ${artist}:`, err);
+      }
+    }
+  }
+
+  // 3. Safety net: if artist search was exhausted, fill from current popular tracks
+  if (!matches.length) {
+    try {
+      const topHits = await spotifyUserFetch<SpotifySearchResponse>(
+        userId,
+        `/search?q=${encodeURIComponent("year:2024-2025")}&type=track&limit=10&market=${encodeURIComponent(ENV.spotifyMarket || "US")}`
+      );
+      for (const cand of topHits.tracks?.items ?? []) {
+        if (matches.length >= 8) break;
+        if (cand.id && !matches.some((m) => m.id === cand.id)) {
+          matches.push({
+            id: cand.id,
+            title: cand.name,
+            artist: cand.artists?.[0]?.name || "Featured Artist",
+            reason: "Trending discovery track",
+            art: cand.album?.images?.[0]?.url ?? null,
+          });
+        }
+      }
+    } catch {}
+  }
+
+  if (!matches.length) throw new Error("Could not find matching tracks. Please sync your library again.");
+
+  const playlist = await createSpotifyPlaylist(
+    userId,
+    `Musivo AI Mix · ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+    "Curated by Musivo based on your recently played tracks.",
+    matches.map((match) => match.id)
+  );
+
   return { playlist, recommendations: matches };
 }
 

@@ -14,7 +14,7 @@ export const ENV = {
   ownerOpenId: cleanEnvString(process.env.OWNER_OPEN_ID),
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: cleanEnvString(process.env.BUILT_IN_FORGE_API_URL),
-  forgeApiKey: cleanEnvString(process.env.BUILT_IN_FORGE_API_KEY),
+  forgeApiKey: cleanEnvString(process.env.BUILT_IN_FORGE_API_KEY) || cleanEnvString(process.env.OPENAI_API_KEY),
   spotifyClientId: cleanEnvString(process.env.SPOTIFY_CLIENT_ID),
   spotifyClientSecret: cleanEnvString(process.env.SPOTIFY_CLIENT_SECRET),
   spotifyMarket: cleanEnvString(process.env.SPOTIFY_MARKET) || "US",
