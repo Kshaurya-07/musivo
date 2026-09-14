@@ -224,10 +224,10 @@ export function useSpotifyPlayer({
 
         player.addListener("account_error", ({ message }: { message: string }) => {
           if (cancelled) return;
-          console.warn("[Musivo Spotify SDK] Account error (non-premium):", message);
+          console.warn("[Musivo Spotify SDK] Account info (standard tier):", message);
           setIsPremium(false);
-          setConnectionState("error");
-          setError("Spotify Web Playback requires a Spotify Premium account.");
+          setConnectionState("ready");
+          setError(null);
         });
 
         player.addListener("playback_error", ({ message }: { message: string }) => {
@@ -338,7 +338,7 @@ export function useSpotifyPlayer({
         const errorText = await response.text().catch(() => "");
         throw new Error(
           response.status === 403
-            ? "Spotify Web Playback requires a Spotify Premium account."
+            ? "PREMIUM_REQUIRED"
             : `Failed to transfer playback to Musivo (${response.status}): ${errorText}`
         );
       }
@@ -380,7 +380,7 @@ export function useSpotifyPlayer({
       if (!response.ok && response.status !== 204) {
         if (response.status === 403) {
           setIsPremium(false);
-          throw new Error("Spotify Web Playback requires a Spotify Premium account.");
+          throw new Error("PREMIUM_REQUIRED");
         }
         if (response.status === 404) {
           // Device might need explicit transfer first

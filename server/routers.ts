@@ -202,6 +202,28 @@ export const appRouter = router({
         const videoId = await resolveFullLengthStream(input.title, input.artist);
         return { videoId };
       }),
+    createAiMix: publicProcedure
+      .input(
+        z
+          .object({
+            prompt: z.string().max(200).optional(),
+            mood: z.string().max(50).optional(),
+            count: z.number().int().min(4).max(16).default(8).optional(),
+            saveToSpotify: z.boolean().default(false).optional(),
+          })
+          .optional()
+      )
+      .mutation(async ({ input, ctx }) => {
+        try {
+          return await createAiSpotifyMix(ctx.user?.id, input);
+        } catch (error) {
+          console.error("[Music] AI mix failed:", error);
+          throw new TRPCError({
+            code: "BAD_GATEWAY",
+            message: error instanceof Error ? error.message : "The AI mix could not be created right now.",
+          });
+        }
+      }),
   }),
   spotify: router({
     status: protectedProcedure.query(({ ctx }) => getSpotifyConnectionStatus(ctx.user.id)),
@@ -257,14 +279,28 @@ export const appRouter = router({
         throw new TRPCError({ code: "BAD_GATEWAY", message: "Spotify playlist could not be created. Please reconnect and try again." });
       }
     }),
-    createAiMix: protectedProcedure.mutation(async ({ ctx }) => {
-      try {
-        return await createAiSpotifyMix(ctx.user.id);
-      } catch (error) {
-        console.error("[Spotify] AI mix failed:", error);
-        throw new TRPCError({ code: "BAD_GATEWAY", message: error instanceof Error ? error.message : "The AI mix could not be created right now." });
-      }
-    }),
+    createAiMix: protectedProcedure
+      .input(
+        z
+          .object({
+            prompt: z.string().max(200).optional(),
+            mood: z.string().max(50).optional(),
+            count: z.number().int().min(4).max(16).default(8).optional(),
+            saveToSpotify: z.boolean().default(true).optional(),
+          })
+          .optional()
+      )
+      .mutation(async ({ ctx, input }) => {
+        try {
+          return await createAiSpotifyMix(ctx.user.id, input);
+        } catch (error) {
+          console.error("[Spotify] AI mix failed:", error);
+          throw new TRPCError({
+            code: "BAD_GATEWAY",
+            message: error instanceof Error ? error.message : "The AI mix could not be created right now.",
+          });
+        }
+      }),
     resolveTrack: publicProcedure
       .input(
         z.object({

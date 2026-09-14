@@ -78,9 +78,70 @@ const mixes = [
 
 const navItems: NavItem[] = [
   { id: "home", label: "Home", icon: HomeIcon },
+  { id: "aimix", label: "AI Mix Studio", icon: Sparkles },
   { id: "discover", label: "Discover", icon: Compass },
   { id: "releases", label: "New releases", icon: Sparkles },
   { id: "podcasts", label: "Podcasts", icon: Podcast },
+];
+
+const MOOD_OPTIONS = [
+  {
+    id: "chill",
+    emoji: "🌙",
+    name: "Midnight Reverie",
+    vibe: "Atmospheric synths, late-night lo-fi & mellow dream pop",
+    gradient: "from-[#2b1f3d] to-[#14121a]",
+    accent: "#d5b9ff",
+  },
+  {
+    id: "workout",
+    emoji: "⚡",
+    name: "Neon Cardio",
+    vibe: "High-octane electronic, driving basslines & synthwave energy",
+    gradient: "from-[#382614] to-[#1a1410]",
+    accent: "#ffb247",
+  },
+  {
+    id: "focus",
+    emoji: "🎯",
+    name: "Deep Flow State",
+    vibe: "Minimalist neo-classical, ambient techno & uninterrupted flow",
+    gradient: "from-[#172836] to-[#10171d]",
+    accent: "#63c5ff",
+  },
+  {
+    id: "party",
+    emoji: "🎉",
+    name: "Weekend Euphoria",
+    vibe: "Infectious dancefloor house, upbeat grooves & uplifting hooks",
+    gradient: "from-[#331828] to-[#1a1018]",
+    accent: "#ff7bd5",
+  },
+  {
+    id: "nostalgia",
+    emoji: "📼",
+    name: "Golden Era Rewind",
+    vibe: "Timeless 80s synth anthems, 90s alternative & vintage soul",
+    gradient: "from-[#332e18] to-[#171610]",
+    accent: "#e5cf58",
+  },
+  {
+    id: "acoustic",
+    emoji: "☕",
+    name: "Sunday Coffeehouse",
+    vibe: "Warm fingerpicking, intimate indie folk & tender storytelling",
+    gradient: "from-[#2a241c] to-[#141210]",
+    accent: "#d8c5a4",
+  },
+];
+
+const INSPIRATION_TAGS = [
+  "Lo-fi beats for rainy study",
+  "Cyberpunk night driving",
+  "90s French Touch & Disco",
+  "Warm acoustic sunset",
+  "Melodic techno flow",
+  "Indie bedroom pop",
 ];
 
 const libraryItems: NavItem[] = [
@@ -271,9 +332,30 @@ type AiRecommendation = {
   id: string;
   title: string;
   artist: string;
+  album?: string;
   reason: string;
   art: string | null;
+  durationMs?: number | null;
+  duration?: string;
+  audio?: string;
+  storeUrl?: string;
 };
+
+function aiRecommendationToTrack(item: AiRecommendation): Track {
+  return {
+    id: item.id.startsWith("spotify-") ? item.id : `spotify-${item.id}`,
+    title: item.title,
+    artist: item.artist,
+    album: item.album || "AI Mix Discovery",
+    duration: item.duration || "3:30",
+    art: item.art || art.purple,
+    audio: item.audio || "",
+    accent: "#c09cff",
+    durationMs: item.durationMs ?? 210000,
+    storeUrl: item.storeUrl || `https://open.spotify.com/track/${item.id.replace(/^spotify-/, "")}`,
+    source: "AI Mix",
+  };
+}
 
 function SyncSkeleton({ rows = 3 }: { rows?: number }) {
   return (
@@ -417,6 +499,331 @@ function SpotifyPlaylistDetail({
   );
 }
 
+function AiMixStudio({
+  recommendations,
+  meta,
+  selectedMood,
+  onSelectMood,
+  customPrompt,
+  onChangePrompt,
+  onBuildMix,
+  buildingMix,
+  onPlayMix,
+  onPlayTrack,
+  onSaveToLibrary,
+  onExportToSpotify,
+  exportingSpotify,
+  isSpotifyConnected,
+  activeTrackId,
+  isPlaying,
+  likedIds,
+  onLike,
+}: {
+  recommendations: AiRecommendation[];
+  meta: { title: string; description: string; mood: string } | null;
+  selectedMood: string;
+  onSelectMood: (mood: string) => void;
+  customPrompt: string;
+  onChangePrompt: (val: string) => void;
+  onBuildMix: () => void;
+  buildingMix: boolean;
+  onPlayMix: () => void;
+  onPlayTrack: (track: Track) => void;
+  onSaveToLibrary: () => void;
+  onExportToSpotify: () => void;
+  exportingSpotify: boolean;
+  isSpotifyConnected: boolean;
+  activeTrackId: string | number;
+  isPlaying: boolean;
+  likedIds: Set<string>;
+  onLike: (track: Track) => void;
+}) {
+  const currentMoodObj = MOOD_OPTIONS.find((m) => m.id === selectedMood) || MOOD_OPTIONS[0];
+
+  return (
+    <section className="space-y-8">
+      {/* Header */}
+      <div className="rounded-3xl border border-[#c09cff]/20 bg-gradient-to-br from-[#271b38] via-[#1a1524] to-[#121413] p-6 sm:p-8 relative overflow-hidden shadow-2xl">
+        <div className="absolute right-0 top-0 -mr-16 -mt-16 h-64 w-64 rounded-full bg-[#c09cff]/10 blur-3xl pointer-events-none" />
+        <div className="relative z-10 max-w-2xl space-y-3">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#d5b9ff]/30 bg-[#d5b9ff]/10 px-3 py-1 text-xs font-semibold text-[#d5b9ff]">
+            <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+            <span>AI MIX STUDIO</span>
+          </div>
+          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#f7f1ff]">
+            Curate your vibe with intelligence.
+          </h1>
+          <p className="text-sm sm:text-base text-[#b8a7cc] leading-relaxed">
+            Select a crafted mood or describe your ideal soundtrack. Musivo analyzes music attributes, harmonic vibes, and artist connections to curate a full-length, uninterrupted playlist.
+          </p>
+        </div>
+      </div>
+
+      {/* Mood Selector Grid */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="font-mono text-xs uppercase tracking-[0.16em] text-[#8e859a]">
+            1. Select a Mood Preset
+          </p>
+          <span className="text-xs text-[#a79bb5]">Click any to tailor the mix</span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {MOOD_OPTIONS.map((mood) => {
+            const isSelected = selectedMood === mood.id;
+            return (
+              <button
+                key={mood.id}
+                type="button"
+                onClick={() => onSelectMood(mood.id)}
+                className={`group flex items-start gap-3.5 rounded-2xl border p-4 text-left transition-all ${
+                  isSelected
+                    ? "border-[#d5b9ff] bg-[#2d1e42] shadow-lg ring-1 ring-[#d5b9ff]/40"
+                    : "border-white/[0.08] bg-[#16141a] hover:border-white/[0.18] hover:bg-[#1f1b25]"
+                }`}
+              >
+                <div
+                  className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg ${
+                    isSelected ? "bg-[#d5b9ff]/20" : "bg-white/[0.05]"
+                  }`}
+                >
+                  {mood.emoji}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <p className={`text-sm font-semibold ${isSelected ? "text-[#f5efff]" : "text-[#eae3f2]"}`}>
+                      {mood.name}
+                    </p>
+                    {isSelected && (
+                      <span className="h-2 w-2 rounded-full bg-[#d5b9ff] animate-ping" />
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-[#9d92a9] leading-relaxed line-clamp-2">
+                    {mood.vibe}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Custom Prompt & Generator */}
+      <div className="rounded-2xl border border-white/[0.08] bg-[#151419] p-5 sm:p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="font-mono text-xs uppercase tracking-[0.16em] text-[#8e859a]">
+            2. Or Describe a Custom Vibe (Optional)
+          </p>
+          <span className="text-xs text-[#a79bb5]">Type any mood, genre, or scene</span>
+        </div>
+        <div className="relative">
+          <input
+            type="text"
+            value={customPrompt}
+            onChange={(e) => onChangePrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !buildingMix) onBuildMix();
+            }}
+            placeholder={`e.g. ${currentMoodObj.name}: ${currentMoodObj.vibe}...`}
+            className="w-full rounded-xl border border-white/[0.1] bg-black/30 px-4 py-3 text-sm text-[#f5f4ec] placeholder:text-[#6e6878] outline-none focus:border-[#d5b9ff] focus:ring-1 focus:ring-[#d5b9ff]/50"
+          />
+        </div>
+
+        {/* Quick Inspiration Tags */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+          <span className="font-mono text-[11px] text-[#787183] mr-1">Inspirations:</span>
+          {INSPIRATION_TAGS.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => onChangePrompt(tag)}
+              className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[11px] text-[#c1b5cf] hover:border-[#d5b9ff]/40 hover:bg-[#d5b9ff]/10 hover:text-white transition"
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+
+        {/* Generate Button */}
+        <div className="flex items-center justify-end pt-2">
+          <button
+            type="button"
+            onClick={onBuildMix}
+            disabled={buildingMix}
+            className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#d5b9ff] to-[#d8ff57] hover:opacity-95 px-6 py-2.5 text-xs font-bold text-[#141217] shadow-lg transition hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Sparkles className={`h-4 w-4 ${buildingMix ? "animate-spin" : ""}`} />
+            {buildingMix ? "Curating your AI Mix…" : "Generate AI Mix"}
+          </button>
+        </div>
+      </div>
+
+      {/* Mix Results Section */}
+      {recommendations.length > 0 && (
+        <div className="space-y-6 pt-2">
+          {/* Hero Mix Banner */}
+          <div className="rounded-3xl border border-[#d5b9ff]/25 bg-gradient-to-br from-[#271d37] via-[#1a1523] to-[#121315] p-6 sm:p-7 shadow-2xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+              <div className="flex items-center gap-4 sm:gap-5">
+                <div className="h-20 w-20 sm:h-24 sm:w-24 shrink-0 overflow-hidden rounded-2xl bg-[#322346] shadow-md">
+                  {recommendations[0]?.art ? (
+                    <img
+                      src={recommendations[0].art}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full grid place-items-center text-3xl">
+                      {currentMoodObj.emoji}
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#d5b9ff]">
+                      Curated AI Playlist
+                    </span>
+                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-semibold text-[#d8ff57]">
+                      Full Length Audio
+                    </span>
+                  </div>
+                  <h2 className="font-display text-xl sm:text-2xl font-bold text-[#f5effe]">
+                    {meta?.title || `Musivo AI Mix · ${currentMoodObj.name}`}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-[#b8a7cc] line-clamp-1 max-w-xl">
+                    {meta?.description || currentMoodObj.vibe}
+                  </p>
+                  <p className="font-mono text-[11px] text-[#8e859a] pt-0.5">
+                    {recommendations.length} tracks curated · full stream enabled
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={onPlayMix}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-full bg-[#d8ff57] hover:bg-[#e4ff78] px-5 py-2.5 text-xs font-bold text-[#141812] shadow-md transition hover:scale-[1.02]"
+                >
+                  <Play className="h-4 w-4 fill-current" />
+                  Play Entire Mix
+                </button>
+                <button
+                  type="button"
+                  onClick={onSaveToLibrary}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/5 hover:bg-white/10 px-4 py-2.5 text-xs font-semibold text-[#f0eff5] transition"
+                  title="Save to your Musivo Library playlists"
+                >
+                  <ListMusic className="h-3.5 w-3.5" />
+                  Save to Library
+                </button>
+                {isSpotifyConnected ? (
+                  <button
+                    type="button"
+                    onClick={onExportToSpotify}
+                    disabled={exportingSpotify}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-full bg-[#1db954] hover:bg-[#1ed760] px-4 py-2.5 text-xs font-bold text-black transition"
+                    title="Export playlist to your Spotify account"
+                  >
+                    <Link2 className="h-3.5 w-3.5" />
+                    {exportingSpotify ? "Exporting…" : "Export to Spotify"}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          {/* Track Rows */}
+          <div className="space-y-1.5">
+            <p className="font-mono text-xs uppercase tracking-[0.16em] text-[#8e859a] px-1 mb-2">
+              Curated Tracklist ({recommendations.length})
+            </p>
+            {recommendations.map((rec, idx) => {
+              const track = aiRecommendationToTrack(rec);
+              const isCurrentPlaying = String(track.id) === String(activeTrackId) && isPlaying;
+
+              return (
+                <div
+                  key={rec.id || idx}
+                  className={`group flex items-center justify-between gap-3 rounded-2xl border px-3.5 py-2.5 transition-colors ${
+                    isCurrentPlaying
+                      ? "border-[#d8ff57]/40 bg-[#1e2719]"
+                      : "border-white/[0.06] bg-[#151419] hover:border-white/[0.14] hover:bg-[#1d1b22]"
+                  }`}
+                >
+                  <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                    <span className="w-5 text-center font-mono text-xs text-[#716a7d]">
+                      {idx + 1}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onPlayTrack(track)}
+                      className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-[#2e233f] group-hover:shadow-md"
+                    >
+                      {rec.art ? (
+                        <img
+                          src={rec.art}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full grid place-items-center text-sm">
+                          {currentMoodObj.emoji}
+                        </div>
+                      )}
+                      <div className="absolute inset-0 grid place-items-center bg-black/40 opacity-0 group-hover:opacity-100 transition">
+                        <Play className="h-4 w-4 fill-white text-white" />
+                      </div>
+                    </button>
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <p className={`truncate text-sm font-semibold ${isCurrentPlaying ? "text-[#d8ff57]" : "text-[#f2eef8]"}`}>
+                        {rec.title}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-[#9d92a9]">
+                        <span className="truncate">{rec.artist}</span>
+                        <span>·</span>
+                        <span className="inline-flex items-center gap-1 text-[11px] text-[#cbb0ef] truncate max-w-[280px]">
+                          <Sparkles className="h-2.5 w-2.5 shrink-0" />
+                          {rec.reason}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      type="button"
+                      aria-label="Like song"
+                      onClick={() => onLike(track)}
+                      className={`p-1.5 rounded-full transition ${
+                        likedIds.has(String(track.id))
+                          ? "text-[#d8ff57]"
+                          : "text-[#6f677b] hover:text-white"
+                      }`}
+                    >
+                      <Heart className={`h-4 w-4 ${likedIds.has(String(track.id)) ? "fill-current" : ""}`} />
+                    </button>
+                    <span className="font-mono text-xs text-[#787183] w-10 text-right">
+                      {rec.duration || "3:30"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onPlayTrack(track)}
+                      className="grid h-8 w-8 place-items-center rounded-full bg-white/[0.06] text-[#e0d8eb] hover:bg-[#d8ff57] hover:text-black transition"
+                    >
+                      <Play className="h-3.5 w-3.5 fill-current ml-0.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function SpotifyPanel({
   connected,
   displayName,
@@ -437,6 +844,8 @@ function SpotifyPanel({
   onBuildAiMix,
   buildingAiMix,
   recommendations,
+  onOpenAiMixStudio,
+  onPlayMix,
   isPremium,
   user,
   savedTracksCount,
@@ -461,6 +870,8 @@ function SpotifyPanel({
   onBuildAiMix: () => void;
   buildingAiMix: boolean;
   recommendations: AiRecommendation[];
+  onOpenAiMixStudio?: () => void;
+  onPlayMix?: () => void;
   isPremium: boolean | null;
   user?: any;
   savedTracksCount?: number;
@@ -541,17 +952,6 @@ function SpotifyPanel({
         )}
       </div>
 
-      {connected && isPremium === false && (
-        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-[#ffb247]/30 bg-[#251e12] p-4 text-xs leading-5 text-[#ffdca3]">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#ffb247]" />
-          <div>
-            <strong className="text-sm font-semibold text-[#fff1cc]">Spotify Premium Required for Web Playback</strong>
-            <p className="mt-1 text-[#e0c69d]">
-              Spotify&apos;s Web Playback SDK requires a Spotify Premium account. Your tracks will play through Musivo&apos;s high-fidelity preview engine where available.
-            </p>
-          </div>
-        </div>
-      )}
 
       {!connected ? (
         <div className="rounded-3xl border border-white/[0.08] bg-[#151815] p-8">
@@ -615,24 +1015,36 @@ function SpotifyPanel({
             <div className="rounded-2xl border border-white/[0.08] bg-[#151815] p-4">
               <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#718069]">Playback SDK</p>
               <p className="mt-1 text-sm font-semibold text-[#d8ff57]">
-                {isPremium === false ? "Preview Mode" : streamingEnabled ? "Active in Musivo" : "Connecting"}
+                {streamingEnabled ? "Active in Musivo" : "Ready"}
               </p>
             </div>
           </div>
 
           <div className="mb-8 grid gap-3 md:grid-cols-2">
             <div className="rounded-2xl border border-[#c09cff]/20 bg-gradient-to-br from-[#281e36] to-[#17151d] p-4">
-              <div className="mb-3 flex items-center gap-2 text-[#d5b9ff]">
-                <Sparkles className="h-4 w-4" />
-                <span className="font-mono text-[10px] uppercase tracking-[0.15em]">AI discovery</span>
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-[#d5b9ff]">
+                  <Sparkles className="h-4 w-4" />
+                  <span className="font-mono text-[10px] uppercase tracking-[0.15em]">AI discovery</span>
+                </div>
+                {onOpenAiMixStudio && (
+                  <button
+                    type="button"
+                    onClick={onOpenAiMixStudio}
+                    className="text-[11px] font-semibold text-[#d5b9ff] hover:underline"
+                  >
+                    Open Studio →
+                  </button>
+                )}
               </div>
-              <p className="text-sm font-semibold text-[#f1eafa]">Turn your recent listening into a fresh mix</p>
+              <p className="text-sm font-semibold text-[#f1eafa]">Turn your vibe into an instant curated mix</p>
               <p className="mt-1 text-xs leading-5 text-[#b2a5bd]">
-                Musivo analyzes your recent tracks, finds adjacent songs, and builds a private Spotify playlist.
+                Musivo analyzes your library and musical vibes to curate a full-length, private Spotify playlist.
               </p>
               <button
+                type="button"
                 onClick={onBuildAiMix}
-                disabled={buildingAiMix || !recentTracks.length}
+                disabled={buildingAiMix}
                 className="mt-4 flex items-center gap-2 rounded-full bg-[#d5b9ff] px-4 py-2 text-xs font-bold text-[#241832] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Sparkles className={`h-3.5 w-3.5 ${buildingAiMix ? "animate-pulse" : ""}`} />
@@ -650,6 +1062,7 @@ function SpotifyPanel({
                 Start a private playlist and add your liked synced tracks in one step.
               </p>
               <button
+                type="button"
                 onClick={onCreatePlaylist}
                 disabled={creatingPlaylist}
                 className="mt-4 rounded-full border border-[#d8ff57]/35 px-4 py-2 text-xs font-bold text-[#d8ff57] hover:bg-[#d8ff57]/10 disabled:opacity-50"
@@ -667,38 +1080,58 @@ function SpotifyPanel({
                     Your AI picks
                   </p>
                   <p className="mt-1 text-sm font-semibold text-[#f1eafa]">
-                    Added to your new Spotify playlist
+                    Curated playlist with full-length streaming
                   </p>
                 </div>
-                <span className="font-mono text-[10px] text-[#a99abb]">
-                  {recommendations.length} tracks
-                </span>
+                <div className="flex items-center gap-2">
+                  {onPlayMix && (
+                    <button
+                      type="button"
+                      onClick={onPlayMix}
+                      className="flex items-center gap-1.5 rounded-full bg-[#d8ff57] hover:bg-[#e4ff78] px-3 py-1 text-xs font-bold text-black shadow transition"
+                    >
+                      <Play className="h-3 w-3 fill-current" />
+                      Play Mix
+                    </button>
+                  )}
+                  <span className="font-mono text-[10px] text-[#a99abb]">
+                    {recommendations.length} tracks
+                  </span>
+                </div>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
-                {recommendations.slice(0, 6).map((recommendation) => (
-                  <div
-                    key={recommendation.id}
-                    className="flex items-center gap-3 rounded-xl bg-black/15 px-2 py-2"
-                  >
-                    <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-[#302441]">
-                      {recommendation.art && (
-                        <img
-                          src={recommendation.art}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-semibold text-[#f0eaf7]">
-                        {recommendation.title}
-                      </p>
-                      <p className="truncate text-[11px] text-[#a99abb]">
-                        {recommendation.artist} · {recommendation.reason}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                {recommendations.slice(0, 8).map((recommendation) => {
+                  const track = aiRecommendationToTrack(recommendation);
+                  return (
+                    <button
+                      key={recommendation.id}
+                      type="button"
+                      onClick={() => onPlay(track)}
+                      className="group flex items-center gap-3 rounded-xl bg-black/20 hover:bg-black/40 px-2.5 py-2 text-left transition w-full"
+                    >
+                      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-[#302441]">
+                        {recommendation.art && (
+                          <img
+                            src={recommendation.art}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        )}
+                        <div className="absolute inset-0 grid place-items-center bg-black/40 opacity-0 group-hover:opacity-100 transition">
+                          <Play className="h-4 w-4 fill-white text-white" />
+                        </div>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-semibold text-[#f0eaf7] group-hover:text-[#d8ff57] transition-colors">
+                          {recommendation.title}
+                        </p>
+                        <p className="truncate text-[11px] text-[#a99abb]">
+                          {recommendation.artist} · {recommendation.reason}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1037,17 +1470,17 @@ function PlaybackDiagnostics({
           <span
             className={
               isPremium === false
-                ? "text-[#ef8e83]"
+                ? "text-[#d8ff57]"
                 : isPremium
                 ? "text-[#d8ff57]"
                 : "text-[#a5afa1]"
             }
           >
             {isPremium === false
-              ? "Free (Premium required for SDK)"
+              ? "Free"
               : isPremium
               ? "Premium"
-              : "Checking tier"}
+              : "Connected"}
           </span>
         </div>
         <div className="flex items-center justify-between">
@@ -1055,6 +1488,8 @@ function PlaybackDiagnostics({
           <span className="font-medium text-[#d8ff57]">
             {playbackMode === "spotify"
               ? "Spotify Web Playback SDK"
+              : playbackMode === "full"
+              ? "Full Stream Audio"
               : playbackMode === "preview"
               ? "Preview Audio (HTML5)"
               : "Idle"}
@@ -1089,6 +1524,13 @@ export default function Home() {
   const [newSpotifyPlaylistName, setNewSpotifyPlaylistName] = useState("My Musivo favorites");
   const [includeLikedInSpotifyPlaylist, setIncludeLikedInSpotifyPlaylist] = useState(true);
   const [aiRecommendations, setAiRecommendations] = useState<AiRecommendation[]>([]);
+  const [selectedMood, setSelectedMood] = useState("chill");
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [aiMixMeta, setAiMixMeta] = useState<{
+    title: string;
+    description: string;
+    mood: string;
+  } | null>(null);
   const [syncStepText, setSyncStepText] = useState("");
   const [lastSyncStats, setLastSyncStats] = useState<{
     playlists: number;
@@ -1206,13 +1648,69 @@ export default function Home() {
     onError: (error) => toast.error(error.message),
   });
 
-  const spotifyAiMixMutation = trpc.spotify.createAiMix.useMutation({
+  const aiMixMutation = trpc.music.createAiMix.useMutation({
     onSuccess: (result) => {
-      setAiRecommendations(result.recommendations);
-      toast.success(`Built ${result.playlist.name} with ${result.recommendations.length} AI picks`);
+      setAiRecommendations(result.recommendations as AiRecommendation[]);
+      setAiMixMeta({
+        title: result.title,
+        description: result.description,
+        mood: result.mood,
+      });
+      toast.success(`Built ${result.title} with ${result.recommendations.length} tracks!`);
     },
     onError: (error) => toast.error(error.message),
   });
+
+  const handleBuildAiMix = (moodOverride?: string, promptOverride?: string) => {
+    const mood = moodOverride ?? selectedMood;
+    const prompt = promptOverride ?? customPrompt.trim();
+    aiMixMutation.mutate({
+      mood,
+      prompt: prompt || undefined,
+      count: 8,
+      saveToSpotify: Boolean(spotifyStatusQuery.data?.connected),
+    });
+  };
+
+  const handlePlayAiMix = () => {
+    if (!aiRecommendations.length) return;
+    const mixTracks = aiRecommendations.map(aiRecommendationToTrack);
+    void playTrack(mixTracks[0], mixTracks);
+    toast.success(`Playing AI Mix: ${aiMixMeta?.title || "Custom Mix"}`);
+  };
+
+  const handleSaveAiMixToLibrary = async () => {
+    if (!aiRecommendations.length) return;
+    try {
+      const title = aiMixMeta?.title || `Musivo AI Mix (${new Date().toLocaleDateString()})`;
+      const playlist = await createPlaylistMutation.mutateAsync({ name: title });
+      const mixTracks = aiRecommendations.map(aiRecommendationToTrack);
+      for (const track of mixTracks) {
+        await addTrackMutation.mutateAsync({
+          playlistId: playlist.id,
+          track: toServerTrack(track),
+        });
+      }
+      toast.success(`Saved all ${mixTracks.length} tracks to your library!`);
+    } catch {
+      toast.error("Failed to save AI mix to library.");
+    }
+  };
+
+  const handleExportAiMixToSpotify = () => {
+    if (!aiRecommendations.length) return;
+    if (!spotifyStatusQuery.data?.connected) {
+      connectSpotify();
+      return;
+    }
+    const rawIds = aiRecommendations.map((r) => r.id.replace(/^spotify-/, ""));
+    const title = aiMixMeta?.title || "Musivo AI Mix";
+    spotifyCreatePlaylistMutation.mutate({
+      name: title,
+      description: aiMixMeta?.description || "Curated in Musivo AI Mix Studio",
+      trackIds: rawIds,
+    });
+  };
 
   const spotifyDisconnectMutation = trpc.spotify.disconnect.useMutation({
     onSuccess: async () => {
@@ -1668,13 +2166,39 @@ export default function Home() {
                 onPlay={(t) => void playTrack(t)}
                 onCreatePlaylist={openSpotifyPlaylistDialog}
                 creatingPlaylist={spotifyCreatePlaylistMutation.isPending}
-                onBuildAiMix={() => spotifyAiMixMutation.mutate()}
-                buildingAiMix={spotifyAiMixMutation.isPending}
+                onBuildAiMix={() => handleBuildAiMix()}
+                buildingAiMix={aiMixMutation.isPending}
                 recommendations={aiRecommendations}
+                onOpenAiMixStudio={() => setActiveView("aimix")}
+                onPlayMix={handlePlayAiMix}
                 isPremium={isPremium}
                 user={user}
                 savedTracksCount={lastSyncStats?.savedTracks ?? spotifyStatusQuery.data?.savedTracksCount ?? (likedTracks ?? []).length}
                 syncStepText={syncStepText}
+              />
+            ) : activeView === "aimix" ? (
+              <AiMixStudio
+                recommendations={aiRecommendations}
+                meta={aiMixMeta}
+                selectedMood={selectedMood}
+                onSelectMood={(mood) => {
+                  setSelectedMood(mood);
+                  handleBuildAiMix(mood, undefined);
+                }}
+                customPrompt={customPrompt}
+                onChangePrompt={setCustomPrompt}
+                onBuildMix={() => handleBuildAiMix()}
+                buildingMix={aiMixMutation.isPending}
+                onPlayMix={handlePlayAiMix}
+                onPlayTrack={(t) => void playTrack(t, aiRecommendations.map(aiRecommendationToTrack))}
+                onSaveToLibrary={handleSaveAiMixToLibrary}
+                onExportToSpotify={handleExportAiMixToSpotify}
+                exportingSpotify={spotifyCreatePlaylistMutation.isPending}
+                isSpotifyConnected={Boolean(spotifyStatusQuery.data?.connected)}
+                activeTrackId={currentTrack.id}
+                isPlaying={isPlaying}
+                likedIds={likedIds}
+                onLike={toggleLike}
               />
             ) : activeView === "liked" ? (
               <section>
@@ -1790,7 +2314,7 @@ export default function Home() {
                     <p className="mt-5 max-w-[420px] text-sm leading-6 text-[#c3d0b2] md:text-[15px]">
                       {isSpotifyConnected
                         ? "Spotify Web Playback SDK powers your music stream. Control everything directly in Musivo."
-                        : "Connect your Spotify account for full Web Playback SDK streaming, or enjoy previews."}
+                        : "Full-length streaming, curated AI mixes, and universal library controls directly in Musivo."}
                     </p>
                     <div className="mt-8 flex flex-wrap items-center gap-3">
                       <button
@@ -1836,6 +2360,34 @@ export default function Home() {
                   onSync={syncSpotify}
                   onOpen={() => setActiveView("spotify")}
                 />
+
+                <div className="mt-8 overflow-hidden rounded-3xl border border-[#c09cff]/25 bg-gradient-to-br from-[#291c3d] via-[#1d1627] to-[#121316] p-6 sm:p-7 shadow-xl relative">
+                  <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-[#d5b9ff]/10 blur-3xl pointer-events-none" />
+                  <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+                    <div className="space-y-1.5 max-w-xl">
+                      <div className="flex items-center gap-2 text-[#d5b9ff]">
+                        <Sparkles className="h-4 w-4 animate-pulse" />
+                        <span className="font-mono text-[10px] uppercase tracking-[0.16em] font-semibold">
+                          AI Mix Studio
+                        </span>
+                      </div>
+                      <h2 className="font-display text-xl sm:text-2xl font-bold text-[#f6efff] tracking-tight">
+                        Curate your personal soundscape with AI
+                      </h2>
+                      <p className="text-xs sm:text-sm text-[#bcaecf] leading-relaxed">
+                        Choose from crafted mood presets like Midnight Reverie and Neon Cardio, or describe any vibe to generate and play full-length playlists instantly.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveView("aimix")}
+                      className="flex items-center gap-2 rounded-full bg-[#d5b9ff] hover:bg-[#e4d2ff] px-5 py-2.5 text-xs font-bold text-[#1f132e] shadow-lg transition hover:scale-[1.03] shrink-0"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Open AI Mix Studio
+                    </button>
+                  </div>
+                </div>
 
                 <section className="mt-10">
                   <SectionHeading
@@ -2069,20 +2621,9 @@ export default function Home() {
                     <span className="h-1.5 w-1.5 rounded-full bg-[#1db954] animate-pulse" />
                     Spotify Full Stream
                   </span>
-                ) : !isSpotifyConnected ? (
-                  <button
-                    onClick={() => void connectSpotify()}
-                    className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-[#1db954] hover:bg-[#1ed760] px-2.5 py-0.5 text-[10px] font-semibold text-black transition shadow-sm hover:scale-[1.02]"
-                    title="Sign in with Spotify to stream full-length songs"
-                  >
-                    <svg className="h-3 w-3 fill-current" viewBox="0 0 24 24">
-                      <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
-                    </svg>
-                    Sign in for Full Song
-                  </button>
                 ) : (
                   <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-[#d8ff57]/15 px-2 py-0.5 text-[9px] font-semibold text-[#d8ff57]">
-                    Full Track Ready
+                    Full Length Audio
                   </span>
                 )}
 
