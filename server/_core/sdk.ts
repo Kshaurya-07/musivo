@@ -167,8 +167,8 @@ class SDKServer {
     return this.signSession(
       {
         openId,
-        appId: ENV.appId,
-        name: options.name || "",
+        appId: ENV.appId || "musivo",
+        name: options.name || "Musivo User",
       },
       options
     );
@@ -185,8 +185,8 @@ class SDKServer {
 
     return new SignJWT({
       openId: payload.openId,
-      appId: payload.appId,
-      name: payload.name,
+      appId: payload.appId || "musivo",
+      name: payload.name || "Musivo User",
     })
       .setProtectedHeader({ alg: "HS256", typ: "JWT" })
       .setExpirationTime(expirationSeconds)
@@ -197,7 +197,6 @@ class SDKServer {
     cookieValue: string | undefined | null
   ): Promise<{ openId: string; appId: string; name: string } | null> {
     if (!cookieValue) {
-      console.warn("[Auth] Missing session cookie");
       return null;
     }
 
@@ -206,14 +205,12 @@ class SDKServer {
       const { payload } = await jwtVerify(cookieValue, secretKey, {
         algorithms: ["HS256"],
       });
-      const { openId, appId, name } = payload as Record<string, unknown>;
+      const openId = isNonEmptyString(payload.openId) ? payload.openId : null;
+      const appId = typeof payload.appId === "string" && payload.appId ? payload.appId : "musivo";
+      const name = typeof payload.name === "string" && payload.name ? payload.name : "Musivo User";
 
-      if (
-        !isNonEmptyString(openId) ||
-        !isNonEmptyString(appId) ||
-        !isNonEmptyString(name)
-      ) {
-        console.warn("[Auth] Session payload missing required fields");
+      if (!openId) {
+        console.warn("[Auth] Session payload missing required openId");
         return null;
       }
 

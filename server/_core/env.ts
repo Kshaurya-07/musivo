@@ -7,8 +7,8 @@ function cleanEnvString(val: string | undefined): string {
 }
 
 export const ENV = {
-  appId: cleanEnvString(process.env.VITE_APP_ID),
-  cookieSecret: cleanEnvString(process.env.JWT_SECRET),
+  appId: cleanEnvString(process.env.VITE_APP_ID) || "musivo",
+  cookieSecret: cleanEnvString(process.env.JWT_SECRET) || "musivo-super-secret-production-key-at-least-32-chars-long",
   databaseUrl: cleanEnvString(process.env.DATABASE_URL),
   oAuthServerUrl: cleanEnvString(process.env.OAUTH_SERVER_URL),
   ownerOpenId: cleanEnvString(process.env.OWNER_OPEN_ID),
