@@ -90,7 +90,7 @@ const fallbackDefaultTrack: PlaybackTrack = {
   duration: "4:03",
   art: "https://images.unsplash.com/photo-1519608487953-e999c86e7455?auto=format&fit=crop&w=900&q=85",
   audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-  accent: "#d8ff57",
+  accent: "#f5ba42",
   badge: "MADE FOR YOU",
   durationMs: 243000,
   source: "fallback",
