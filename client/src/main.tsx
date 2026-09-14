@@ -98,3 +98,18 @@ createRoot(document.getElementById("root")!).render(
     </QueryClientProvider>
   </trpc.Provider>
 );
+
+// Register Musivo PWA service worker for installable app & background caching
+if ("serviceWorker" in navigator && typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((reg) => {
+        console.log("[PWA] Service Worker registered with scope:", reg.scope);
+      })
+      .catch((err) => {
+        console.warn("[PWA] Service Worker registration skipped/failed:", err);
+      });
+  });
+}
+

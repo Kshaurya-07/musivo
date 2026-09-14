@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   Album,
   ArrowRight,
@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatTime, matchesTrackQuery } from "@/lib/musivo";
+import { MobileNavDrawer } from "@/components/MobileNavDrawer";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
@@ -1981,6 +1982,38 @@ export default function Home() {
     savedTracks: number;
   } | null>(null);
 
+  // Responsive mobile/tablet nav state & PWA installation hook
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [canInstallPwa, setCanInstallPwa] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setCanInstallPwa(true);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const installPwa = useCallback(async () => {
+    if (!deferredPrompt) {
+      toast.info("To install on iOS: Tap Share then 'Add to Home Screen'. On desktop: Click the install icon in your browser address bar.");
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      toast.success("Musivo installed successfully! Launch it anytime from your home screen or desktop.");
+      setCanInstallPwa(false);
+    }
+    setDeferredPrompt(null);
+  }, [deferredPrompt]);
+
   // Centralized playback hook
   const {
     currentTrack,
@@ -2498,7 +2531,17 @@ export default function Home() {
             )}
           </div>
 
-          <div className="mt-auto rounded-2xl border border-white/[0.08] bg-[#1a130c] p-4">
+          {/* PWA Install Button (When installable) */}
+          {canInstallPwa && (
+            <button
+              onClick={installPwa}
+              className="mt-auto mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-[#f5ba42]/30 bg-[#f5ba42]/10 py-2.5 text-xs font-bold text-[#f5ba42] transition hover:bg-[#f5ba42] hover:text-[#140f07] shadow-[0_2px_12px_rgba(245,186,66,0.2)]"
+            >
+              <Download className="h-3.5 w-3.5" /> Install Musivo App
+            </button>
+          )}
+
+          <div className={`${canInstallPwa ? "" : "mt-auto"} rounded-2xl border border-white/[0.08] bg-[#1a130c] p-4`}>
             <div className="mb-3 flex items-center justify-between">
               <span className="grid h-8 w-8 place-items-center rounded-full bg-[#382614] text-[#f5ba42]">
                 <Download className="h-4 w-4" />
@@ -2523,8 +2566,9 @@ export default function Home() {
           <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-white/[0.055] bg-[#0d0f0d]/85 px-5 py-4 backdrop-blur-xl md:px-8 lg:px-12">
             <div className="flex min-w-0 items-center gap-2 sm:gap-3">
               <button
-                onClick={() => toast.info("Open Musivo on a wider screen for the full library rail.")}
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[0.08] text-[#c2b2a0] lg:hidden"
+                onClick={() => setIsMobileNavOpen(true)}
+                aria-label="Open navigation menu"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[0.08] text-[#c2b2a0] hover:bg-white/[0.06] hover:text-white transition lg:hidden"
               >
                 <Menu className="h-5 w-5" />
               </button>
@@ -3273,7 +3317,15 @@ export default function Home() {
 
       {/* Persistent Bottom Musivo Player */}
       <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/[0.09] bg-[#100c08]/95 shadow-[0_-16px_50px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
-        <div className="relative mx-auto max-w-[1600px] px-4 py-3 md:px-8 lg:px-12">
+        {/* Mobile Top Progress Line Indicator (Spotify Mobile Style) */}
+        <div className="absolute top-0 inset-x-0 h-[2.5px] bg-white/[0.08] sm:hidden overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-[#ffd064] via-[#f5ba42] to-[#e09b26] transition-all duration-300"
+            style={{ width: `${duration > 0 ? (progress / duration) * 100 : 0}%` }}
+          />
+        </div>
+
+        <div className="relative mx-auto max-w-[1600px] px-3.5 py-2.5 sm:px-6 sm:py-3 md:px-8 lg:px-12">
           {showPlaybackDiagnostics && (
             <PlaybackDiagnostics
               connected={isSpotifyConnected}
@@ -3286,22 +3338,22 @@ export default function Home() {
             />
           )}
 
-          <div className="flex items-center gap-3 md:gap-5">
+          <div className="flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 md:gap-5">
             {/* Left Track Info */}
-            <div className="flex min-w-0 flex-1 items-center gap-3 md:w-[28%] md:flex-none">
+            <div className="flex min-w-0 max-w-[56%] sm:max-w-none sm:w-[28%] sm:flex-none items-center gap-2.5 sm:gap-3">
               <img
                 src={currentTrack.art}
                 alt=""
-                className="h-11 w-11 shrink-0 rounded-lg object-cover"
+                className="h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-lg object-cover shadow-md"
               />
               <div className="min-w-0">
-                <p className="truncate text-[13px] font-semibold text-[#faf5ee]">
+                <p className="truncate text-xs sm:text-[13px] font-semibold text-[#faf5ee]">
                   {currentTrack.title}
                 </p>
-                <p className="truncate text-xs text-[#a2927f]">{currentTrack.artist}</p>
+                <p className="truncate text-[11px] sm:text-xs text-[#a2927f]">{currentTrack.artist}</p>
               </div>
               <div
-                className={`player-eq ${isPlaying ? "" : "paused"}`}
+                className={`player-eq hidden xs:flex ${isPlaying ? "" : "paused"}`}
                 aria-label={isPlaying ? "Playing" : "Paused"}
               >
                 <span />
@@ -3325,8 +3377,8 @@ export default function Home() {
             </div>
 
             {/* Middle Playback Controls */}
-            <div className="flex flex-1 flex-col items-center gap-1.5 md:max-w-[520px]">
-              <div className="flex items-center gap-4 text-[#948472]">
+            <div className="flex shrink-0 sm:flex-1 flex-col items-center gap-1 sm:gap-1.5 md:max-w-[520px]">
+              <div className="flex items-center gap-2.5 sm:gap-4 text-[#948472]">
                 <button
                   aria-label="Shuffle queue"
                   onClick={shuffleQueue}
@@ -3646,6 +3698,22 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Mobile & Tablet Slide-Over Navigation Drawer */}
+      <MobileNavDrawer
+        isOpen={isMobileNavOpen}
+        onClose={() => setIsMobileNavOpen(false)}
+        activeView={activeView}
+        onSelectView={(viewId) => {
+          handleNav(viewId);
+          setIsMobileNavOpen(false);
+        }}
+        navItems={navItems}
+        libraryItems={libraryItems}
+        isSpotifyConnected={isSpotifyConnected}
+        canInstallPwa={canInstallPwa}
+        onInstallPwa={installPwa}
+      />
     </main>
   );
 }

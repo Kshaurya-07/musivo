@@ -698,6 +698,133 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
     window.location.href = "/api/auth/spotify";
   }, []);
 
+  // Media Session API & Background Audio Focus for Mobile/Tablet/Desktop lock screen and background streaming
+  const backgroundAudioKeeperRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    // Hidden whisper audio element to retain native audio focus and OS media pipeline when app is backgrounded
+    const bgAudio = new Audio();
+    bgAudio.loop = true;
+    bgAudio.volume = 0.01;
+    bgAudio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+    backgroundAudioKeeperRef.current = bgAudio;
+
+    return () => {
+      bgAudio.pause();
+      bgAudio.src = "";
+    };
+  }, []);
+
+  // Sync background audio keeper with playing state for full streaming & PWA background playback
+  useEffect(() => {
+    if (!backgroundAudioKeeperRef.current) return;
+    if (isPlaying && (playbackMode === "full" || playbackMode === "preview")) {
+      backgroundAudioKeeperRef.current.play().catch(() => undefined);
+    } else {
+      backgroundAudioKeeperRef.current.pause();
+    }
+  }, [isPlaying, playbackMode]);
+
+  // Sync track metadata with OS lock screen, notifications, and Control Center
+  useEffect(() => {
+    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
+
+    try {
+      const artUrl = currentTrack.art || "/musivo-logo.png";
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentTrack.title || "Musivo",
+        artist: currentTrack.artist || "Music, Reimagined",
+        album: currentTrack.album || "Musivo",
+        artwork: [
+          { src: artUrl, sizes: "96x96", type: "image/jpeg" },
+          { src: artUrl, sizes: "128x128", type: "image/jpeg" },
+          { src: artUrl, sizes: "192x192", type: "image/jpeg" },
+          { src: artUrl, sizes: "256x256", type: "image/jpeg" },
+          { src: artUrl, sizes: "384x384", type: "image/jpeg" },
+          { src: artUrl, sizes: "512x512", type: "image/jpeg" },
+        ],
+      });
+    } catch (err) {
+      console.warn("[MediaSession] Metadata update skipped:", err);
+    }
+  }, [currentTrack]);
+
+  // Sync playback state with Media Session
+  useEffect(() => {
+    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
+
+    try {
+      navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+    } catch {}
+  }, [isPlaying]);
+
+  // Wire up Media Session action handlers (Lock screen controls & Bluetooth buttons)
+  useEffect(() => {
+    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
+
+    const actionMap: [MediaSessionAction, MediaSessionActionHandler | null][] = [
+      ["play", () => void resume()],
+      ["pause", () => void pause()],
+      ["previoustrack", () => void skip(-1)],
+      ["nexttrack", () => void skip(1)],
+      [
+        "seekto",
+        (details) => {
+          if (typeof details.seekTime === "number") {
+            void seek(details.seekTime);
+          }
+        },
+      ],
+      [
+        "seekbackward",
+        (details) => {
+          const offset = details.seekOffset || 10;
+          void seek(Math.max(0, progress - offset));
+        },
+      ],
+      [
+        "seekforward",
+        (details) => {
+          const offset = details.seekOffset || 10;
+          void seek(Math.min(duration || 9999, progress + offset));
+        },
+      ],
+      ["stop", () => void pause()],
+    ];
+
+    actionMap.forEach(([action, handler]) => {
+      try {
+        navigator.mediaSession.setActionHandler(action, handler);
+      } catch {}
+    });
+
+    return () => {
+      actionMap.forEach(([action]) => {
+        try {
+          navigator.mediaSession.setActionHandler(action, null);
+        } catch {}
+      });
+    };
+  }, [resume, pause, skip, seek, progress, duration]);
+
+  // Sync position state
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      "mediaSession" in navigator &&
+      typeof navigator.mediaSession.setPositionState === "function" &&
+      duration > 0
+    ) {
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: Math.max(0, duration),
+          playbackRate: isPlaying ? 1.0 : 0,
+          position: Math.min(Math.max(0, progress), duration),
+        });
+      } catch {}
+    }
+  }, [progress, duration, isPlaying]);
+
   const value = useMemo<PlaybackContextType>(
     () => ({
       currentTrack,
