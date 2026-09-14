@@ -208,22 +208,34 @@ async function spotifyUserFetch<T>(userId: number, path: string) {
   return (await response.json()) as T;
 }
 
-export async function completeSpotifyConnection(userId: number, code: string, redirectUri: string) {
-  const payload = await exchangeUserCode(code, redirectUri);
-  if (!payload.refresh_token) throw new Error("Spotify did not return a refresh token");
-  const profile = await spotifyUserFetchWithToken<SpotifyProfile & { email?: string }>(payload.access_token!, "/me");
+export async function saveSpotifyConnectionFromTokens(
+  userId: number,
+  tokens: { access_token: string; refresh_token?: string; expires_in?: number; scope?: string },
+  profile: SpotifyProfile & { email?: string }
+) {
   if (!profile.id) throw new Error("Spotify profile did not include an id");
+  const existing = await db.getSpotifyConnection(userId);
+  const refreshToken = tokens.refresh_token || (existing ? decryptSpotifyToken(existing.refreshTokenEncrypted) : "");
+  if (!refreshToken) throw new Error("Spotify did not return a refresh token");
+
   await db.upsertSpotifyConnection({
     userId,
     spotifyUserId: profile.id,
     spotifyDisplayName: profile.display_name ?? null,
     spotifyProfileImageUrl: profile.images?.[0]?.url ?? null,
-    accessTokenEncrypted: encryptSpotifyToken(payload.access_token!),
-    refreshTokenEncrypted: encryptSpotifyToken(payload.refresh_token),
-    accessTokenExpiresAt: new Date(Date.now() + Math.max(60, payload.expires_in ?? 3600) * 1000),
-    scope: payload.scope ?? USER_SCOPES,
+    accessTokenEncrypted: encryptSpotifyToken(tokens.access_token),
+    refreshTokenEncrypted: encryptSpotifyToken(refreshToken),
+    accessTokenExpiresAt: new Date(Date.now() + Math.max(60, tokens.expires_in ?? 3600) * 1000),
+    scope: tokens.scope ?? USER_SCOPES,
   });
-  return { ...profile, accessToken: payload.access_token!, refreshToken: payload.refresh_token };
+  return { ...profile, accessToken: tokens.access_token, refreshToken };
+}
+
+export async function completeSpotifyConnection(userId: number, code: string, redirectUri: string) {
+  const payload = await exchangeUserCode(code, redirectUri);
+  if (!payload.access_token) throw new Error("Spotify did not return an access token");
+  const profile = await spotifyUserFetchWithToken<SpotifyProfile & { email?: string }>(payload.access_token, "/me");
+  return saveSpotifyConnectionFromTokens(userId, payload as { access_token: string; refresh_token?: string; expires_in?: number; scope?: string }, profile);
 }
 
 async function spotifyUserFetchWithToken<T>(accessToken: string, path: string) {

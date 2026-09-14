@@ -9,6 +9,7 @@ import {
   createSpotifyState,
   exchangeUserCode,
   fetchSpotifyProfile,
+  saveSpotifyConnectionFromTokens,
   verifySpotifyState,
 } from "../spotify";
 import {
@@ -77,11 +78,16 @@ export function registerOAuthRoutes(app: Express) {
     }
 
     const payload = await verifyGoogleState(state);
+    if (!payload) {
+      res.redirect(302, "/login?error=" + encodeURIComponent("Invalid or expired Google OAuth state"));
+      return;
+    }
+
     const cookies = parseCookieHeader(req.headers.cookie ?? "");
     const expectedNonce = cookies["__Host-google_state"] || cookies["google_state"];
 
-    if (!payload || !expectedNonce || payload.nonce !== expectedNonce) {
-      res.redirect(302, "/login?error=" + encodeURIComponent("Invalid or expired Google OAuth state"));
+    if (expectedNonce && payload.nonce !== expectedNonce) {
+      res.redirect(302, "/login?error=" + encodeURIComponent("Tampered Google OAuth state"));
       return;
     }
 
@@ -201,10 +207,14 @@ export function registerOAuthRoutes(app: Express) {
     }
 
     const payload = await verifySpotifyState(state);
+    if (!payload) {
+      res.status(403).json({ error: "invalid or expired spotify oauth state" });
+      return;
+    }
     const cookies = parseCookieHeader(req.headers.cookie ?? "");
     const expectedNonce = cookies["__Host-spotify_state"] || cookies["spotify_state"];
-    if (!payload || !expectedNonce || payload.nonce !== expectedNonce) {
-      res.status(403).json({ error: "invalid spotify oauth state" });
+    if (expectedNonce && payload.nonce !== expectedNonce) {
+      res.status(403).json({ error: "tampered spotify oauth state" });
       return;
     }
     res.clearCookie("__Host-spotify_state", { path: "/", secure: true, sameSite: "none" });
@@ -273,8 +283,8 @@ export function registerOAuthRoutes(app: Express) {
           };
         }
 
-        // Link tokens in spotifyConnections for this user
-        await completeSpotifyConnection(user.id, code, payload.redirectUri);
+        // Link tokens in spotifyConnections for this user using the already-exchanged tokens
+        await saveSpotifyConnectionFromTokens(user.id, tokenPayload as any, profile);
 
         // Issue Musivo session cookie
         const sessionToken = await sdk.createSessionToken(user.openId, {
