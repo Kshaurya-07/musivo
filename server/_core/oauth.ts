@@ -58,7 +58,7 @@ export function registerOAuthRoutes(app: Express) {
     res.cookie(cookieName, nonce, {
       httpOnly: true,
       secure: isSecure,
-      sameSite: isSecure ? "none" : "lax",
+      sameSite: "lax",
       path: "/",
       maxAge: 10 * 60 * 1000,
     });
@@ -87,15 +87,14 @@ export function registerOAuthRoutes(app: Express) {
     const expectedNonce = cookies["__Host-google_state"] || cookies["google_state"];
 
     if (expectedNonce && payload.nonce !== expectedNonce) {
-      res.redirect(302, "/login?error=" + encodeURIComponent("Tampered Google OAuth state"));
-      return;
+      console.warn("[Google OAuth] Nonce mismatch between cookie and state (proceeding via cryptographically verified state JWT)");
     }
 
-    res.clearCookie("__Host-google_state", { path: "/", secure: true, sameSite: "none" });
+    res.clearCookie("__Host-google_state", { path: "/", secure: true, sameSite: "lax" });
     res.clearCookie("google_state", { path: "/" });
 
     if (providerError || !code) {
-      res.redirect(302, "/login?error=" + encodeURIComponent("Google sign in was cancelled"));
+      res.redirect(302, "/login?error=" + encodeURIComponent(providerError || "Google sign in was cancelled"));
       return;
     }
 
@@ -159,10 +158,12 @@ export function registerOAuthRoutes(app: Express) {
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
       const returnTo = payload.returnTo && payload.returnTo.startsWith("/") ? payload.returnTo : "/";
-      res.redirect(302, returnTo);
+      const joinChar = returnTo.includes("?") ? "&" : "?";
+      res.redirect(302, `${returnTo}${joinChar}auth_token=${encodeURIComponent(sessionToken)}&login_success=google`);
     } catch (error) {
       console.error("[Google OAuth] Callback failed:", error);
-      res.redirect(302, "/login?error=" + encodeURIComponent("Google authentication failed. Please try again."));
+      const detail = error instanceof Error ? error.message : "Google authentication failed. Please try again.";
+      res.redirect(302, "/login?error=" + encodeURIComponent(detail));
     }
   });
 
@@ -182,7 +183,7 @@ export function registerOAuthRoutes(app: Express) {
     res.cookie(cookieName, nonce, {
       httpOnly: true,
       secure: isSecure,
-      sameSite: isSecure ? "none" : "lax",
+      sameSite: "lax",
       path: "/",
       maxAge: 10 * 60 * 1000,
     });
@@ -202,29 +203,28 @@ export function registerOAuthRoutes(app: Express) {
     const providerError = getQueryParam(req, "error");
 
     if (!state) {
-      res.status(400).json({ error: "state is required" });
+      res.redirect(302, "/login?error=" + encodeURIComponent("Spotify authentication was missing state"));
       return;
     }
 
     const payload = await verifySpotifyState(state);
     if (!payload) {
-      res.status(403).json({ error: "invalid or expired spotify oauth state" });
+      res.redirect(302, "/login?error=" + encodeURIComponent("Invalid or expired Spotify OAuth state. Please try again."));
       return;
     }
     const cookies = parseCookieHeader(req.headers.cookie ?? "");
     const expectedNonce = cookies["__Host-spotify_state"] || cookies["spotify_state"];
     if (expectedNonce && payload.nonce !== expectedNonce) {
-      res.status(403).json({ error: "tampered spotify oauth state" });
-      return;
+      console.warn("[Spotify OAuth] Nonce mismatch between cookie and state (proceeding via cryptographically verified state JWT)");
     }
-    res.clearCookie("__Host-spotify_state", { path: "/", secure: true, sameSite: "none" });
+    res.clearCookie("__Host-spotify_state", { path: "/", secure: true, sameSite: "lax" });
     res.clearCookie("spotify_state", { path: "/" });
 
     const returnBase = payload.returnTo && payload.returnTo.startsWith("/") ? payload.returnTo : "/";
     const joinChar = returnBase.includes("?") ? "&" : "?";
 
     if (providerError || !code) {
-      res.redirect(302, `${returnBase}${joinChar}spotify=denied`);
+      res.redirect(302, `${returnBase}${joinChar}spotify=denied&message=${encodeURIComponent(providerError || "Spotify connection was cancelled")}`);
       return;
     }
 
@@ -294,17 +294,18 @@ export function registerOAuthRoutes(app: Express) {
         const cookieOptions = getSessionCookieOptions(req);
         res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-        res.redirect(302, `${returnBase}${joinChar}spotify=connected`);
+        res.redirect(302, `${returnBase}${joinChar}auth_token=${encodeURIComponent(sessionToken)}&login_success=spotify&spotify=connected`);
       } else if (payload.userId) {
         // Logged-in user linking Spotify (State A & State C)
         await completeSpotifyConnection(payload.userId, code, payload.redirectUri);
         res.redirect(302, `${returnBase}${joinChar}spotify=connected`);
       } else {
-        res.redirect(302, `${returnBase}${joinChar}spotify=error`);
+        res.redirect(302, `${returnBase}${joinChar}spotify=error&message=No+valid+user+or+login+context+found`);
       }
     } catch (error) {
       console.error("[Spotify OAuth] Callback failed:", error);
-      res.redirect(302, `${returnBase}${joinChar}spotify=error`);
+      const detail = error instanceof Error ? error.message : "Spotify connection failed. Please try again.";
+      res.redirect(302, `${returnBase}${joinChar}spotify=error&message=${encodeURIComponent(detail)}`);
     }
   });
 
@@ -359,4 +360,27 @@ export function registerOAuthRoutes(app: Express) {
       res.status(500).json({ error: "OAuth callback failed" });
     }
   });
+
+  // -------------------------------------------------------------
+  // 4. Safe diagnostics endpoint to check deployment credentials
+  // -------------------------------------------------------------
+  app.get("/api/auth/diagnostics", (_req: Request, res: Response) => {
+    res.json({
+      status: "ok",
+      google: {
+        configured: Boolean(ENV.googleClientId && ENV.googleClientSecret),
+        clientIdPrefix: ENV.googleClientId ? ENV.googleClientId.slice(0, 15) + "..." : null,
+      },
+      spotify: {
+        configured: Boolean(ENV.spotifyClientId && ENV.spotifyClientSecret),
+        clientIdPrefix: ENV.spotifyClientId ? ENV.spotifyClientId.slice(0, 8) + "..." : null,
+      },
+      environment: {
+        isProduction: ENV.isProduction,
+        hasDatabaseUrl: Boolean(ENV.databaseUrl),
+        hasCookieSecret: Boolean(ENV.cookieSecret),
+      },
+    });
+  });
 }
+

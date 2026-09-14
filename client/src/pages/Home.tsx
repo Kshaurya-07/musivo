@@ -1137,6 +1137,39 @@ export default function Home() {
     retry: false,
   });
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const spotifyParam = params.get("spotify");
+    const loginSuccess = params.get("login_success");
+    const message = params.get("message");
+
+    if (loginSuccess) {
+      toast.success(`Welcome to Musivo! Signed in with ${loginSuccess === "google" ? "Google" : "Spotify"}.`);
+    }
+
+    if (spotifyParam === "connected") {
+      toast.success("Spotify connected successfully! Library sync is ready.");
+      spotifyStatusQuery.refetch();
+      spotifyPlaylistsQuery.refetch();
+      spotifyRecentQuery.refetch();
+      playlistUtils.auth.me.invalidate();
+    } else if (spotifyParam === "error") {
+      toast.error(message ? `Spotify connection error: ${message}` : "Spotify connection failed. Please try again.");
+    } else if (spotifyParam === "denied") {
+      toast.info(message ? `Spotify: ${message}` : "Spotify connection was cancelled.");
+    }
+
+    if (spotifyParam || loginSuccess || message) {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete("spotify");
+      cleanUrl.searchParams.delete("login_success");
+      cleanUrl.searchParams.delete("message");
+      cleanUrl.searchParams.delete("auth_token");
+      window.history.replaceState({}, document.title, cleanUrl.pathname + (cleanUrl.searchParams.toString() ? `?${cleanUrl.searchParams.toString()}` : "") + cleanUrl.hash);
+    }
+  }, []);
+
   const spotifyConnectMutation = trpc.spotify.connect.useMutation({
     onSuccess: ({ authorizeUrl }) => {
       window.location.href = authorizeUrl;

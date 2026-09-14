@@ -10,9 +10,17 @@ export default function Login() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const err = params.get("error");
+    const spotifyStatus = params.get("spotify");
+    const msg = params.get("message");
+
     if (err) {
       setErrorMessage(err);
+    } else if (spotifyStatus === "error") {
+      setErrorMessage(msg || "Spotify authentication failed. Please check Developer Dashboard or try again.");
+    } else if (spotifyStatus === "denied") {
+      setErrorMessage(msg || "Spotify authorization was cancelled.");
     }
+
     const ret = params.get("returnTo");
     if (ret && ret.startsWith("/")) {
       setReturnTo(ret);

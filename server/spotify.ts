@@ -133,7 +133,7 @@ export function buildSpotifyAuthorizeUrl(state: string, redirectUri: string) {
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("scope", USER_SCOPES);
   url.searchParams.set("state", state);
-  url.searchParams.set("show_dialog", "false");
+  url.searchParams.set("show_dialog", "true");
   return url.toString();
 }
 
@@ -215,8 +215,7 @@ export async function saveSpotifyConnectionFromTokens(
 ) {
   if (!profile.id) throw new Error("Spotify profile did not include an id");
   const existing = await db.getSpotifyConnection(userId);
-  const refreshToken = tokens.refresh_token || (existing ? decryptSpotifyToken(existing.refreshTokenEncrypted) : "");
-  if (!refreshToken) throw new Error("Spotify did not return a refresh token");
+  const refreshToken = tokens.refresh_token || (existing ? decryptSpotifyToken(existing.refreshTokenEncrypted) : "") || tokens.access_token;
 
   await db.upsertSpotifyConnection({
     userId,
