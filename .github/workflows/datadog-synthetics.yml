@@ -24,15 +24,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-    # Run Synthetic tests within your GitHub workflow.
-    # For additional configuration options visit the action within the marketplace: https://github.com/marketplace/actions/datadog-synthetics-ci
+    # Verify if Datadog credentials exist in GitHub Secrets
+    - name: Verify Datadog Credentials
+      id: check_keys
+      env:
+        DD_API_KEY: ${{ secrets.DD_API_KEY }}
+        DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
+      run: |
+        if [ -z "$DD_API_KEY" ] || [ -z "$DD_APP_KEY" ]; then
+          echo "has_keys=false" >> $GITHUB_OUTPUT
+          echo "::notice title=Datadog CI::Datadog API key (DD_API_KEY) or Application key (DD_APP_KEY) is not yet set in GitHub repository secrets. Skipping Synthetic tests. Add them in GitHub Settings > Secrets and variables > Actions."
+        else
+          echo "has_keys=true" >> $GITHUB_OUTPUT
+          echo "Datadog credentials verified."
+        fi
+
+    # Run Synthetic tests only when credentials are provided
     - name: Run Datadog Synthetic tests
+      if: steps.check_keys.outputs.has_keys == 'true'
       uses: DataDog/synthetics-ci-github-action@87b505388a22005bb8013481e3f73a367b9a53eb # v1.4.0
       with:
-        api_key: ${{secrets.DD_API_KEY}}
-        app_key: ${{secrets.DD_APP_KEY}}
-        test_search_query: 'tag:e2e-tests' #Modify this tag to suit your tagging strategy
+        api_key: ${{ secrets.DD_API_KEY }}
+        app_key: ${{ secrets.DD_APP_KEY }}
+        datadog_site: ${{ secrets.DD_SITE || 'datadoghq.com' }}
+        test_search_query: 'tag:e2e-tests' # Modify this tag to suit your tagging strategy
 
 
