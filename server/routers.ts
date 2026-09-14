@@ -49,6 +49,35 @@ type ProviderTrack = {
   source: "Spotify" | "iTunes";
 };
 
+const fullStreamCache = new Map<string, string>();
+
+async function resolveFullLengthStream(title: string, artist: string): Promise<string | null> {
+  const cacheKey = `${title.toLowerCase().trim()}:::${artist.toLowerCase().trim()}`;
+  const cached = fullStreamCache.get(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const query = `${title} ${artist} audio`;
+    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const match = html.match(/\/watch\?v=([a-zA-Z0-9_-]{11})/);
+    if (match?.[1]) {
+      fullStreamCache.set(cacheKey, match[1]);
+      return match[1];
+    }
+  } catch (err) {
+    console.warn("[Music] Failed to resolve full-length stream:", err);
+  }
+  return null;
+}
+
 async function searchItunesTracks(query: string, limit: number): Promise<ProviderTrack[]> {
   const url = new URL("https://itunes.apple.com/search");
   url.searchParams.set("term", query);
@@ -161,6 +190,17 @@ export const appRouter = router({
             throw new TRPCError({ code: "BAD_GATEWAY", message: "The music catalog is temporarily unavailable." });
           }
         }
+      }),
+    resolveFullStream: publicProcedure
+      .input(
+        z.object({
+          title: z.string().min(1),
+          artist: z.string().min(1),
+        })
+      )
+      .query(async ({ input }) => {
+        const videoId = await resolveFullLengthStream(input.title, input.artist);
+        return { videoId };
       }),
   }),
   spotify: router({

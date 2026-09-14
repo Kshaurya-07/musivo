@@ -9,12 +9,26 @@ import React, {
 } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { formatTime, getNextTrackIndex } from "@/lib/musivo";
+import { formatTime, getNextTrackIndex, parseDuration } from "@/lib/musivo";
 import {
   useSpotifyPlayer,
   SpotifyConnectionState,
 } from "@/hooks/useSpotifyPlayer";
 import { toast } from "sonner";
+
+declare global {
+  interface Window {
+    YT?: {
+      Player: new (elementId: string, config: any) => any;
+      PlayerState: {
+        PLAYING: number;
+        PAUSED: number;
+        ENDED: number;
+      };
+    };
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
 
 export type PlaybackTrack = {
   id: number | string;
@@ -31,7 +45,7 @@ export type PlaybackTrack = {
   source?: string;
 };
 
-export type PlaybackMode = "spotify" | "preview" | "idle";
+export type PlaybackMode = "spotify" | "full" | "preview" | "idle";
 
 export interface PlaybackContextType {
   currentTrack: PlaybackTrack;
@@ -99,6 +113,9 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
 
   // Hidden HTML5 audio element for preview/demo tracks
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Background audio player instance for full-length song streaming
+  const ytPlayerRef = useRef<any>(null);
 
   // Timestamp and position reference for smooth Spotify position interpolation
   const spotifyStateRef = useRef<{
@@ -243,7 +260,111 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
     [queue, currentTrack]
   );
 
-  // Play a track
+  // Background YouTube audio player setup for full-length song playback
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const initYt = () => {
+      if (!window.YT?.Player || ytPlayerRef.current) return;
+      try {
+        let container = document.getElementById("musivo-yt-audio-container");
+        if (!container) {
+          container = document.createElement("div");
+          container.id = "musivo-yt-audio-container";
+          Object.assign(container.style, {
+            position: "fixed",
+            bottom: "-9999px",
+            left: "-9999px",
+            width: "2px",
+            height: "2px",
+            opacity: "0.01",
+            pointerEvents: "none",
+          });
+          const target = document.createElement("div");
+          target.id = "musivo-yt-player-target";
+          container.appendChild(target);
+          document.body.appendChild(container);
+        }
+
+        const player = new window.YT.Player("musivo-yt-player-target", {
+          height: "1",
+          width: "1",
+          playerVars: {
+            autoplay: 1,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            modestbranding: 1,
+            playsinline: 1,
+            origin: window.location.origin,
+          },
+          events: {
+            onReady: (event: any) => {
+              ytPlayerRef.current = event.target;
+              try {
+                event.target.setVolume(volume);
+              } catch {}
+            },
+            onStateChange: (event: any) => {
+              // 1: playing, 2: paused, 0: ended
+              if (event.data === 1) {
+                setIsPlaying(true);
+                const dur = Math.floor(player.getDuration() || 0);
+                if (dur > 0) setDuration(dur);
+              } else if (event.data === 2) {
+                setIsPlaying(false);
+              } else if (event.data === 0) {
+                void skip(1);
+              }
+            },
+            onError: (err: any) => {
+              console.warn("[Musivo Full Stream] Audio error:", err);
+            },
+          },
+        });
+      } catch (err) {
+        console.warn("[Musivo] Failed to init background audio player:", err);
+      }
+    };
+
+    if (window.YT && window.YT.Player) {
+      initYt();
+    } else {
+      if (!document.getElementById("musivo-yt-api-script")) {
+        const script = document.createElement("script");
+        script.id = "musivo-yt-api-script";
+        script.src = "https://www.youtube.com/iframe_api";
+        document.head.appendChild(script);
+      }
+      const existingCb = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        existingCb?.();
+        initYt();
+      };
+    }
+  }, [skip, volume]);
+
+  // Track position and full duration while in full streaming mode
+  useEffect(() => {
+    if (playbackMode !== "full" || !isPlaying) return;
+
+    const interval = window.setInterval(() => {
+      if (ytPlayerRef.current && typeof ytPlayerRef.current.getCurrentTime === "function") {
+        try {
+          const cur = Math.floor(ytPlayerRef.current.getCurrentTime() || 0);
+          setProgress(cur);
+          const dur = Math.floor(ytPlayerRef.current.getDuration() || 0);
+          if (dur > 0) {
+            setDuration(dur);
+          }
+        } catch {}
+      }
+    }, 500);
+
+    return () => window.clearInterval(interval);
+  }, [playbackMode, isPlaying]);
+
+  // Play a track (Full-Length & Spotify)
   const playTrack = useCallback(
     async (track: PlaybackTrack, newQueue?: PlaybackTrack[]) => {
       if (newQueue && newQueue.length > 0) {
@@ -251,8 +372,9 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
       }
 
       let playTarget = track;
+      const initialDuration = parseDuration(playTarget.durationMs || playTarget.duration);
 
-      // 1. Primary path: Spotify Web Playback SDK
+      // 1. Primary path: Spotify Web Playback SDK (if Spotify is connected)
       if (isSpotifyConnected) {
         let isSpotifyTrack =
           String(playTarget.id).startsWith("spotify-") ||
@@ -287,17 +409,12 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
 
         if (isSpotifyTrack) {
           try {
-            if (audioRef.current) {
-              audioRef.current.pause();
-            }
+            if (audioRef.current) audioRef.current.pause();
+            if (ytPlayerRef.current?.pauseVideo) ytPlayerRef.current.pauseVideo();
 
             setCurrentTrack(playTarget);
             setProgress(0);
-            setDuration(
-              playTarget.durationMs
-                ? Math.round(playTarget.durationMs / 1000)
-                : 0
-            );
+            setDuration(initialDuration || 0);
             setPlaybackMode("spotify");
             setUserError(null);
 
@@ -306,63 +423,53 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
             return;
           } catch (err: unknown) {
             console.warn(
-              "[Musivo] Spotify Web Playback SDK could not play track; checking fallback:",
+              "[Musivo] Spotify Web Playback SDK fallback to full length stream:",
               err
             );
-            const message =
-              err instanceof Error
-                ? err.message
-                : "Spotify playback failed to start.";
-
-            setUserError(message);
-
-            if (
-              message.includes("Premium") ||
-              spotifyPlayer.isPremium === false
-            ) {
-              toast.error(
-                "Spotify in-app playback requires Spotify Premium. Falling back to preview audio where available."
-              );
-            } else {
-              toast.info(message);
-            }
-
-            if (!playTarget.audio) {
-              setIsPlaying(false);
-              return;
-            }
           }
         }
       }
 
-      // 2. Fallback path: Preview audio via HTMLAudioElement
-      if (playTarget.audio) {
-        if (spotifyPlayer.isPlaying) {
-          void spotifyPlayer.pause().catch(() => undefined);
+      // 2. Full-Length Audio Stream (Streams the complete full length song!)
+      try {
+        const fullStream = await trpcUtils.music.resolveFullStream.fetch({
+          title: playTarget.title,
+          artist: playTarget.artist,
+        });
+
+        if (fullStream?.videoId) {
+          if (audioRef.current) audioRef.current.pause();
+          if (spotifyPlayer.isPlaying) void spotifyPlayer.pause().catch(() => undefined);
+
+          setCurrentTrack(playTarget);
+          setProgress(0);
+          setDuration(initialDuration || 0);
+          setPlaybackMode("full");
+          setIsPlaying(true);
+          setUserError(null);
+
+          if (ytPlayerRef.current?.loadVideoById) {
+            ytPlayerRef.current.loadVideoById(fullStream.videoId);
+            ytPlayerRef.current.setVolume(volume);
+            ytPlayerRef.current.playVideo();
+            return;
+          }
         }
+      } catch (streamErr) {
+        console.warn("[Musivo] Full-length stream resolution fallback:", streamErr);
+      }
+
+      // 3. Fallback path: Preview audio via HTMLAudioElement
+      if (playTarget.audio) {
+        if (spotifyPlayer.isPlaying) void spotifyPlayer.pause().catch(() => undefined);
+        if (ytPlayerRef.current?.pauseVideo) ytPlayerRef.current.pauseVideo();
 
         setCurrentTrack(playTarget);
         setProgress(0);
-        // Preserve full song duration (e.g. 4:12) instead of capping to 30s
-        const fullDurationSec = playTarget.durationMs
-          ? Math.round(playTarget.durationMs / 1000)
-          : 0;
-        setDuration(fullDurationSec);
+        setDuration(initialDuration || 0);
         setPlaybackMode("preview");
         setIsPlaying(true);
         setUserError(null);
-
-        if (!isSpotifyConnected) {
-          toast.info("Playing 30s preview. Sign in with Spotify to stream the full song!", {
-            action: {
-              label: "Sign in with Spotify",
-              onClick: () => {
-                window.location.href = "/api/auth/spotify";
-              },
-            },
-            duration: 6000,
-          });
-        }
 
         if (audioRef.current) {
           audioRef.current.src = playTarget.audio;
@@ -370,30 +477,16 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
           try {
             await audioRef.current.play();
           } catch {
-            console.warn("[Musivo] Preview autoplay blocked by browser");
             setIsPlaying(false);
-            toast.info("Click play to allow playback in this browser.");
           }
         }
         return;
       }
 
-      // 3. No playback available
+      // 4. No playback available
       setCurrentTrack(playTarget);
       setIsPlaying(false);
-      if (!isSpotifyConnected) {
-        toast.info("Sign in with Spotify to stream full-length songs.", {
-          action: {
-            label: "Sign in with Spotify",
-            onClick: () => {
-              window.location.href = "/api/auth/spotify";
-            },
-          },
-          duration: 6000,
-        });
-      } else {
-        toast.info("This track does not have an in-app audio stream.");
-      }
+      toast.info("No audio stream available for this track.");
     },
     [isSpotifyConnected, spotifyPlayer, volume, trpcUtils]
   );
@@ -401,6 +494,8 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
   const pause = useCallback(async () => {
     if (playbackMode === "spotify") {
       await spotifyPlayer.pause();
+    } else if (playbackMode === "full" && ytPlayerRef.current?.pauseVideo) {
+      ytPlayerRef.current.pauseVideo();
     } else if (audioRef.current) {
       audioRef.current.pause();
     }
@@ -410,6 +505,9 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
   const resume = useCallback(async () => {
     if (playbackMode === "spotify") {
       await spotifyPlayer.resume();
+      setIsPlaying(true);
+    } else if (playbackMode === "full" && ytPlayerRef.current?.playVideo) {
+      ytPlayerRef.current.playVideo();
       setIsPlaying(true);
     } else if (audioRef.current && currentTrack.audio) {
       try {
@@ -442,6 +540,8 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
         spotifyStateRef.current.positionMs = safeSeconds * 1000;
         spotifyStateRef.current.timestamp = Date.now();
         await spotifyPlayer.seek(safeSeconds * 1000);
+      } else if (playbackMode === "full" && ytPlayerRef.current?.seekTo) {
+        ytPlayerRef.current.seekTo(safeSeconds, true);
       } else if (audioRef.current) {
         audioRef.current.currentTime = safeSeconds;
       }
@@ -455,6 +555,11 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
       setVolumeState(clamped);
       if (audioRef.current) {
         audioRef.current.volume = clamped / 100;
+      }
+      if (ytPlayerRef.current?.setVolume) {
+        try {
+          ytPlayerRef.current.setVolume(clamped);
+        } catch {}
       }
       await spotifyPlayer.setVolume(clamped / 100);
     },

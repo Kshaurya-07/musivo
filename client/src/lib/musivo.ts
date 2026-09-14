@@ -12,6 +12,24 @@ export function formatTime(seconds: number) {
   return `${mins}:${secs}`;
 }
 
+export function parseDuration(duration: string | number | null | undefined): number {
+  if (typeof duration === "number" && Number.isFinite(duration) && duration > 0) {
+    return duration > 1000 ? Math.round(duration / 1000) : Math.round(duration);
+  }
+  if (typeof duration === "string") {
+    const clean = duration.trim();
+    if (!clean || clean.toLowerCase() === "preview") return 0;
+    const parts = clean.split(":").map(Number);
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      return parts[0] * 60 + parts[1];
+    }
+    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
+  }
+  return 0;
+}
+
 export function matchesTrackQuery(track: CatalogTrack, query: string) {
   const normalized = query.trim().toLowerCase();
   if (!normalized) return true;
