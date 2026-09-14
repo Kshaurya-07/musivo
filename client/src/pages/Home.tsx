@@ -73,13 +73,13 @@ const fallbackTracks: Track[] = [
   { id: "fallback-5", title: "The Less I Know The Better", artist: "Tame Impala", album: "Currents", duration: "3:36", art: art.red, audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", accent: "#ff725d", durationMs: 216000, source: "fallback" },
   { id: "fallback-6", title: "Intro", artist: "The xx", album: "xx", duration: "2:07", art: art.night, audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", accent: "#8ca3ff", durationMs: 127000, source: "fallback" },
   { id: "fallback-7", title: "Good Days", artist: "SZA", album: "Good Days", duration: "4:39", art: art.cream, audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", accent: "#ecdbad", durationMs: 279000, source: "fallback" },
-  { id: "fallback-8", title: "Love Tonight", artist: "Shouse", album: "Open", duration: "4:01", art: art.purple, audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", accent: "#7be3b5", durationMs: 241000, source: "fallback" },
+  { id: "fallback-8", title: "Love Tonight", artist: "Shouse", album: "Open", duration: "4:01", art: art.purple, audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", accent: "#ffd064", durationMs: 241000, source: "fallback" },
 ];
 
 const mixes = [
-  { title: "late night drive", detail: "A little faster, a little further", art: art.neon, gradient: "from-[#263716] to-[#131c12]" },
-  { title: "focus / flow", detail: "No lyrics. No distractions.", art: art.blue, gradient: "from-[#162b3b] to-[#111719]" },
-  { title: "soft launch", detail: "New sounds worth sharing", art: art.cream, gradient: "from-[#493a24] to-[#181612]" },
+  { title: "late night drive", detail: "A little faster, a little further", art: art.neon, gradient: "from-[#2a1a0f] to-[#131c12]" },
+  { title: "focus / flow", detail: "No lyrics. No distractions.", art: art.blue, gradient: "from-[#1f1610] to-[#111719]" },
+  { title: "soft launch", detail: "New sounds worth sharing", art: art.cream, gradient: "from-[#4a371c] to-[#181612]" },
 ];
 
 const navItems: NavItem[] = [
@@ -112,7 +112,7 @@ const MOOD_OPTIONS = [
     emoji: "🎯",
     name: "Deep Flow State",
     vibe: "Minimalist neo-classical, ambient techno & uninterrupted flow",
-    gradient: "from-[#172836] to-[#10171d]",
+    gradient: "from-[#221810] to-[#10171d]",
     accent: "#63c5ff",
   },
   {
@@ -229,7 +229,7 @@ function TrackRow({
         <div className="flex min-w-0 items-center gap-2">
           <p
             className={`truncate text-[13px] font-semibold ${
-              active ? "text-[#f5ba42]" : "text-[#f3f3ea]"
+              active ? "text-[#f5ba42]" : "text-[#faf5ee]"
             }`}
           >
             {track.title}
@@ -306,18 +306,18 @@ function SectionHeading({
     <div className="mb-4 flex items-end justify-between gap-4">
       <div>
         {eyebrow && (
-          <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-[#919c8b]">
+          <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-[#a89885]">
             {eyebrow}
           </p>
         )}
-        <h2 className="font-display text-xl font-semibold tracking-[-0.03em] text-[#f2f4eb] md:text-2xl">
+        <h2 className="font-display text-xl font-semibold tracking-[-0.03em] text-[#faf5ee] md:text-2xl">
           {title}
         </h2>
       </div>
       {action && (
         <button
           onClick={onAction}
-          className="flex shrink-0 items-center gap-1 text-xs font-semibold text-[#959e91] transition-colors hover:text-[#f5ba42]"
+          className="flex shrink-0 items-center gap-1 text-xs font-semibold text-[#ab9b88] transition-colors hover:text-[#f5ba42]"
         >
           {action} <ArrowRight className="h-3.5 w-3.5" />
         </button>
@@ -434,7 +434,7 @@ function SpotifyPlaylistDetail({
     <section>
       <button
         onClick={onBack}
-        className="mb-6 flex items-center gap-2 text-sm font-semibold text-[#9aa697] hover:text-[#f5ba42]"
+        className="mb-6 flex items-center gap-2 text-sm font-semibold text-[#b2a28f] hover:text-[#f5ba42]"
       >
         <ArrowRight className="h-4 w-4 rotate-180" />
         Back to Spotify sync
@@ -449,22 +449,22 @@ function SpotifyPlaylistDetail({
       ) : (
         <>
           <div className="mb-8 flex flex-wrap items-end gap-5 rounded-3xl border border-white/[0.08] bg-[#17110a] p-5 md:p-7">
-            <div className="h-28 w-28 shrink-0 overflow-hidden rounded-2xl bg-[#293421] md:h-40 md:w-40">
+            <div className="h-28 w-28 shrink-0 overflow-hidden rounded-2xl bg-[#261b11] md:h-40 md:w-40">
               {playlist?.imageUrl && (
                 <img src={playlist.imageUrl} alt="" className="h-full w-full object-cover" />
               )}
             </div>
             <div className="min-w-0">
-              <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#899789]">
+              <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#a2927f]">
                 Spotify playlist
               </p>
-              <h1 className="truncate font-display text-3xl font-semibold tracking-[-0.06em] text-[#f1f4ea] md:text-5xl">
+              <h1 className="truncate font-display text-3xl font-semibold tracking-[-0.06em] text-[#faf5ee] md:text-5xl">
                 {playlist?.name}
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[#a2927f]">
                 {playlist?.description || "Synced from your Spotify library."}
               </p>
-              <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.14em] text-[#718069]">
+              <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.14em] text-[#968572]">
                 {detailQuery.data?.totalTracks ?? 0} tracks · refreshed{" "}
                 {playlist?.syncedAt
                   ? new Date(playlist.syncedAt).toLocaleDateString()
@@ -480,7 +480,7 @@ function SpotifyPlaylistDetail({
               />
             </div>
             <div className="relative w-full max-w-xs">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a8478]" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#998875]" />
               <input
                 value={searchDraft}
                 onChange={(event) => setSearchDraft(event.target.value)}
@@ -510,7 +510,7 @@ function SpotifyPlaylistDetail({
             <div className="rounded-2xl border border-dashed border-white/[0.12] px-6 py-16 text-center">
               <Search className="mx-auto mb-4 h-7 w-7 text-[#8f806e]" />
               <p className="font-display text-lg font-semibold">No songs match</p>
-              <p className="mt-1 text-sm text-[#7f887d]">
+              <p className="mt-1 text-sm text-[#9c8c79]">
                 Try a different title, artist, or album.
               </p>
             </div>
@@ -639,7 +639,7 @@ function QueueDrawer({
                 <p className="truncate text-sm font-bold text-[#f5ba42]">
                   {currentTrack.title}
                 </p>
-                <p className="truncate text-xs text-[#a9b3a7]">
+                <p className="truncate text-xs text-[#c2b2a0]">
                   {currentTrack.artist}
                 </p>
                 <div className="flex items-center gap-2 pt-0.5 text-[11px] text-[#8e7f6e]">
@@ -660,7 +660,7 @@ function QueueDrawer({
                 Up Next ({upcoming.length})
               </p>
               {upcoming.length > 0 && (
-                <span className="text-[11px] text-[#7a8479]">
+                <span className="text-[11px] text-[#998875]">
                   Auto-advances smoothly
                 </span>
               )}
@@ -668,12 +668,12 @@ function QueueDrawer({
 
             {upcoming.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center space-y-3">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/[0.04] text-[#899388] mx-auto">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/[0.04] text-[#a2927f] mx-auto">
                   <ListMusic className="h-5 w-5" />
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs font-semibold text-[#d4dcd2]">Queue is empty</p>
-                  <p className="text-[11px] text-[#7a8579] leading-relaxed max-w-[260px] mx-auto">
+                  <p className="text-[11px] text-[#998875] leading-relaxed max-w-[260px] mx-auto">
                     Hover over any song and click "+ Add to Queue", or load your curated AI Mix.
                   </p>
                 </div>
@@ -701,7 +701,7 @@ function QueueDrawer({
                       className="group flex items-center justify-between gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2 hover:border-white/15 hover:bg-white/[0.06] transition"
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <span className="w-4 font-mono text-[11px] text-[#6b756a] text-center shrink-0">
+                        <span className="w-4 font-mono text-[11px] text-[#8a7a67] text-center shrink-0">
                           {uIdx + 1}
                         </span>
                         <button
@@ -718,21 +718,21 @@ function QueueDrawer({
                           <p className="truncate text-xs font-semibold text-[#f0ede6]">
                             {track.title}
                           </p>
-                          <p className="truncate text-[11px] text-[#869085]">
+                          <p className="truncate text-[11px] text-[#a0907d]">
                             {track.artist}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[11px] font-mono text-[#6c766b] mr-1">
+                        <span className="text-[11px] font-mono text-[#8a7a67] mr-1">
                           {track.duration}
                         </span>
                         <button
                           type="button"
                           onClick={() => onRemoveFromQueue(absoluteIdx)}
                           title="Remove from queue"
-                          className="rounded-lg p-1.5 text-[#6c766b] hover:bg-white/10 hover:text-[#ef6b5e] transition"
+                          className="rounded-lg p-1.5 text-[#8a7a67] hover:bg-white/10 hover:text-[#ef6b5e] transition"
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
@@ -900,7 +900,7 @@ function AiMixStudio({
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 space-y-1">
             <p className="font-mono text-[10px] uppercase tracking-wider text-[#8b8496]">Engine Calibrated</p>
-            <p className="font-display text-base font-semibold text-[#8ce28a] truncate">
+            <p className="font-display text-base font-semibold text-[#ffd064] truncate">
               Continuous Vibe
             </p>
           </div>
@@ -1155,7 +1155,7 @@ function AiMixStudio({
                     type="button"
                     onClick={onExportToSpotify}
                     disabled={exportingSpotify}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-full bg-[#1db954] hover:bg-[#1ed760] px-4 py-2.5 text-xs font-bold text-black transition"
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-full bg-[#f5ba42] hover:bg-[#ffd064] px-4 py-2.5 text-xs font-bold text-black transition"
                     title="Export playlist to your Spotify account"
                   >
                     <Link2 className="h-3.5 w-3.5" />
@@ -1324,8 +1324,8 @@ function SpotifyPanel({
     <section>
       <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
         {user?.hasGoogle ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 font-medium text-emerald-300">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#f5ba42]/25 bg-[#f5ba42]/10 px-3 py-1 font-medium text-[#f5ba42]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#f5ba42]" />
             Google connected {user.email ? `(${user.email})` : ""}
           </span>
         ) : (
@@ -1347,7 +1347,7 @@ function SpotifyPanel({
 
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#899789]">
+          <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#a2927f]">
             Personal connection
           </p>
           <h1 className="font-display text-3xl font-semibold tracking-[-0.05em] md:text-4xl">
@@ -1402,7 +1402,7 @@ function SpotifyPanel({
           <h2 className="mt-5 font-display text-2xl font-semibold tracking-[-0.04em]">
             Your listening space, connected.
           </h2>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-[#899388]">
+          <p className="mt-2 max-w-xl text-sm leading-6 text-[#a2927f]">
             Authorize Musivo to stream your music via the Spotify Web Playback SDK and read your playlists. Tokens remain securely encrypted on the server.
           </p>
           <button
@@ -1426,10 +1426,10 @@ function SpotifyPanel({
               <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#26190e] bg-[#f5ba42]" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-[#ebf1e2]">
+              <p className="truncate text-sm font-semibold text-[#faf5ee]">
                 Connected{displayName ? ` as ${displayName}` : " to Spotify"}
               </p>
-              <p className="text-xs text-[#99aa90]">
+              <p className="text-xs text-[#b0a08d]">
                 {syncing
                   ? "Fetching playlists and listening history…"
                   : streamingEnabled
@@ -1437,26 +1437,26 @@ function SpotifyPanel({
                   : "Reconnect Spotify to enable in-app playback."}
               </p>
             </div>
-            <span className="rounded-full border border-[#f5ba42]/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[#b8d66b]">
+            <span className="rounded-full border border-[#f5ba42]/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[#ffd064]">
               Account connected
             </span>
           </div>
 
           <div className="mb-8 grid gap-3 grid-cols-2 sm:grid-cols-4">
             <div className="rounded-2xl border border-white/[0.08] bg-[#17110a] p-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#718069]">Synced playlists</p>
-              <p className="mt-1 font-display text-2xl font-semibold text-[#f0f4e9]">{playlists.length}</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#968572]">Synced playlists</p>
+              <p className="mt-1 font-display text-2xl font-semibold text-[#faf5ee]">{playlists.length}</p>
             </div>
             <div className="rounded-2xl border border-white/[0.08] bg-[#17110a] p-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#718069]">Saved tracks</p>
-              <p className="mt-1 font-display text-2xl font-semibold text-[#f0f4e9]">{savedTracksCount ?? 0}</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#968572]">Saved tracks</p>
+              <p className="mt-1 font-display text-2xl font-semibold text-[#faf5ee]">{savedTracksCount ?? 0}</p>
             </div>
             <div className="rounded-2xl border border-white/[0.08] bg-[#17110a] p-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#718069]">Recent tracks</p>
-              <p className="mt-1 font-display text-2xl font-semibold text-[#f0f4e9]">{recentTracks.length}</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#968572]">Recent tracks</p>
+              <p className="mt-1 font-display text-2xl font-semibold text-[#faf5ee]">{recentTracks.length}</p>
             </div>
             <div className="rounded-2xl border border-white/[0.08] bg-[#17110a] p-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#718069]">Playback SDK</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#968572]">Playback SDK</p>
               <p className="mt-1 text-sm font-semibold text-[#f5ba42]">
                 {streamingEnabled ? "Active in Musivo" : "Ready"}
               </p>
@@ -1500,8 +1500,8 @@ function SpotifyPanel({
                 <ListMusic className="h-4 w-4" />
                 <span className="font-mono text-[10px] uppercase tracking-[0.15em]">Your Spotify account</span>
               </div>
-              <p className="text-sm font-semibold text-[#edf2e8]">Create a playlist without leaving Musivo</p>
-              <p className="mt-1 text-xs leading-5 text-[#879383]">
+              <p className="text-sm font-semibold text-[#faf5ee]">Create a playlist without leaving Musivo</p>
+              <p className="mt-1 text-xs leading-5 text-[#a0907d]">
                 Start a private playlist and add your liked synced tracks in one step.
               </p>
               <button
@@ -1603,7 +1603,7 @@ function SpotifyPanel({
                         className="group flex min-h-[150px] flex-col justify-between overflow-hidden rounded-2xl border border-white/[0.08] bg-[#17110a] p-4 text-left transition-colors hover:border-[#c88719] hover:bg-[#1c221a]"
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <div className="h-14 w-14 overflow-hidden rounded-xl bg-[#273321]">
+                          <div className="h-14 w-14 overflow-hidden rounded-xl bg-[#261b11]">
                             {playlist.imageUrl && (
                               <img
                                 src={playlist.imageUrl}
@@ -1612,15 +1612,15 @@ function SpotifyPanel({
                               />
                             )}
                           </div>
-                          <span className="font-mono text-[10px] text-[#718069]">
+                          <span className="font-mono text-[10px] text-[#968572]">
                             {playlist.trackCount} tracks
                           </span>
                         </div>
                         <div>
-                          <p className="truncate font-display text-lg font-semibold text-[#edf2e8]">
+                          <p className="truncate font-display text-lg font-semibold text-[#faf5ee]">
                             {playlist.name}
                           </p>
-                          <p className="mt-1 truncate text-xs text-[#7f8b7c]">
+                          <p className="mt-1 truncate text-xs text-[#9c8c79]">
                             Open detailed track listing
                           </p>
                         </div>
@@ -1628,7 +1628,7 @@ function SpotifyPanel({
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-white/[0.12] px-5 py-12 text-center text-sm text-[#7f887d]">
+                  <div className="rounded-2xl border border-dashed border-white/[0.12] px-5 py-12 text-center text-sm text-[#9c8c79]">
                     No Spotify playlists found. Tap Sync now to refresh.
                   </div>
                 )}
@@ -1657,7 +1657,7 @@ function SpotifyPanel({
                         }
                         className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-white/[0.045]"
                       >
-                        <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-[#273321]">
+                        <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-[#261b11]">
                           {track.artworkUrl && (
                             <img
                               src={track.artworkUrl}
@@ -1667,7 +1667,7 @@ function SpotifyPanel({
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-[#e9ede3]">
+                          <p className="truncate text-sm font-semibold text-[#faf5ee]">
                             {track.title}
                           </p>
                           <p className="truncate text-xs text-[#948472]">
@@ -1677,19 +1677,19 @@ function SpotifyPanel({
                         <span className="hidden font-mono text-[10px] text-[#7b6c5b] sm:block">
                           {new Date(track.playedAt).toLocaleDateString()}
                         </span>
-                        <History className="h-4 w-4 text-[#718069] transition-colors group-hover:text-[#f5ba42]" />
+                        <History className="h-4 w-4 text-[#968572] transition-colors group-hover:text-[#f5ba42]" />
                       </button>
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-white/[0.12] px-5 py-12 text-center text-sm text-[#7f887d]">
+                  <div className="rounded-2xl border border-dashed border-white/[0.12] px-5 py-12 text-center text-sm text-[#9c8c79]">
                     No recent plays returned yet. Tap Sync now to refresh.
                   </div>
                 )}
               </div>
             </div>
           )}
-          <p className="mt-7 text-xs text-[#6f7a6e]">
+          <p className="mt-7 text-xs text-[#8c7d6b]">
             Spotify Web Playback SDK powers music streaming inside Musivo. All controls and queue state remain in the Musivo interface.
           </p>
         </>
@@ -1726,11 +1726,11 @@ function SpotifyConnectSection({
   onOpen: () => void;
 }) {
   return (
-    <section className="mt-10 overflow-hidden rounded-3xl border border-[#f5ba42]/15 bg-gradient-to-br from-[#1b2815] via-[#151c13] to-[#140e08] p-5 md:p-7">
+    <section className="mt-10 overflow-hidden rounded-3xl border border-[#f5ba42]/15 bg-gradient-to-br from-[#24170c] via-[#1a120b] to-[#140e08] p-5 md:p-7">
       <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
         {user?.hasGoogle ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 font-medium text-emerald-300">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#f5ba42]/25 bg-[#f5ba42]/10 px-3 py-1 font-medium text-[#f5ba42]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#f5ba42]" />
             Google connected {user.email ? `(${user.email})` : ""}
           </span>
         ) : (
@@ -1759,12 +1759,12 @@ function SpotifyConnectSection({
             <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-[#caa972]">
               Build your Musivo library
             </p>
-            <h2 className="font-display text-2xl font-semibold tracking-[-0.05em] text-[#f1f5e8]">
+            <h2 className="font-display text-2xl font-semibold tracking-[-0.05em] text-[#faf5ee]">
               {connected
                 ? `Spotify is synced${displayName ? ` · ${displayName}` : ""}`
                 : "Connect your Spotify account"}
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#a1ae9b]">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#b8a895]">
               {connected
                 ? "Keep your playlists and listening history fresh in Musivo, then browse and play your synced music from one place."
                 : "Bring your playlists and recently played tracks into Musivo. Spotify acts as the music engine while Musivo stays your music player interface."}
@@ -1784,7 +1784,7 @@ function SpotifyConnectSection({
               </button>
               <button
                 onClick={onOpen}
-                className="rounded-full border border-white/[0.14] px-4 py-2.5 text-sm font-semibold text-[#e4ebdc] hover:border-[#f5ba42]/50"
+                className="rounded-full border border-white/[0.14] px-4 py-2.5 text-sm font-semibold text-[#faf5ee] hover:border-[#f5ba42]/50"
               >
                 Open synced library
               </button>
@@ -1802,31 +1802,31 @@ function SpotifyConnectSection({
       {connected ? (
         <div className="mt-6 grid gap-3 grid-cols-2 sm:grid-cols-4">
           <div className="rounded-2xl border border-white/[0.07] bg-black/10 px-4 py-3">
-            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#718069]">
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#968572]">
               Synced playlists
             </p>
-            <p className="mt-1 font-display text-2xl font-semibold text-[#f0f4e9]">
+            <p className="mt-1 font-display text-2xl font-semibold text-[#faf5ee]">
               {playlistCount}
             </p>
           </div>
           <div className="rounded-2xl border border-white/[0.07] bg-black/10 px-4 py-3">
-            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#718069]">
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#968572]">
               Saved tracks
             </p>
-            <p className="mt-1 font-display text-2xl font-semibold text-[#f0f4e9]">
+            <p className="mt-1 font-display text-2xl font-semibold text-[#faf5ee]">
               {savedTracksCount}
             </p>
           </div>
           <div className="rounded-2xl border border-white/[0.07] bg-black/10 px-4 py-3">
-            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#718069]">
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#968572]">
               Recent tracks
             </p>
-            <p className="mt-1 font-display text-2xl font-semibold text-[#f0f4e9]">
+            <p className="mt-1 font-display text-2xl font-semibold text-[#faf5ee]">
               {recentCount}
             </p>
           </div>
           <div className="rounded-2xl border border-white/[0.07] bg-black/10 px-4 py-3">
-            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#718069]">
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#968572]">
               SDK Player
             </p>
             <p className="mt-1 text-sm font-semibold text-[#f5ba42]">
@@ -1835,7 +1835,7 @@ function SpotifyConnectSection({
           </div>
         </div>
       ) : (
-        <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-xs text-[#a8b79d]">
+        <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-xs text-[#c0b09d]">
           <span>Encrypted account connection</span>
           <span>In-app Spotify Web Playback SDK</span>
           <span>Full UI playback controls</span>
@@ -1876,10 +1876,10 @@ function PlaybackDiagnostics({
     <div className="absolute bottom-[calc(100%+0.75rem)] right-4 w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-white/[0.1] bg-[#1a130c]/98 p-4 shadow-2xl backdrop-blur-xl md:right-8">
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#899789]">
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#a2927f]">
             Playback diagnostics
           </p>
-          <p className="mt-1 text-sm font-semibold text-[#edf2e8]">
+          <p className="mt-1 text-sm font-semibold text-[#faf5ee]">
             Spotify Web Playback SDK
           </p>
         </div>
@@ -1894,7 +1894,7 @@ function PlaybackDiagnostics({
         </div>
         <div className="flex items-center justify-between">
           <span className="text-[#a0917e]">SDK script</span>
-          <span className={sdkLoaded ? "text-[#f5ba42]" : "text-[#a5afa1]"}>
+          <span className={sdkLoaded ? "text-[#f5ba42]" : "text-[#bcaea0]"}>
             {sdkLoaded ? "Loaded" : "Waiting"}
           </span>
         </div>
@@ -1916,7 +1916,7 @@ function PlaybackDiagnostics({
                 ? "text-[#f5ba42]"
                 : isPremium
                 ? "text-[#f5ba42]"
-                : "text-[#a5afa1]"
+                : "text-[#bcaea0]"
             }
           >
             {isPremium === false
@@ -2271,6 +2271,13 @@ export default function Home() {
   const visibleSearchResults = liveResults.length > 0 ? liveResults : fallbackResults;
   const viewTracks = activeView === "liked" ? likedTracks : catalog;
   const greeting = user?.name?.split(" ")[0] || "listener";
+  const timeGreeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  }, []);
+  const [dashboardFilter, setDashboardFilter] = useState<"all" | "music" | "podcasts" | "aimix">("all");
 
   useEffect(() => {
     const result = new URLSearchParams(window.location.search).get("spotify");
@@ -2418,7 +2425,7 @@ export default function Home() {
           </div>
 
           <div className="mt-12">
-            <p className="mb-3 px-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[#687067]">
+            <p className="mb-3 px-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[#8c7b68]">
               Listen
             </p>
             <nav className="space-y-1">
@@ -2429,7 +2436,7 @@ export default function Home() {
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all ${
                     activeView === id
                       ? "bg-[#f5ba42] font-semibold text-[#140f07]"
-                      : "text-[#9aa296] hover:bg-white/[0.05] hover:text-[#f5f4ec]"
+                      : "text-[#b2a28f] hover:bg-white/[0.05] hover:text-[#f5f4ec]"
                   }`}
                 >
                   <Icon className="h-[17px] w-[17px]" />
@@ -2440,7 +2447,7 @@ export default function Home() {
           </div>
 
           <div className="mt-9">
-            <p className="mb-3 px-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[#687067]">
+            <p className="mb-3 px-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[#8c7b68]">
               Your library
             </p>
             <nav className="space-y-1">
@@ -2451,7 +2458,7 @@ export default function Home() {
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all ${
                     activeView === id
                       ? "bg-white/[0.08] text-[#f5ba42]"
-                      : "text-[#9aa296] hover:bg-white/[0.05] hover:text-[#f5f4ec]"
+                      : "text-[#b2a28f] hover:bg-white/[0.05] hover:text-[#f5f4ec]"
                   }`}
                 >
                   <Icon className="h-[17px] w-[17px]" />
@@ -2472,7 +2479,7 @@ export default function Home() {
                   <button
                     key={playlist.id}
                     onClick={() => toast.info(`${playlist.name} is ready for track additions.`)}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-xs text-[#7f8a7c] hover:bg-white/[0.04] hover:text-[#f5f4ec]"
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-xs text-[#9c8c79] hover:bg-white/[0.04] hover:text-[#f5f4ec]"
                   >
                     <Disc3 className="h-3.5 w-3.5" />
                     {playlist.name}
@@ -2487,14 +2494,14 @@ export default function Home() {
               <span className="grid h-8 w-8 place-items-center rounded-full bg-[#382614] text-[#f5ba42]">
                 <Download className="h-4 w-4" />
               </span>
-              <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#718069]">
+              <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#968572]">
                 Engine
               </span>
             </div>
-            <p className="text-sm font-semibold text-[#e9ede0]">
+            <p className="text-sm font-semibold text-[#faf5ee]">
               {isSpotifyConnected ? "Spotify Web Playback" : "Musivo Preview Mode"}
             </p>
-            <p className="mt-1 text-xs leading-5 text-[#7e887a]">
+            <p className="mt-1 text-xs leading-5 text-[#9c8c79]">
               {isSpotifyConnected
                 ? "Full in-app playback with real Spotify Connect controls."
                 : "Connect Spotify to play full catalog tracks in Musivo."}
@@ -2508,12 +2515,12 @@ export default function Home() {
             <div className="flex min-w-0 items-center gap-3">
               <button
                 onClick={() => toast.info("Open Musivo on a wider screen for the full library rail.")}
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[0.08] text-[#aab2a5] lg:hidden"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[0.08] text-[#c2b2a0] lg:hidden"
               >
                 <Menu className="h-5 w-5" />
               </button>
               <div className="relative w-full max-w-[390px]">
-                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a8478]" />
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#998875]" />
                 <input
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
@@ -2524,7 +2531,7 @@ export default function Home() {
                   <button
                     aria-label="Clear search"
                     onClick={() => setSearchQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#7a8478] hover:text-white"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#998875] hover:text-white"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -2534,7 +2541,7 @@ export default function Home() {
             <div className="flex shrink-0 items-center gap-2">
               <button
                 onClick={() => toast.info("Settings are ready for your account and provider connections.")}
-                className="hidden h-10 w-10 place-items-center rounded-xl text-[#8d9789] transition-colors hover:bg-white/[0.05] hover:text-white sm:grid"
+                className="hidden h-10 w-10 place-items-center rounded-xl text-[#a49481] transition-colors hover:bg-white/[0.05] hover:text-white sm:grid"
               >
                 <Settings2 className="h-[17px] w-[17px]" />
               </button>
@@ -2542,18 +2549,18 @@ export default function Home() {
                 <div className="flex items-center gap-2">
                   <div className="hidden text-right sm:block">
                     <p className="text-xs font-semibold text-[#e7eadf]">{user?.name || "Musivo listener"}</p>
-                    <p className="text-[10px] text-[#7c8876]">Synced library</p>
+                    <p className="text-[10px] text-[#9a8a77]">Synced library</p>
                   </div>
                   <button
                     onClick={() => void logout()}
                     disabled={authLoading}
                     className="flex items-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.04] py-1.5 pl-1.5 pr-3 text-sm font-semibold text-[#e7eadf] transition-colors hover:border-[#c88719]"
                   >
-                    <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#b9da4c] text-xs font-bold text-[#1b2412]">
+                    <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#ffd064] text-xs font-bold text-[#1b2412]">
                       {(user?.name || "M").slice(0, 1).toUpperCase()}
                     </span>
                     <span className="hidden sm:inline">Log out</span>
-                    <ChevronDown className="h-3.5 w-3.5 text-[#7c8876]" />
+                    <ChevronDown className="h-3.5 w-3.5 text-[#9a8a77]" />
                   </button>
                 </div>
               ) : (
@@ -2585,7 +2592,7 @@ export default function Home() {
               <section>
                 <div className="mb-8 flex items-end justify-between gap-4">
                   <div>
-                    <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#899789]">
+                    <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#a2927f]">
                       Live catalog search · {statusQuery.data?.label ?? "catalog"}
                     </p>
                     <h1 className="font-display text-3xl font-semibold tracking-[-0.05em] md:text-4xl">
@@ -2615,7 +2622,7 @@ export default function Home() {
                   <div className="rounded-2xl border border-dashed border-white/[0.12] px-6 py-16 text-center">
                     <Search className="mx-auto mb-4 h-7 w-7 text-[#8f806e]" />
                     <p className="font-display text-lg font-semibold">No tracks found yet</p>
-                    <p className="mt-1 text-sm text-[#7f887d]">Try an artist, album, or a different mood.</p>
+                    <p className="mt-1 text-sm text-[#9c8c79]">Try an artist, album, or a different mood.</p>
                   </div>
                 )}
               </section>
@@ -2726,7 +2733,7 @@ export default function Home() {
                   <div className="rounded-2xl border border-dashed border-white/[0.12] px-6 py-16 text-center">
                     <Heart className="mx-auto mb-4 h-7 w-7 text-[#f5ba42]" />
                     <p className="font-display text-lg font-semibold">Your Liked Songs are waiting</p>
-                    <p className="mt-1 text-sm text-[#7f887d]">
+                    <p className="mt-1 text-sm text-[#9c8c79]">
                       Tap the heart beside any track to keep it synced to your account.
                     </p>
                   </div>
@@ -2760,7 +2767,7 @@ export default function Home() {
                   <div className="rounded-2xl border border-dashed border-white/[0.12] px-6 py-16 text-center">
                     <ListMusic className="mx-auto mb-4 h-7 w-7 text-[#f5ba42]" />
                     <p className="font-display text-lg font-semibold">Build your first playlist</p>
-                    <p className="mt-1 text-sm text-[#7f887d]">
+                    <p className="mt-1 text-sm text-[#9c8c79]">
                       Save catalog tracks into a collection that follows you.
                     </p>
                     <button
@@ -2787,20 +2794,203 @@ export default function Home() {
               </section>
             ) : (
               <>
-                {/* Hero Section */}
-                <section className="relative overflow-hidden rounded-[26px] border border-[#f5ba42]/20 bg-[#24170c] shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_12%,rgba(245,186,66,0.38),transparent_28%),linear-gradient(105deg,#24170c_0%,#3d2714_45%,#160e08_100%)]" />
-                  <div className="absolute -right-20 -top-32 h-[420px] w-[420px] rounded-full border border-[#f5ba42]/25 bg-[#f5ba42]/15 blur-3xl" />
-                  <div className="absolute bottom-0 right-0 top-0 hidden w-[46%] overflow-hidden md:block">
-                    <img
-                      src="/molten-gold-hero.jpg"
-                      alt="Musivo Molten Gold Artwork"
-                      className="h-full w-full object-cover opacity-75 mix-blend-lighten transition-transform duration-700 hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#24170c] via-[#24170c]/40 to-transparent" />
+                {/* Spotify-Style Greeting Header & Quick Filters */}
+                <div className="mb-7 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-[#faf5ee] tracking-tight">
+                        {timeGreeting}, {greeting}
+                      </h1>
+                      <p className="mt-1 text-xs sm:text-sm text-[#9a8976]">
+                        {isSpotifyConnected
+                          ? "Welcome back to your synced Spotify listening room"
+                          : "Explore full-length tracks, curated AI mixes, and your personal library"}
+                      </p>
+                    </div>
                   </div>
+
+                  {/* Filter Pills */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar">
+                    <button
+                      type="button"
+                      onClick={() => setDashboardFilter("all")}
+                      className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                        dashboardFilter === "all"
+                          ? "bg-[#f5ba42] text-[#140f07] shadow-md shadow-[#f5ba42]/20"
+                          : "bg-white/[0.06] text-[#dfd2be] hover:bg-white/[0.1] hover:text-white"
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDashboardFilter("music")}
+                      className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                        dashboardFilter === "music"
+                          ? "bg-[#f5ba42] text-[#140f07] shadow-md shadow-[#f5ba42]/20"
+                          : "bg-white/[0.06] text-[#dfd2be] hover:bg-white/[0.1] hover:text-white"
+                      }`}
+                    >
+                      Music
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveView("podcasts")}
+                      className="rounded-full bg-white/[0.06] px-4 py-1.5 text-xs font-semibold text-[#dfd2be] hover:bg-white/[0.1] hover:text-white transition"
+                    >
+                      Podcasts
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveView("aimix")}
+                      className="rounded-full bg-white/[0.06] px-4 py-1.5 text-xs font-semibold text-[#dfd2be] hover:bg-[#f5ba42]/20 hover:text-[#f5ba42] transition flex items-center gap-1.5"
+                    >
+                      <Sparkles className="h-3 w-3 text-[#f5ba42]" />
+                      AI Mix Studio
+                    </button>
+                  </div>
+                </div>
+
+                {/* Spotify Signature 6-Item Quick-Access Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-9">
+                  {/* Tile 1: Liked Songs */}
+                  <div
+                    onClick={() => setActiveView("liked")}
+                    className="group relative flex items-center gap-3.5 rounded-xl overflow-hidden bg-white/[0.05] hover:bg-white/[0.11] transition duration-200 cursor-pointer border border-white/[0.04]"
+                  >
+                    <div className="h-16 w-16 shrink-0 bg-gradient-to-br from-[#ffd064] via-[#f5ba42] to-[#c88719] flex items-center justify-center text-[#140f07] shadow-md">
+                      <Heart className="h-7 w-7 fill-current" />
+                    </div>
+                    <div className="min-w-0 flex-1 pr-2">
+                      <p className="font-semibold text-sm text-[#faf5ee] truncate">
+                        Liked Songs
+                      </p>
+                      <p className="text-[11px] text-[#9a8976] truncate">
+                        {likedTracks.length} saved tracks
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Play liked songs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (likedTracks.length) void playTrack(likedTracks[0], likedTracks);
+                        else setActiveView("liked");
+                      }}
+                      className="mr-3.5 h-10 w-10 rounded-full bg-[#f5ba42] text-[#140f07] shadow-xl flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:scale-100 scale-90 transition-all duration-200 hover:scale-105 shrink-0"
+                    >
+                      <Play className="h-4 w-4 fill-current ml-0.5" />
+                    </button>
+                  </div>
+
+                  {/* Tile 2: AI Mix Studio */}
+                  <div
+                    onClick={() => setActiveView("aimix")}
+                    className="group relative flex items-center gap-3.5 rounded-xl overflow-hidden bg-white/[0.05] hover:bg-white/[0.11] transition duration-200 cursor-pointer border border-white/[0.04]"
+                  >
+                    <div className="h-16 w-16 shrink-0 bg-gradient-to-br from-[#ffd064] via-[#f5ba42] to-[#c88719] flex items-center justify-center text-[#140f07] shadow-md">
+                      <Sparkles className="h-7 w-7" />
+                    </div>
+                    <div className="min-w-0 flex-1 pr-2">
+                      <p className="font-semibold text-sm text-[#faf5ee] truncate">
+                        AI Mix Studio
+                      </p>
+                      <p className="text-[11px] text-[#9a8976] truncate">
+                        Curated neural soundscapes
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Open AI Mix"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveView("aimix");
+                      }}
+                      className="mr-3.5 h-10 w-10 rounded-full bg-[#f5ba42] text-[#140f07] shadow-xl flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:scale-100 scale-90 transition-all duration-200 hover:scale-105 shrink-0"
+                    >
+                      <Play className="h-4 w-4 fill-current ml-0.5" />
+                    </button>
+                  </div>
+
+                  {/* Tiles 3 to 6: Quick Play Tracks from Catalog */}
+                  {catalog.slice(0, 4).map((track) => (
+                    <div
+                      key={`quick-${track.id}`}
+                      onClick={() => void playTrack(track, catalog)}
+                      className="group relative flex items-center gap-3.5 rounded-xl overflow-hidden bg-white/[0.05] hover:bg-white/[0.11] transition duration-200 cursor-pointer border border-white/[0.04]"
+                    >
+                      <img
+                        src={track.art}
+                        alt=""
+                        className="h-16 w-16 shrink-0 object-cover"
+                      />
+                      <div className="min-w-0 flex-1 pr-2">
+                        <p className="font-semibold text-sm text-[#faf5ee] truncate">
+                          {track.title}
+                        </p>
+                        <p className="text-[11px] text-[#9a8976] truncate">
+                          {track.artist}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label={`Play ${track.title}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void playTrack(track, catalog);
+                        }}
+                        className="mr-3.5 h-10 w-10 rounded-full bg-[#f5ba42] text-[#140f07] shadow-xl flex items-center justify-center opacity-0 group-hover:opacity-100 group-hover:scale-100 scale-90 transition-all duration-200 hover:scale-105 shrink-0"
+                      >
+                        <Play className="h-4 w-4 fill-current ml-0.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Spotify-Style Editorial Hero Banner (Pure sleek album vinyl graphics, zero uploaded photo!) */}
+                <section className="relative overflow-hidden rounded-[26px] border border-[#f5ba42]/20 bg-[#24170c] shadow-[0_24px_80px_rgba(0,0,0,0.4)]">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(245,186,66,0.32),transparent_32%),linear-gradient(105deg,#24170c_0%,#352010_45%,#150e08_100%)]" />
+                  <div className="absolute -right-20 -top-32 h-[420px] w-[420px] rounded-full border border-[#f5ba42]/25 bg-[#f5ba42]/15 blur-3xl pointer-events-none" />
+                  
+                  {/* Right-side Spotify Vinyl Sleeve Display */}
+                  <div className="absolute bottom-0 right-0 top-0 hidden w-[44%] items-center justify-center overflow-hidden pr-8 md:flex pointer-events-none">
+                    <div className="relative group">
+                      {/* Ambient Golden Glow Behind Album Art */}
+                      <div className="absolute -inset-4 rounded-3xl bg-gradient-to-tr from-[#f5ba42]/30 to-[#ffd064]/15 blur-2xl opacity-70" />
+                      
+                      {/* Rotating Vinyl Record Disc */}
+                      <div className="absolute -right-10 top-3 h-48 w-48 rounded-full bg-[#100c07] border border-white/10 shadow-2xl flex items-center justify-center rotate-45 transition-transform duration-700">
+                        <div className="h-36 w-36 rounded-full border border-white/5 flex items-center justify-center">
+                          <div className="h-24 w-24 rounded-full border border-white/10 flex items-center justify-center bg-[#1c140d]">
+                            <div className="h-10 w-10 rounded-full bg-[#f5ba42] flex items-center justify-center text-[#140f07]">
+                              <Disc3 className="h-6 w-6 animate-[spin_8s_linear_infinite]" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Main Featured Album Art */}
+                      <div className="relative h-56 w-56 overflow-hidden rounded-2xl border border-white/15 bg-[#1a120b] shadow-2xl">
+                        <img
+                          src={featuredTrack.art}
+                          alt={featuredTrack.title}
+                          className="h-full w-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                        <div className="absolute bottom-3 left-3 right-3">
+                          <p className="truncate text-xs font-semibold text-white drop-shadow">
+                            {featuredTrack.title}
+                          </p>
+                          <p className="truncate text-[11px] text-[#d6c8b6] drop-shadow">
+                            {featuredTrack.artist}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="relative max-w-[650px] px-6 py-8 md:px-9 md:py-10 lg:px-11 lg:py-12">
-                    <div className="mb-7 flex items-center gap-3">
+                    <div className="mb-6 flex items-center gap-3">
                       <span className="rounded-full bg-[#f5ba42] px-2.5 py-1 font-mono text-[9px] font-medium tracking-[0.16em] text-[#140f07] shadow-sm">
                         {isSpotifyConnected ? "SPOTIFY CONNECTED" : "PREVIEW MODE"}
                       </span>
@@ -2808,16 +2998,16 @@ export default function Home() {
                         {catalog.length} TRACKS
                       </span>
                     </div>
-                    <h1 className="font-display max-w-[570px] text-4xl font-semibold leading-[0.98] tracking-[-0.07em] text-[#faf5ee] md:text-6xl">
+                    <h2 className="font-display max-w-[570px] text-4xl font-semibold leading-[0.98] tracking-[-0.07em] text-[#faf5ee] md:text-5xl lg:text-6xl">
                       Stream your favorite music with Musivo<span className="text-[#f5ba42]">.</span>
-                    </h1>
+                    </h2>
                     <p className="mt-5 max-w-[440px] text-sm leading-6 text-[#d6c8b6] md:text-[15px]">
                       Discover a world of sound with Musivo (integrated with Spotify), where every genre and artist is at your fingertips, ready to be explored.
                     </p>
                     <div className="mt-8 flex flex-wrap items-center gap-3">
                       <button
                         onClick={() => void playTrack(featuredTrack, catalog)}
-                        className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#ffd064] via-[#f5ba42] to-[#e09b26] px-5 py-3 text-sm font-bold text-[#140f07] shadow-[0_8px_28px_rgba(245,186,66,0.3)] hover:opacity-95 hover:scale-[1.02] transition"
+                        className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#ffd064] via-[#f5ba42] to-[#e09b26] px-6 py-3 text-sm font-bold text-[#140f07] shadow-[0_8px_28px_rgba(245,186,66,0.35)] hover:opacity-95 hover:scale-[1.02] transition"
                       >
                         <Play className="h-4 w-4 fill-current" /> Start listening
                       </button>
@@ -2829,7 +3019,8 @@ export default function Home() {
                       </button>
                     </div>
                   </div>
-                  <div className="relative flex items-center gap-3 border-t border-white/[0.09] bg-black/10 px-6 py-3 md:px-9 lg:px-11">
+
+                  <div className="relative flex items-center gap-3 border-t border-white/[0.09] bg-black/20 px-6 py-3 md:px-9 lg:px-11">
                     <div className="waveform">
                       <span />
                       <span />
@@ -2837,9 +3028,9 @@ export default function Home() {
                       <span />
                       <span />
                     </div>
-                    <p className="text-xs text-[#b6c4a9]">
+                    <p className="text-xs text-[#cbbca8]">
                       Your daily mix is ready{" "}
-                      <span className="text-[#697568]">· refreshed just now</span>
+                      <span className="text-[#8a7a67]">· refreshed just now</span>
                     </p>
                   </div>
                 </section>
@@ -2859,27 +3050,27 @@ export default function Home() {
                   onOpen={() => setActiveView("spotify")}
                 />
 
-                <div className="mt-8 overflow-hidden rounded-3xl border border-[#c09cff]/25 bg-gradient-to-br from-[#291c3d] via-[#1d1627] to-[#121316] p-6 sm:p-7 shadow-xl relative">
-                  <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-[#d5b9ff]/10 blur-3xl pointer-events-none" />
+                <div className="mt-8 overflow-hidden rounded-3xl border border-[#f5ba42]/20 bg-gradient-to-br from-[#291e14] via-[#1f160e] to-[#140e08] p-6 sm:p-7 shadow-xl relative">
+                  <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-[#f5ba42]/10 blur-3xl pointer-events-none" />
                   <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
                     <div className="space-y-1.5 max-w-xl">
-                      <div className="flex items-center gap-2 text-[#d5b9ff]">
+                      <div className="flex items-center gap-2 text-[#f5ba42]">
                         <Sparkles className="h-4 w-4 animate-pulse" />
                         <span className="font-mono text-[10px] uppercase tracking-[0.16em] font-semibold">
                           AI Mix Studio
                         </span>
                       </div>
-                      <h2 className="font-display text-xl sm:text-2xl font-bold text-[#f6efff] tracking-tight">
+                      <h2 className="font-display text-xl sm:text-2xl font-bold text-[#faf5ee] tracking-tight">
                         Curate your personal soundscape with AI
                       </h2>
-                      <p className="text-xs sm:text-sm text-[#bcaecf] leading-relaxed">
-                        Choose from crafted mood presets like Midnight Reverie and Neon Cardio, or describe any vibe to generate and play full-length playlists instantly.
+                      <p className="text-xs sm:text-sm text-[#cbbca8] leading-relaxed">
+                        Choose from crafted mood presets or describe any vibe to generate and play full-length playlists instantly.
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => setActiveView("aimix")}
-                      className="flex items-center gap-2 rounded-full bg-[#d5b9ff] hover:bg-[#e4d2ff] px-5 py-2.5 text-xs font-bold text-[#1f132e] shadow-lg transition hover:scale-[1.03] shrink-0"
+                      className="flex items-center gap-2 rounded-full bg-[#f5ba42] hover:bg-[#ffd064] px-5 py-2.5 text-xs font-bold text-[#140f07] shadow-lg transition hover:scale-[1.03] shrink-0"
                     >
                       <Sparkles className="h-3.5 w-3.5" />
                       Open AI Mix Studio
@@ -2887,60 +3078,81 @@ export default function Home() {
                   </div>
                 </div>
 
+                {/* Spotify "Made For You" Square Album Cards Grid */}
                 <section className="mt-10">
                   <SectionHeading
-                    eyebrow="Picked for you"
-                    title={`Good evening, ${greeting}`}
+                    eyebrow="Made For You"
+                    title="Jump back in"
                     action="See all"
                     onAction={() => setActiveView("discover")}
                   />
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4">
                     {catalog.slice(0, 4).map((track) => (
                       <div
-                        key={track.id}
-                        className="group gloss-card relative flex items-center gap-3 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#17110a] p-2.5 transition-colors hover:border-white/[0.18] hover:bg-[#231a10]"
+                        key={`made-for-you-${track.id}`}
+                        onClick={() => void playTrack(track, catalog)}
+                        className="group gloss-card flex flex-col p-3.5 rounded-2xl bg-[#17110a] hover:bg-[#231a10] border border-white/[0.06] hover:border-white/[0.14] transition-all duration-300 cursor-pointer"
                       >
-                        <div className="relative h-[62px] w-[62px] shrink-0 overflow-hidden rounded-xl">
+                        <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-3 bg-[#24170c] shadow-md">
                           <img
                             src={track.art}
                             alt=""
-                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />
-                          <button
-                            onClick={() => void playTrack(track, catalog)}
-                            className="absolute inset-0 m-auto grid h-9 w-9 place-items-center rounded-full bg-[#f5ba42] text-[#140f07] opacity-0 shadow-lg transition-all group-hover:opacity-100"
-                          >
-                            <Play className="h-4 w-4 fill-current" />
-                          </button>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-[#ebeee4]">
-                            {track.title}
-                          </p>
-                          <p className="mt-0.5 truncate text-xs text-[#978776]">{track.artist}</p>
-                        </div>
-                        <div className="ml-auto flex items-center gap-1 self-center">
+                          {/* Spotify-style floating round play button in bottom right corner */}
                           <button
                             type="button"
-                            title="Add to queue"
-                            onClick={() => addToQueue(track)}
-                            className="p-1.5 text-[#978776] hover:text-[#f5ba42] transition"
+                            aria-label={`Play ${track.title}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void playTrack(track, catalog);
+                            }}
+                            className="absolute bottom-2.5 right-2.5 h-11 w-11 rounded-full bg-[#f5ba42] text-[#140f07] shadow-2xl flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:scale-105"
                           >
-                            <ListPlus className="h-4 w-4" />
+                            <Play className="h-5 w-5 fill-current ml-0.5" />
                           </button>
-                          <button
-                            onClick={() => toggleLike(track)}
-                            className={`p-1.5 ${
-                              likedIds.has(String(track.id))
-                                ? "text-[#f5ba42]"
-                                : "text-[#697468] opacity-0 group-hover:opacity-100"
-                            }`}
-                          >
-                            <Heart
-                              className="h-4 w-4"
-                              fill={likedIds.has(String(track.id)) ? "currentColor" : "none"}
-                            />
-                          </button>
+                        </div>
+                        <p className="font-semibold text-sm text-[#faf5ee] truncate">
+                          {track.title}
+                        </p>
+                        <p className="text-xs text-[#9a8976] truncate mt-0.5">
+                          {track.artist}
+                        </p>
+                        <div className="mt-2.5 flex items-center justify-between pt-2 border-t border-white/[0.05]">
+                          <span className="font-mono text-[10px] text-[#7d6e5d]">
+                            {track.duration}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              title="Add to queue"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                addToQueue(track);
+                              }}
+                              className="p-1 text-[#8c7b68] hover:text-[#f5ba42] transition"
+                            >
+                              <ListPlus className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              aria-label="Like track"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleLike(track);
+                              }}
+                              className={`p-1 ${
+                                likedIds.has(String(track.id))
+                                  ? "text-[#f5ba42]"
+                                  : "text-[#8c7b68] hover:text-white"
+                              }`}
+                            >
+                              <Heart
+                                className="h-3.5 w-3.5"
+                                fill={likedIds.has(String(track.id)) ? "currentColor" : "none"}
+                              />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -3010,7 +3222,7 @@ export default function Home() {
                           className="h-11 w-11 rounded-lg object-cover"
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-[#e9ede3]">
+                          <p className="truncate text-sm font-semibold text-[#faf5ee]">
                             {track.title}
                           </p>
                           <p className="truncate text-xs text-[#948472]">{track.artist}</p>
@@ -3067,10 +3279,10 @@ export default function Home() {
                 className="h-11 w-11 shrink-0 rounded-lg object-cover"
               />
               <div className="min-w-0">
-                <p className="truncate text-[13px] font-semibold text-[#f0f2e9]">
+                <p className="truncate text-[13px] font-semibold text-[#faf5ee]">
                   {currentTrack.title}
                 </p>
-                <p className="truncate text-xs text-[#899388]">{currentTrack.artist}</p>
+                <p className="truncate text-xs text-[#a2927f]">{currentTrack.artist}</p>
               </div>
               <div
                 className={`player-eq ${isPlaying ? "" : "paused"}`}
@@ -3117,7 +3329,7 @@ export default function Home() {
                 <button
                   aria-label={isPlaying ? "Pause" : "Play"}
                   onClick={() => void togglePlay()}
-                  className="grid h-8 w-8 place-items-center rounded-full bg-[#f2f5e8] text-[#131811] hover:bg-[#f5ba42]"
+                  className="grid h-8 w-8 place-items-center rounded-full bg-[#faf5ee] text-[#131811] hover:bg-[#f5ba42]"
                 >
                   {isPlaying ? (
                     <Pause className="h-4 w-4 fill-current" />
@@ -3135,8 +3347,8 @@ export default function Home() {
 
                 {/* Spotify Full-Length Indicator or Sign-in Action */}
                 {playbackMode === "spotify" ? (
-                  <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-[#1db954]/15 px-2 py-0.5 text-[9px] font-semibold text-[#1db954]">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#1db954] animate-pulse" />
+                  <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-[#f5ba42]/15 px-2 py-0.5 text-[9px] font-semibold text-[#f5ba42]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#f5ba42] animate-pulse" />
                     Spotify Full Stream
                   </span>
                 ) : (
@@ -3269,14 +3481,14 @@ export default function Home() {
           <div className="w-full max-w-md rounded-3xl border border-white/[0.1] bg-[#1a130c] p-5 shadow-2xl">
             <div className="mb-5 flex items-start justify-between">
               <div>
-                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#899789]">
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a2927f]">
                   Your library
                 </p>
                 <h2 className="mt-1 font-display text-2xl font-semibold tracking-[-0.05em]">
                   {trackToSave ? "Save to playlist" : "Create a playlist"}
                 </h2>
                 {trackToSave && (
-                  <p className="mt-1 max-w-[270px] truncate text-xs text-[#7f8b7c]">
+                  <p className="mt-1 max-w-[270px] truncate text-xs text-[#9c8c79]">
                     {trackToSave.title} · {trackToSave.artist}
                   </p>
                 )}
@@ -3301,7 +3513,7 @@ export default function Home() {
                         track: toServerTrack(trackToSave),
                       })
                     }
-                    className="flex w-full items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-3 text-left text-sm text-[#e8eee1] hover:border-[#c88719] hover:bg-white/[0.06]"
+                    className="flex w-full items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-3 text-left text-sm text-[#faf5ee] hover:border-[#c88719] hover:bg-white/[0.06]"
                   >
                     <span className="flex items-center gap-2">
                       <ListMusic className="h-4 w-4 text-[#f5ba42]" />
@@ -3311,7 +3523,7 @@ export default function Home() {
                   </button>
                 ))}
                 {(playlistsQuery.data ?? []).length === 0 && (
-                  <p className="rounded-xl border border-dashed border-white/[0.1] px-4 py-6 text-center text-xs text-[#7e897b]">
+                  <p className="rounded-xl border border-dashed border-white/[0.1] px-4 py-6 text-center text-xs text-[#9c8c79]">
                     Create your first playlist below.
                   </p>
                 )}
@@ -3363,7 +3575,7 @@ export default function Home() {
                 <h2 className="mt-1 font-display text-2xl font-semibold tracking-[-0.05em]">
                   Create a Spotify playlist
                 </h2>
-                <p className="mt-1 text-xs leading-5 text-[#899388]">
+                <p className="mt-1 text-xs leading-5 text-[#a2927f]">
                   The playlist will be private and created directly in your Spotify account.
                 </p>
               </div>
