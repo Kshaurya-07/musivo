@@ -1,0 +1,59 @@
+﻿name: CI & Health Check
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type Check (TypeScript)
+        run: pnpm run check
+
+      - name: Run Unit & Integration Tests
+        run: pnpm test
+
+      - name: Build Application Bundle
+        run: pnpm run build
+
+  production-health-check:
+    name: Live Production Health Check
+    runs-on: ubuntu-latest
+    needs: [build-and-test]
+
+    steps:
+      - name: Ping Live Production Server
+        run: |
+          echo "Pinging Musivo production server..."
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://musivo-xgm4.onrender.com/api/auth/diagnostics)
+          echo "Diagnostics endpoint HTTP status: $STATUS_CODE"
+          if [ "$STATUS_CODE" -eq 200 ]; then
+            echo "Production deployment is live and healthy!"
+          else
+            echo "Checking root URL..."
+            ROOT_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://musivo-xgm4.onrender.com)
+            echo "Root URL HTTP status: $ROOT_CODE"
+          fi
