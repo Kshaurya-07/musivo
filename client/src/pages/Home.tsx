@@ -2447,8 +2447,8 @@ export default function Home() {
   const isSpotifyCatalog = statusQuery.data?.provider === "spotify";
 
   return (
-    <main className="noise min-h-screen bg-[#0d0f0d] pb-40 lg:pb-28 text-[#f5f4ec]">
-      <div className="mx-auto flex min-h-screen max-w-[1600px]">
+    <main className="noise min-h-[100dvh] bg-[#0d0f0d] text-[#f5f4ec] overflow-x-hidden">
+      <div className="mx-auto flex min-h-[100dvh] max-w-[1600px] w-full">
         {/* Left Sidebar */}
         <aside className="hidden w-[240px] shrink-0 flex-col border-r border-white/[0.065] px-5 py-6 lg:flex">
           <div className="flex items-center gap-3 px-2">
@@ -2566,8 +2566,8 @@ export default function Home() {
 
         {/* Main Content Area */}
         <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-white/[0.055] bg-[#0d0f0d]/85 px-5 py-4 backdrop-blur-xl md:px-8 lg:px-12">
-            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <header className="sticky top-0 z-30 flex items-center justify-between gap-2.5 sm:gap-4 border-b border-white/[0.055] bg-[#0d0f0d]/85 px-3.5 py-3 sm:px-6 sm:py-4 backdrop-blur-xl md:px-8 lg:px-12">
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
               <button
                 onClick={() => setIsMobileNavOpen(true)}
                 aria-label="Open navigation menu"
@@ -2575,7 +2575,7 @@ export default function Home() {
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <div className="flex items-center shrink-0 lg:hidden">
+              <div className="hidden xs:flex items-center shrink-0 lg:hidden">
                 <img
                   src="/musivo-logo-transparent.png"
                   alt="Musivo"
@@ -2583,18 +2583,18 @@ export default function Home() {
                 />
               </div>
               <div className="relative w-full max-w-[390px]">
-                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#998875]" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#998875]" />
                 <input
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Search Spotify's catalog"
-                  className="h-10 w-full rounded-xl border border-white/[0.075] bg-white/[0.045] pl-10 pr-9 text-sm text-[#f5f4ec] placeholder:text-[#887967] outline-none transition-colors focus:border-[#e6a325]"
+                  placeholder="Search songs, artists, albums..."
+                  className="h-10 w-full rounded-xl border border-white/[0.075] bg-white/[0.045] pl-9 pr-8 text-xs sm:text-sm text-[#f5f4ec] placeholder:text-[#887967] outline-none transition-colors focus:border-[#e6a325]"
                 />
                 {showSearch && (
                   <button
                     aria-label="Clear search"
                     onClick={() => setSearchQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#998875] hover:text-white"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#998875] hover:text-white"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -2638,7 +2638,7 @@ export default function Home() {
             </div>
           </header>
 
-          <div className="px-3.5 py-5 sm:px-6 sm:py-7 md:px-8 lg:px-12 lg:py-9 pb-32 sm:pb-36 lg:pb-28">
+          <div className="px-3.5 py-4 sm:px-6 sm:py-6 md:px-8 lg:px-12 lg:py-8 pb-[calc(var(--bottom-nav-height,3.5rem)+6.5rem)] lg:pb-32">
             {autoplayBlocked && (
               <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-[#f5ba42]/30 bg-[#22160d] p-4 text-xs text-[#f5ba42]">
                 <span>Browser audio autoplay was restricted. Press play to start playback in this browser.</span>
@@ -2853,6 +2853,261 @@ export default function Home() {
                   <p className="mt-2 max-w-xl text-sm leading-6 text-[#a2927f]">
                     Musivo is connected to music catalog metadata first. Podcast discovery can be added as a separate provider surface without mixing playback or user data.
                   </p>
+                </div>
+              </section>
+            ) : activeView === "discover" ? (
+              <section className="space-y-8">
+                <SectionHeading
+                  eyebrow="Explore"
+                  title="Discover"
+                  action="Back home"
+                  onAction={() => setActiveView("home")}
+                />
+
+                {/* Mood & Soundscapes Grid */}
+                <div>
+                  <h2 className="font-display text-lg sm:text-xl font-bold text-[#faf5ee] mb-3">
+                    Curated Moods & Vibes
+                  </h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+                    {MOOD_OPTIONS.map((mood) => (
+                      <button
+                        key={mood.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedMood(mood.id);
+                          setActiveView("aimix");
+                          handleBuildAiMix(mood.id, undefined);
+                        }}
+                        className={`group flex flex-col justify-between p-4 rounded-2xl bg-gradient-to-br ${mood.gradient} border border-white/[0.08] hover:border-white/[0.2] transition-all duration-300 text-left cursor-pointer hover:scale-[1.02] shadow-lg`}
+                      >
+                        <span className="text-2xl sm:text-3xl mb-3 block">{mood.emoji}</span>
+                        <div>
+                          <p className="font-semibold text-xs sm:text-sm text-[#faf5ee] group-hover:text-[#f5ba42] transition-colors">
+                            {mood.name}
+                          </p>
+                          <p className="text-[10px] text-[#9a8976] line-clamp-2 mt-1">
+                            {mood.vibe}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Full Catalog Multi-Column Responsive Grid */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-display text-lg sm:text-xl font-bold text-[#faf5ee]">
+                      All Tracks & Catalog ({catalog.length})
+                    </h2>
+                    <span className="font-mono text-xs text-[#90816f]">
+                      {catalog.length} items
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                    {catalog.map((track) => (
+                      <div
+                        key={`discover-track-${track.id}`}
+                        onClick={() => void playTrack(track, catalog)}
+                        className="group flex flex-col p-3 rounded-2xl bg-[#17110a] hover:bg-[#231a10] border border-white/[0.06] hover:border-white/[0.14] transition-all duration-300 cursor-pointer shadow-md"
+                      >
+                        <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-2.5 bg-[#24170c] shadow-md">
+                          <img
+                            src={track.art}
+                            alt=""
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                          <button
+                            type="button"
+                            aria-label={`Play ${track.title}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void playTrack(track, catalog);
+                            }}
+                            className="absolute bottom-2 right-2 h-9 w-9 rounded-full bg-[#f5ba42] text-[#140f07] shadow-2xl flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:scale-105"
+                          >
+                            <Play className="h-4 w-4 fill-current ml-0.5" />
+                          </button>
+                        </div>
+                        <p className="font-semibold text-xs sm:text-sm text-[#faf5ee] truncate">
+                          {track.title}
+                        </p>
+                        <p className="text-[11px] sm:text-xs text-[#9a8976] truncate mt-0.5">
+                          {track.artist}
+                        </p>
+                        <div className="mt-2 flex items-center justify-between pt-1.5 border-t border-white/[0.05]">
+                          <span className="font-mono text-[10px] text-[#7d6e5d]">
+                            {track.duration}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              title="Add to queue"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                addToQueue(track);
+                              }}
+                              className="p-1 text-[#8c7b68] hover:text-[#f5ba42] transition"
+                            >
+                              <ListPlus className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              title="Save to liked"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleLike(track);
+                              }}
+                              className={`p-1 transition ${
+                                likedIds.has(String(track.id))
+                                  ? "text-[#f5ba42]"
+                                  : "text-[#8c7b68] hover:text-white"
+                              }`}
+                            >
+                              <Heart
+                                className="h-3.5 w-3.5"
+                                fill={likedIds.has(String(track.id)) ? "currentColor" : "none"}
+                              />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            ) : activeView === "releases" ? (
+              <section className="space-y-8">
+                <SectionHeading
+                  eyebrow="Fresh drops"
+                  title="New Releases"
+                  action="Back home"
+                  onAction={() => setActiveView("home")}
+                />
+
+                {/* Featured Release Hero Banner */}
+                {featuredTrack && (
+                  <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-[#f5ba42]/25 bg-gradient-to-br from-[#2a1d10] via-[#1c140c] to-[#120d08] p-5 sm:p-8 shadow-2xl">
+                    <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#f5ba42]/15 blur-3xl pointer-events-none" />
+                    <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-7">
+                      <img
+                        src={featuredTrack.art}
+                        alt={featuredTrack.title}
+                        className="h-28 w-28 sm:h-36 sm:w-36 rounded-2xl object-cover shadow-2xl shrink-0 border border-white/10"
+                      />
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f5ba42]/20 border border-[#f5ba42]/30 px-2.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-[#f5ba42]">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#f5ba42] animate-ping" />
+                          Featured Release
+                        </span>
+                        <h2 className="font-display text-xl sm:text-3xl font-bold text-[#faf5ee] truncate">
+                          {featuredTrack.title}
+                        </h2>
+                        <p className="text-sm text-[#bcaea0] truncate">
+                          {featuredTrack.artist} · {featuredTrack.album}
+                        </p>
+                        <div className="flex items-center gap-3 pt-2">
+                          <button
+                            type="button"
+                            onClick={() => void playTrack(featuredTrack, catalog)}
+                            className="inline-flex items-center gap-2 rounded-full bg-[#f5ba42] hover:bg-[#ffd064] px-5 py-2 text-xs font-bold text-[#140f07] shadow-lg transition hover:scale-105 active:scale-95"
+                          >
+                            <Play className="h-4 w-4 fill-current" />
+                            Play now
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => addToQueue(featuredTrack)}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] hover:bg-white/[0.12] px-4 py-2 text-xs font-semibold text-[#faf5ee] transition"
+                          >
+                            <ListPlus className="h-4 w-4" />
+                            Add to queue
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* New Releases Multi-Column Grid */}
+                <div>
+                  <h2 className="font-display text-lg sm:text-xl font-bold text-[#faf5ee] mb-4">
+                    Latest Singles & Drops
+                  </h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                    {catalog.map((track) => (
+                      <div
+                        key={`release-track-${track.id}`}
+                        onClick={() => void playTrack(track, catalog)}
+                        className="group relative flex flex-col p-3 rounded-2xl bg-[#17110a] hover:bg-[#231a10] border border-white/[0.06] hover:border-white/[0.14] transition-all duration-300 cursor-pointer shadow-md"
+                      >
+                        <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-2.5 bg-[#24170c] shadow-md">
+                          <img
+                            src={track.art}
+                            alt=""
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                          <span className="absolute top-2 left-2 rounded-md bg-[#f5ba42] px-1.5 py-0.5 text-[9px] font-mono font-bold text-[#140f07] shadow-md">
+                            NEW
+                          </span>
+                          <button
+                            type="button"
+                            aria-label={`Play ${track.title}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void playTrack(track, catalog);
+                            }}
+                            className="absolute bottom-2 right-2 h-9 w-9 rounded-full bg-[#f5ba42] text-[#140f07] shadow-2xl flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:scale-105"
+                          >
+                            <Play className="h-4 w-4 fill-current ml-0.5" />
+                          </button>
+                        </div>
+                        <p className="font-semibold text-xs sm:text-sm text-[#faf5ee] truncate">
+                          {track.title}
+                        </p>
+                        <p className="text-[11px] sm:text-xs text-[#9a8976] truncate mt-0.5">
+                          {track.artist}
+                        </p>
+                        <div className="mt-2 flex items-center justify-between pt-1.5 border-t border-white/[0.05]">
+                          <span className="font-mono text-[10px] text-[#7d6e5d]">
+                            {track.duration}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              title="Add to queue"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                addToQueue(track);
+                              }}
+                              className="p-1 text-[#8c7b68] hover:text-[#f5ba42] transition"
+                            >
+                              <ListPlus className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              title="Save to liked"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleLike(track);
+                              }}
+                              className={`p-1 transition ${
+                                likedIds.has(String(track.id))
+                                  ? "text-[#f5ba42]"
+                                  : "text-[#8c7b68] hover:text-white"
+                              }`}
+                            >
+                              <Heart
+                                className="h-3.5 w-3.5"
+                                fill={likedIds.has(String(track.id)) ? "currentColor" : "none"}
+                              />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </section>
             ) : (
@@ -3149,8 +3404,8 @@ export default function Home() {
                     action="See all"
                     onAction={() => setActiveView("discover")}
                   />
-                  <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-3 sm:gap-4 snap-x pb-2 hide-scrollbar sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4">
-                    {catalog.slice(0, 4).map((track) => (
+                  <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-3 sm:gap-4 snap-x pb-2 hide-scrollbar sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                    {catalog.slice(0, 10).map((track) => (
                       <div
                         key={`made-for-you-${track.id}`}
                         onClick={() => void playTrack(track, catalog)}
@@ -3319,7 +3574,7 @@ export default function Home() {
       </div>
 
       {/* Persistent Bottom Musivo Player */}
-      <div className="fixed inset-x-0 bottom-[50px] sm:bottom-[54px] lg:bottom-0 z-40 lg:z-50 border-t border-white/[0.09] bg-[#100c08]/95 shadow-[0_-16px_50px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition-all">
+      <div className="fixed inset-x-0 bottom-[var(--bottom-nav-height,3.5rem)] lg:bottom-0 z-40 lg:z-50 border-t border-white/[0.09] bg-[#100c08]/95 shadow-[0_-16px_50px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition-all">
         {/* Mobile Top Progress Line Indicator (Spotify Mobile Style) */}
         <div className="absolute top-0 inset-x-0 h-[2.5px] bg-white/[0.08] sm:hidden overflow-hidden">
           <div
@@ -3372,7 +3627,7 @@ export default function Home() {
                   e.stopPropagation();
                   toggleLike(currentTrack);
                 }}
-                className={`ml-1 hidden sm:block ${
+                className={`ml-1 hidden sm:grid h-9 w-9 place-items-center rounded-full hover:bg-white/[0.08] transition ${
                   likedIds.has(String(currentTrack.id))
                     ? "text-[#f5ba42]"
                     : "text-[#887967] hover:text-white"
@@ -3387,39 +3642,39 @@ export default function Home() {
 
             {/* Middle Playback Controls */}
             <div className="flex shrink-0 sm:flex-1 flex-col items-center gap-1 sm:gap-1.5 md:max-w-[520px]">
-              <div className="flex items-center gap-2.5 sm:gap-4 text-[#948472]">
+              <div className="flex items-center gap-1.5 sm:gap-3 text-[#948472]">
                 <button
                   aria-label="Shuffle queue"
                   onClick={shuffleQueue}
-                  className="hidden sm:block text-[#948472] hover:text-[#f5ba42] transition"
+                  className="hidden sm:grid h-9 w-9 place-items-center rounded-full text-[#948472] hover:bg-white/[0.08] hover:text-[#f5ba42] transition active:scale-95 shrink-0"
                   title="Shuffle queue"
                 >
-                  <Shuffle className="h-3.5 w-3.5" />
+                  <Shuffle className="h-4 w-4" />
                 </button>
                 <button
                   aria-label="Previous track"
                   onClick={() => void skip(-1)}
-                  className="hover:text-white"
+                  className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full text-[#948472] hover:bg-white/[0.08] hover:text-white transition active:scale-95 shrink-0"
                 >
-                  <SkipBack className="h-4 w-4 fill-current" />
+                  <SkipBack className="h-4 w-4 sm:h-4.5 sm:w-4.5 fill-current" />
                 </button>
                 <button
                   aria-label={isPlaying ? "Pause" : "Play"}
                   onClick={() => void togglePlay()}
-                  className="grid h-8 w-8 place-items-center rounded-full bg-[#faf5ee] text-[#131811] hover:bg-[#f5ba42]"
+                  className="grid h-9 w-9 sm:h-11 sm:w-11 place-items-center rounded-full bg-[#faf5ee] text-[#131811] hover:bg-[#f5ba42] hover:scale-105 active:scale-95 transition-all shadow-md shrink-0"
                 >
                   {isPlaying ? (
-                    <Pause className="h-4 w-4 fill-current" />
+                    <Pause className="h-4 w-4 sm:h-5 sm:w-5 fill-current" />
                   ) : (
-                    <Play className="ml-0.5 h-4 w-4 fill-current" />
+                    <Play className="ml-0.5 h-4 w-4 sm:h-5 sm:w-5 fill-current" />
                   )}
                 </button>
                 <button
                   aria-label="Next track"
                   onClick={() => void skip(1)}
-                  className="hover:text-white"
+                  className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-full text-[#948472] hover:bg-white/[0.08] hover:text-white transition active:scale-95 shrink-0"
                 >
-                  <SkipForward className="h-4 w-4 fill-current" />
+                  <SkipForward className="h-4 w-4 sm:h-4.5 sm:w-4.5 fill-current" />
                 </button>
 
                 {/* Spotify Full-Length Indicator or Sign-in Action */}
@@ -3437,17 +3692,17 @@ export default function Home() {
                 <button
                   aria-label={`Repeat mode: ${repeatMode}`}
                   onClick={toggleRepeatMode}
-                  className={`hidden sm:flex items-center gap-1 transition ${
+                  className={`hidden sm:inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 transition active:scale-95 ${
                     repeatMode !== "off"
-                      ? "text-[#f5ba42] drop-shadow-[0_0_8px_rgba(245,186,66,0.4)]"
-                      : "text-[#948472] hover:text-[#f5ba42]"
+                      ? "text-[#f5ba42] drop-shadow-[0_0_8px_rgba(245,186,66,0.4)] bg-[#f5ba42]/10"
+                      : "text-[#948472] hover:bg-white/[0.08] hover:text-[#f5ba42]"
                   }`}
                   title={`Repeat: ${repeatMode.toUpperCase()}`}
                 >
                   {repeatMode === "one" ? (
-                    <Repeat1 className="h-3.5 w-3.5" />
+                    <Repeat1 className="h-4 w-4" />
                   ) : (
-                    <Repeat2 className="h-3.5 w-3.5" />
+                    <Repeat2 className="h-4 w-4" />
                   )}
                   {repeatMode !== "off" && (
                     <span className="font-mono text-[9px] font-bold">
@@ -3458,17 +3713,17 @@ export default function Home() {
                 <button
                   aria-label="Toggle playback queue"
                   onClick={() => setIsQueueOpen((prev) => !prev)}
-                  className="sm:hidden text-[#8e7f6e] hover:text-[#f5ba42]"
+                  className="sm:hidden grid h-9 w-9 place-items-center rounded-full text-[#8e7f6e] hover:bg-white/[0.08] hover:text-[#f5ba42] transition shrink-0"
                   title="Queue"
                 >
-                  <ListMusic className="h-3.5 w-3.5" />
+                  <ListMusic className="h-4 w-4" />
                 </button>
                 <button
                   aria-label="Playback diagnostics"
                   onClick={() => setShowPlaybackDiagnostics((visible) => !visible)}
-                  className="md:hidden text-[#8e7f6e] hover:text-[#f5ba42]"
+                  className="md:hidden grid h-9 w-9 place-items-center rounded-full text-[#8e7f6e] hover:bg-white/[0.08] hover:text-[#f5ba42] transition shrink-0"
                 >
-                  <Headphones className="h-3.5 w-3.5" />
+                  <Headphones className="h-4 w-4" />
                 </button>
               </div>
 

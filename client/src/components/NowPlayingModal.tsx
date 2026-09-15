@@ -95,20 +95,22 @@ export function NowPlayingModal({
         </button>
       </div>
 
-      {/* Center Artwork */}
-      <div className="relative z-10 mx-auto my-auto w-full max-w-[270px] xs:max-w-[310px] sm:max-w-[380px] aspect-square">
-        <div className="relative h-full w-full overflow-hidden rounded-3xl border border-[#f5ba42]/20 bg-[#16100a] shadow-[0_20px_60px_rgba(0,0,0,0.7)]">
-          <img
-            src={currentTrack.art}
-            alt={currentTrack.title}
-            className="h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+      {/* Center Artwork & Controls Container (Responsive Portrait & Landscape) */}
+      <div className="relative z-10 mx-auto my-auto flex w-full max-w-4xl flex-col items-center justify-center gap-5 py-2 landscape:flex-row landscape:items-center landscape:justify-center landscape:gap-8 sm:gap-7">
+        {/* Center Artwork */}
+        <div className="relative w-full max-w-[240px] xs:max-w-[280px] sm:max-w-[340px] md:max-w-[380px] landscape:max-w-[210px] aspect-square shrink-0">
+          <div className="relative h-full w-full overflow-hidden rounded-3xl border border-[#f5ba42]/20 bg-[#16100a] shadow-[0_20px_60px_rgba(0,0,0,0.7)]">
+            <img
+              src={currentTrack.art}
+              alt={currentTrack.title}
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+          </div>
         </div>
-      </div>
 
-      {/* Track Info & Controls */}
-      <div className="relative z-10 mx-auto w-full max-w-md space-y-5">
+        {/* Track Info & Controls */}
+        <div className="w-full max-w-md space-y-4 sm:space-y-5">
         {/* Title & Artist & Like Button */}
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
@@ -224,6 +226,7 @@ export function NowPlayingModal({
         </div>
       </div>
     </div>
+  </div>
   );
 }
 

@@ -820,14 +820,18 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentTrack]);
 
-  // Sync playback state with Media Session
+  // Sync playback state with Media Session (playing / paused / none)
   useEffect(() => {
     if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
 
     try {
-      navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+      if (playbackMode === "idle") {
+        navigator.mediaSession.playbackState = "none";
+      } else {
+        navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+      }
     } catch {}
-  }, [isPlaying]);
+  }, [isPlaying, playbackMode]);
 
   // Wire up Media Session action handlers (Lock screen controls & Bluetooth buttons)
   useEffect(() => {

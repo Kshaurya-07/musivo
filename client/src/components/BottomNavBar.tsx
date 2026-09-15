@@ -22,7 +22,8 @@ export function BottomNavBar({
   return (
     <nav
       aria-label="Mobile Navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[#0d0a07]/95 px-3 py-2 backdrop-blur-2xl lg:hidden safe-area-pb"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[#0d0a07]/95 px-3 pt-1.5 backdrop-blur-2xl lg:hidden safe-area-pb"
+      style={{ minHeight: "var(--bottom-nav-height)" }}
     >
       <div className="mx-auto flex max-w-md items-center justify-around">
         {tabs.map(({ id, label, icon: Icon, highlight, badge }) => {
@@ -31,7 +32,7 @@ export function BottomNavBar({
             <button
               key={id}
               onClick={() => onSelectView(id)}
-              className={`group relative flex flex-1 flex-col items-center justify-center py-1 transition-all ${
+              className={`group relative flex flex-1 flex-col items-center justify-center min-h-[44px] py-1 transition-all ${
                 isActive
                   ? "text-[#f5ba42]"
                   : "text-[#8c7b68] hover:text-[#d6c8b6]"
