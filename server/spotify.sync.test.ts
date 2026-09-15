@@ -9,6 +9,8 @@ import {
   listLikedTracks,
   upsertSpotifyConnection,
   getSpotifyConnection,
+  syncSpotifySavedTracksToLiked,
+  getFamiliarTrackIds,
 } from "./db";
 
 describe("Database & Memory Fallback Store", () => {
@@ -81,5 +83,47 @@ describe("Database & Memory Fallback Store", () => {
     const status = await getSpotifyConnectionStatus(userId);
     expect(status.connected).toBe(true);
     expect(status.displayName).toBe("Spotify Fan");
+  });
+
+  it("syncs Spotify saved tracks directly into user liked tracks without duplicates", async () => {
+    const userId = 999;
+    const tracksToSync = [
+      {
+        externalId: "spotify-sync-track-1",
+        title: "Sunset Lover",
+        artist: "Petit Biscuit",
+        album: "Presence",
+        artworkUrl: "https://example.com/sunset.jpg",
+        previewUrl: null,
+        storeUrl: "https://open.spotify.com/track/sync-1",
+        durationMs: 237000,
+      },
+      {
+        externalId: "spotify-sync-track-2",
+        title: "Sun Models",
+        artist: "ODESZA",
+        album: "In Return",
+        artworkUrl: "https://example.com/sunmodels.jpg",
+        previewUrl: null,
+        storeUrl: "https://open.spotify.com/track/sync-2",
+        durationMs: 160000,
+      },
+    ];
+
+    const insertedCount = await syncSpotifySavedTracksToLiked(userId, tracksToSync);
+    expect(insertedCount).toBe(2);
+
+    const liked = await listLikedTracks(userId);
+    expect(liked.length).toBe(2);
+    expect(liked.some((t) => t.externalId === "spotify-sync-track-1")).toBe(true);
+    expect(liked.some((t) => t.externalId === "spotify-sync-track-2")).toBe(true);
+
+    // Re-syncing the same tracks should not create duplicates
+    const secondSyncCount = await syncSpotifySavedTracksToLiked(userId, tracksToSync);
+    expect(secondSyncCount).toBe(0);
+
+    const familiar = await getFamiliarTrackIds(userId);
+    expect(familiar.has("spotify-sync-track-1")).toBe(true);
+    expect(familiar.has("sync-track-1")).toBe(true);
   });
 });

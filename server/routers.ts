@@ -18,6 +18,7 @@ import {
   listSpotifyRecentTracks,
   listUserPlaylists,
   toggleLikedTrack,
+  storeUserRecentSearch,
 } from "./db";
 import {
   buildSpotifyAuthorizeUrl,
@@ -173,6 +174,9 @@ export const appRouter = router({
     search: publicProcedure
       .input(z.object({ query: z.string().trim().min(1).max(80), limit: z.number().int().min(1).max(20).default(12) }))
       .query(async ({ input, ctx }) => {
+        if (ctx.user?.id) {
+          void storeUserRecentSearch(ctx.user.id, input.query).catch(() => undefined);
+        }
         try {
           if (ctx.user) {
             const userConnection = await getSpotifyConnection(ctx.user.id);
@@ -224,6 +228,8 @@ export const appRouter = router({
             count: z.number().int().min(4).max(16).default(8).optional(),
             saveToSpotify: z.boolean().default(false).optional(),
             seedPlaylistId: z.union([z.number(), z.string()]).optional(),
+            searchIntent: z.string().max(200).optional(),
+            refreshSeed: z.number().optional(),
           })
           .optional()
       )

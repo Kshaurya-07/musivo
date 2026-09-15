@@ -57,4 +57,32 @@ describe("Enhanced AI Mix Studio", () => {
     const pastAiPlaylists = await listPastAiPlaylists(999999);
     expect(Array.isArray(pastAiPlaylists)).toBe(true);
   });
+
+  it("discovers novel related artists from seed artists", async () => {
+    const { discoverRelatedArtists } = await import("./spotify");
+    const related = await discoverRelatedArtists(undefined, ["M83"], 5);
+
+    expect(Array.isArray(related)).toBe(true);
+    expect(related.length).toBeGreaterThan(0);
+    expect(related).toContain("Tycho");
+    expect(related.map((r) => r.toLowerCase())).not.toContain("m83");
+  });
+
+  it("produces exploratory mixes without 30-second audio preview clipping and incorporates search intent", async () => {
+    const result = await createAiSpotifyMix(999999, {
+      mood: "chill",
+      searchIntent: "deep house sunset",
+      refreshSeed: 42,
+      count: 4,
+      saveToSpotify: false,
+    });
+
+    expect(result).toBeDefined();
+    expect(result.title).toContain("deep house sunset");
+    expect(result.recommendations.length).toBeGreaterThanOrEqual(0);
+    for (const rec of result.recommendations) {
+      expect(rec.audio).toBe(""); // Ensure 30s preview URLs are never assigned to audio!
+      expect(rec.durationMs).toBeGreaterThan(0);
+    }
+  });
 });

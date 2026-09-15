@@ -232,11 +232,10 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
 
     const handleLoadedMetadata = () => {
       if (audioRef.current) {
-        setDuration((prevDuration) => {
-          if (prevDuration && prevDuration > 30) return prevDuration;
-          const audioSec = Math.round(audioRef.current?.duration || 0);
-          return audioSec || prevDuration || 0;
-        });
+        const audioSec = Math.round(audioRef.current?.duration || 0);
+        if (audioSec > 0) {
+          setDuration(audioSec);
+        }
       }
     };
 
@@ -375,7 +374,7 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
       let playTarget = track;
       const initialDuration = parseDuration(playTarget.durationMs || playTarget.duration);
 
-      // 1. Primary path: Spotify Web Playback SDK (if Spotify is connected)
+      // 1. Authoritative path: Spotify Web Playback SDK (if Spotify is connected)
       if (isSpotifyConnected) {
         let isSpotifyTrack =
           String(playTarget.id).startsWith("spotify-") ||
@@ -423,41 +422,25 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
             setIsPlaying(true);
             return;
           } catch (err: unknown) {
-            console.warn(
-              "[Musivo] Spotify Web Playback SDK fallback to full length stream:",
-              err
-            );
+            const isPremiumReq =
+              err instanceof Error &&
+              (err.message.includes("PREMIUM_REQUIRED") || err.message.includes("403"));
+
+            if (isPremiumReq) {
+              toast.info(
+                "Spotify Premium is required for full web SDK streaming. Streaming full song via Musivo high-fidelity engine."
+              );
+            } else {
+              console.warn(
+                "[Musivo] Spotify Web Playback SDK error, transitioning to full engine stream:",
+                err
+              );
+            }
           }
         }
       }
 
-      // 2. Direct High-Fidelity Audio Stream via Native HTML5 Audio (Supports Background Streaming & Lock Screen)
-      if (playTarget.audio) {
-        if (spotifyPlayer.isPlaying) void spotifyPlayer.pause().catch(() => undefined);
-        if (ytPlayerRef.current?.pauseVideo) ytPlayerRef.current.pauseVideo();
-
-        setCurrentTrack(playTarget);
-        setProgress(0);
-        setDuration(initialDuration || 0);
-        setPlaybackMode("full");
-        setIsPlaying(true);
-        setUserError(null);
-
-        if (audioRef.current) {
-          audioRef.current.src = playTarget.audio;
-          audioRef.current.volume = volume / 100;
-          try {
-            await audioRef.current.play();
-            setIsPlaying(true);
-          } catch (e) {
-            console.warn("[Musivo Native Engine] Play error:", e);
-            setIsPlaying(false);
-          }
-        }
-        return;
-      }
-
-      // 3. Full-Length Video/Audio Stream Fallback
+      // 2. High-Fidelity Full-Length Audio Engine Stream (Full duration, seeking, background playback)
       try {
         const fullStream = await trpcUtils.music.resolveFullStream.fetch({
           title: playTarget.title,
@@ -484,6 +467,37 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (streamErr) {
         console.warn("[Musivo] Full-length stream resolution fallback:", streamErr);
+      }
+
+      // 3. Direct High-Fidelity Native Audio (only if real non-preview full audio stream URL exists)
+      const isPreviewClip =
+        !playTarget.audio ||
+        playTarget.audio.includes("p.scdn.co") ||
+        playTarget.audio.includes("audio-ak-spotify");
+
+      if (playTarget.audio && !isPreviewClip) {
+        if (spotifyPlayer.isPlaying) void spotifyPlayer.pause().catch(() => undefined);
+        if (ytPlayerRef.current?.pauseVideo) ytPlayerRef.current.pauseVideo();
+
+        setCurrentTrack(playTarget);
+        setProgress(0);
+        setDuration(initialDuration || 0);
+        setPlaybackMode("full");
+        setIsPlaying(true);
+        setUserError(null);
+
+        if (audioRef.current) {
+          audioRef.current.src = playTarget.audio;
+          audioRef.current.volume = volume / 100;
+          try {
+            await audioRef.current.play();
+            setIsPlaying(true);
+            return;
+          } catch (e) {
+            console.warn("[Musivo Native Engine] Play error:", e);
+            setIsPlaying(false);
+          }
+        }
       }
 
       // 4. No playback available

@@ -367,6 +367,8 @@ export type AiMixOptions = {
   count?: number;
   saveToSpotify?: boolean;
   seedPlaylistId?: number | string;
+  searchIntent?: string;
+  refreshSeed?: number;
 };
 
 export type UserAiTasteProfile = {
@@ -663,10 +665,123 @@ function formatSeconds(sec: number): string {
   return `${m}:${s < 10 ? "0" : ""}${s}`;
 }
 
+const RELATED_ARTIST_CURATED: Record<string, string[]> = {
+  m83: ["Tycho", "Kavinsky", "Washed Out", "Neon Indian", "CHVRCHES", "MGMT"],
+  "fred again..": ["Overmono", "Four Tet", "Bicep", "Floating Points", "Joy Orbison", "Burial"],
+  tycho: ["Com Truise", "Bonobo", "Boards of Canada", "Emancipator", "Maribou State"],
+  bonobo: ["Maribou State", "Tourist", "Session Victim", "Christian Löffler", "George FitzGerald"],
+  "dua lipa": ["Jessie Ware", "Roisin Murphy", "Kylie Minogue", "Raye", "Reneé Rapp"],
+  "tame impala": ["Pond", "Unknown Mortal Orchestra", "STRFKR", "GUM", "King Gizzard"],
+  "beach house": ["Cocteau Twins", "Slowdive", "Alvvays", "Cigarettes After Sex", "Deerhunter"],
+  "cigarettes after sex": ["Men I Trust", "Beach House", "Lana Del Rey", "Mazzy Star", "The Marías"],
+  khruangbin: ["Yin Yin", "Surprise Chef", "El Michels Affair", "Skinshape", "Mildlife"],
+  "men i trust": ["Crumb", "Faye Webster", "The Marías", "Mild High Club", "Boy Pablo"],
+  "daft punk": ["Justice", "Cassius", "SebastiAn", "Kavinsky", "Modjo"],
+  disclosure: ["SG Lewis", "Gorgon City", "Duke Dumont", "Kaytranada", "Jax Jones"],
+  skrillex: ["Noisia", "Sub Focus", "Zeds Dead", "Virtual Riot", "Kill the Noise"],
+  "max richter": ["Ólafur Arnalds", "Dustin O'Halloran", "Nils Frahm", "Hauschka", "Ludovico Einaudi"],
+  "nils frahm": ["Kiasmos", "Max Richter", "Ólafur Arnalds", "A Winged Victory for the Sullen"],
+  "calvin harris": ["David Guetta", "Avicii", "Alesso", "Swedish House Mafia", "Zedd"],
+  "iron & wine": ["Ray LaMontagne", "Damien Rice", "Gregory Alan Isakov", "Sun Kil Moon", "The Tallest Man on Earth"],
+  "bon iver": ["Sufjan Stevens", "Fleet Foxes", "Novo Amor", "The Antlers", "Ben Howard"],
+  "phoebe bridgers": ["Lucy Dacus", "Julien Baker", "Boygenius", "Clairo", "Soccer Mommy"],
+};
+
+export async function discoverRelatedArtists(
+  userId?: number,
+  seedArtists: string[] = [],
+  limit = 8
+): Promise<string[]> {
+  const discovered = new Set<string>();
+  const normalizedSeeds = new Set(seedArtists.map((s) => s.toLowerCase().trim()));
+
+  for (const seed of seedArtists.slice(0, 4)) {
+    if (discovered.size >= limit) break;
+    const seedNorm = seed.toLowerCase().trim();
+
+    // 1. Try Spotify API for related artists if available
+    let spotifyRelated: string[] = [];
+    try {
+      let artistId: string | undefined;
+      if (userId) {
+        const searchRes = await spotifyUserFetch<any>(
+          userId,
+          `/search?q=${encodeURIComponent(seed)}&type=artist&limit=1`
+        ).catch(() => null);
+        artistId = searchRes?.artists?.items?.[0]?.id;
+      }
+      if (!artistId && hasSpotifyCredentials()) {
+        const token = await getSpotifyAccessToken();
+        if (token) {
+          const res = await fetch(
+            `https://api.spotify.com/v1/search?q=${encodeURIComponent(seed)}&type=artist&limit=1`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            artistId = data.artists?.items?.[0]?.id;
+          }
+        }
+      }
+
+      if (artistId) {
+        let relData: any = null;
+        if (userId) {
+          relData = await spotifyUserFetch<any>(userId, `/artists/${artistId}/related-artists`).catch(() => null);
+        }
+        if (!relData && hasSpotifyCredentials()) {
+          const token = await getSpotifyAccessToken();
+          if (token) {
+            const res = await fetch(`https://api.spotify.com/v1/artists/${artistId}/related-artists`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.ok) relData = await res.json();
+          }
+        }
+        if (relData?.artists && Array.isArray(relData.artists)) {
+          spotifyRelated = relData.artists
+            .map((a: any) => a?.name)
+            .filter((n: string) => n && !normalizedSeeds.has(n.toLowerCase().trim()));
+        }
+      }
+    } catch (e) {
+      console.warn(`[AI Mix] Related artist lookup for "${seed}" skipped:`, e);
+    }
+
+    for (const art of spotifyRelated) {
+      if (discovered.size >= limit) break;
+      if (!normalizedSeeds.has(art.toLowerCase().trim())) {
+        discovered.add(art);
+      }
+    }
+
+    // 2. Curated fallback graph
+    const curatedMatches = RELATED_ARTIST_CURATED[seedNorm] ?? [];
+    for (const match of curatedMatches) {
+      if (discovered.size >= limit) break;
+      if (!normalizedSeeds.has(match.toLowerCase().trim())) {
+        discovered.add(match);
+      }
+    }
+  }
+
+  return Array.from(discovered);
+}
+
+function hashString(str: string, seed = 0): number {
+  let h = seed;
+  for (let i = 0; i < str.length; i++) {
+    h = (h * 31 + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
 export async function createAiSpotifyMix(userId?: number, options?: AiMixOptions) {
   const recent = userId ? await db.listSpotifyRecentTracks(userId).catch(() => []) : [];
   const liked = userId ? await db.listLikedTracks(userId).catch(() => []) : [];
   const userProfile = await trainUserAiProfile(userId);
+  const familiarTrackIds = userId ? await db.getFamiliarTrackIds(userId).catch(() => new Set<string>()) : new Set<string>();
+  const userRecentSearches = userId ? await db.getUserRecentSearches(userId).catch(() => []) : [];
 
   // Load tracks from user's chosen past AI playlist if seedPlaylistId is provided
   let seedPlaylistTracks: Array<{ title: string; artist: string }> = [];
@@ -696,10 +811,26 @@ export async function createAiSpotifyMix(userId?: number, options?: AiMixOptions
   const moodConfig = MOOD_PROFILES[selectedMood] || MOOD_PROFILES.chill;
   const targetCount = Math.min(Math.max(options?.count ?? 8, 4), 16);
 
+  const searchIntent = (options?.searchIntent || userRecentSearches[0] || "").trim();
+
+  // Multi-signal seed compilation
+  const seedArtists = Array.from(
+    new Set([
+      ...userProfile.topArtists.slice(0, 3),
+      ...recent.slice(0, 3).map((r) => r.artist),
+      ...moodConfig.seedArtists.slice(0, 3),
+    ])
+  ).filter(Boolean);
+
+  // Discover NEW related artists to avoid replaying listening history
+  const relatedArtists = await discoverRelatedArtists(userId, seedArtists, 8);
+
   const mixTitle = options?.prompt
     ? `AI Mix · ${options.prompt.slice(0, 24)}`
     : seedPlaylistName
     ? `AI Mix · Inspired by ${seedPlaylistName.replace(/^Musivo · /i, "").slice(0, 20)}`
+    : searchIntent
+    ? `AI Mix · ${searchIntent.slice(0, 18)} & ${moodConfig.name}`
     : `AI Mix · ${moodConfig.name}`;
 
   let matches: AiMixTrack[] = [];
@@ -708,20 +839,13 @@ export async function createAiSpotifyMix(userId?: number, options?: AiMixOptions
   // 1. LLM Curation (if OpenAI/Forge API key is configured)
   if (ENV.forgeApiKey) {
     try {
-      const seedContext = [
-        ...seedPlaylistTracks.slice(0, 8).map((t) => `${t.title} by ${t.artist}`),
-        ...userProfile.favoriteTracks.slice(0, 8).map((t) => `${t.title} by ${t.artist}`),
-        ...recent.slice(0, 6).map((t) => `${t.title} by ${t.artist}`),
-        ...liked.slice(0, 6).map((t) => `${t.title} by ${t.artist}`),
-      ].filter(Boolean).join(", ");
-
       const promptContext = options?.prompt
         ? `The user requested the vibe: "${options.prompt}".`
         : seedPlaylistName
         ? `The user chose to evolve the vibe from their past AI playlist "${seedPlaylistName}".`
         : `The user selected the mood: "${moodConfig.name}" (${moodConfig.description}).`;
 
-      const trainingSummary = `User learned profile: top affinities are ${userProfile.topSeedAffinities.slice(0, 3).map((a) => `${a.name} (${a.weight}%)`).join(", ")}, top artists: ${userProfile.topArtists.slice(0, 5).join(", ")}.`;
+      const trainingSummary = `User affinities: ${userProfile.topSeedAffinities.slice(0, 3).map((a) => `${a.name} (${a.weight}%)`).join(", ")}; top artists: ${userProfile.topArtists.slice(0, 5).join(", ")}. Novel related artists: ${relatedArtists.slice(0, 5).join(", ")}.`;
 
       const result = await invokeLLM({
         model: "gpt-4o-mini",
@@ -730,13 +854,13 @@ export async function createAiSpotifyMix(userId?: number, options?: AiMixOptions
           {
             role: "system",
             content:
-              "You are an expert music curator for Musivo. Suggest musically cohesive songs matching the user's aesthetic, taking into account their trained music taste profile. Return only JSON.",
+              "You are an expert music discovery curator for Musivo. Suggest musically cohesive songs matching the user's aesthetic. Crucially: discover NEW and related songs/artists matching the aesthetic, rather than just repeating their exact previous songs. Return only JSON.",
           },
           {
             role: "user",
             content: `${promptContext}\n${trainingSummary}\n${
-              seedContext ? `User's seed library & chosen mix: ${seedContext}\n` : ""
-            }Suggest ${targetCount} distinct songs that fit this aesthetic. Include title, artist, and a compelling, concise reason (under 15 words) explaining why it fits.`,
+              searchIntent ? `User recent search intent: "${searchIntent}".\n` : ""
+            }Suggest ${targetCount} distinct songs that fit this aesthetic and introduce fresh discoveries. Include title, artist, and a compelling, concise reason (under 15 words).`,
           },
         ],
         responseFormat: {
@@ -808,86 +932,192 @@ export async function createAiSpotifyMix(userId?: number, options?: AiMixOptions
             title: match.name,
             artist: match.artists?.[0]?.name || rec.artist,
             album: match.album?.name || "Single",
-            reason: rec.reason || moodConfig.defaultReason,
+            reason: rec.reason || `Discovered for ${moodConfig.name} aesthetic.`,
             art: match.album?.images?.[0]?.url ?? null,
             durationMs: durMs,
             duration: formatSeconds(durMs / 1000),
-            audio: match.preview_url ?? undefined,
+            audio: "",
             storeUrl: match.external_urls?.spotify,
           });
         }
       }
     } catch (llmErr) {
-      console.warn("[AI Mix] LLM curation skipped/failed; using algorithmic curator:", llmErr);
+      console.warn("[AI Mix] LLM curation skipped/failed; using exploratory algorithmic curator:", llmErr);
     }
   }
 
-  // 2. Algorithmic Mix Curator (Seed Artists & Keywords)
+  // 2. Exploratory Multi-Signal Candidate Generation & Weighted Ranking
   if (matches.length < targetCount) {
-    const candidateArtists = [
-      ...seedPlaylistTracks.map((t) => t.artist),
-      ...userProfile.topArtists,
-      ...moodConfig.seedArtists,
-      ...recent.map((r) => r.artist),
-      ...liked.map((l) => l.artist),
-    ].filter(Boolean);
+    type CandidateItem = {
+      track: SpotifyTrack;
+      sourceStream: "related" | "intent" | "mood" | "seed";
+      matchKeyword?: string;
+    };
 
-    const shuffledArtists = Array.from(new Set(candidateArtists)).sort(() => Math.random() - 0.5);
+    const candidatePool: CandidateItem[] = [];
+    const poolSeenIds = new Set<string>();
 
-    for (const artist of shuffledArtists) {
-      if (matches.length >= targetCount) break;
-      try {
-        let candidates: SpotifyTrack[] = [];
-        if (userId) {
+    // Signal Stream 1: Newly discovered related artists
+    const discoveryArtists = relatedArtists.length > 0 ? relatedArtists : moodConfig.seedArtists;
+    const shuffledRelated = [...discoveryArtists].sort(() => Math.random() - 0.5);
+
+    // Signal Stream 2: Search intent queries
+    const intentQueries = [
+      searchIntent,
+      options?.prompt,
+      ...userRecentSearches.slice(0, 2),
+    ].filter(Boolean) as string[];
+
+    // Signal Stream 3: Mood keywords and aesthetics
+    const moodKeywords = [...moodConfig.seedKeywords, moodConfig.name];
+
+    // Query helper that searches Spotify via user token or client credentials
+    const searchTracks = async (q: string, limit = 4): Promise<SpotifyTrack[]> => {
+      if (userId) {
+        try {
           const searchRes = await spotifyUserFetch<SpotifySearchResponse>(
             userId,
-            `/search?q=${encodeURIComponent(`artist:${artist}`)}&type=track&limit=4&market=${encodeURIComponent(
+            `/search?q=${encodeURIComponent(q)}&type=track&limit=${limit}&market=${encodeURIComponent(
               ENV.spotifyMarket || "US"
             )}`
-          ).catch(() => null);
-          candidates = searchRes?.tracks?.items ?? [];
-        }
-
-        if (!candidates.length && hasSpotifyCredentials()) {
+          );
+          if (searchRes?.tracks?.items?.length) return searchRes.tracks.items;
+        } catch {}
+      }
+      if (hasSpotifyCredentials()) {
+        try {
           const token = await getSpotifyAccessToken();
           if (token) {
             const url = new URL("https://api.spotify.com/v1/search");
-            url.searchParams.set("q", `artist:${artist}`);
+            url.searchParams.set("q", q);
             url.searchParams.set("type", "track");
-            url.searchParams.set("limit", "4");
+            url.searchParams.set("limit", String(limit));
+            url.searchParams.set("market", ENV.spotifyMarket || "US");
             const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
             if (res.ok) {
               const payload = (await res.json()) as SpotifySearchResponse;
-              candidates = payload.tracks?.items ?? [];
+              return payload.tracks?.items ?? [];
             }
           }
-        }
-
-        for (const cand of candidates) {
-          if (matches.length >= targetCount) break;
-          if (!cand.id || seenIds.has(cand.id)) continue;
-          seenIds.add(cand.id);
-          const durMs = cand.duration_ms || 210000;
-          matches.push({
-            id: `spotify-${cand.id}`,
-            title: cand.name,
-            artist: cand.artists?.[0]?.name || artist,
-            album: cand.album?.name || "Single",
-            reason: `Curated for ${artist}'s signature sound matching the ${moodConfig.name} aesthetic.`,
-            art: cand.album?.images?.[0]?.url ?? null,
-            durationMs: durMs,
-            duration: formatSeconds(durMs / 1000),
-            audio: cand.preview_url ?? undefined,
-            storeUrl: cand.external_urls?.spotify,
-          });
-        }
-      } catch (err) {
-        console.warn(`[AI Mix] Seed artist search failed for ${artist}:`, err);
+        } catch {}
       }
+      return [];
+    };
+
+    // Gather candidate tracks from novel related artists
+    for (const artist of shuffledRelated.slice(0, 4)) {
+      const tracks = await searchTracks(`artist:${artist}`, 3);
+      for (const t of tracks) {
+        if (t.id && !seenIds.has(t.id) && !poolSeenIds.has(t.id)) {
+          poolSeenIds.add(t.id);
+          candidatePool.push({ track: t, sourceStream: "related", matchKeyword: artist });
+        }
+      }
+    }
+
+    // Gather candidate tracks from search intent
+    for (const query of intentQueries.slice(0, 2)) {
+      const tracks = await searchTracks(query, 3);
+      for (const t of tracks) {
+        if (t.id && !seenIds.has(t.id) && !poolSeenIds.has(t.id)) {
+          poolSeenIds.add(t.id);
+          candidatePool.push({ track: t, sourceStream: "intent", matchKeyword: query });
+        }
+      }
+    }
+
+    // Gather candidate tracks from mood aesthetic keywords
+    for (const kw of moodKeywords.slice(0, 3)) {
+      const tracks = await searchTracks(kw, 3);
+      for (const t of tracks) {
+        if (t.id && !seenIds.has(t.id) && !poolSeenIds.has(t.id)) {
+          poolSeenIds.add(t.id);
+          candidatePool.push({ track: t, sourceStream: "mood", matchKeyword: kw });
+        }
+      }
+    }
+
+    // Candidate Scoring Pipeline
+    const scoredCandidates = candidatePool.map((cand) => {
+      let score = 50;
+      const t = cand.track;
+      const candId = t.id;
+      const candArtist = (t.artists?.[0]?.name || "").toLowerCase();
+
+      // Novelty bonus for related artists
+      if (cand.sourceStream === "related") {
+        score += 35;
+      }
+
+      // Search intent match bonus
+      if (cand.sourceStream === "intent") {
+        score += 30;
+      }
+
+      // Mood keyword alignment
+      if (cand.sourceStream === "mood") {
+        score += 20;
+      }
+
+      // Already-Heard Penalty: penalize tracks already in user's liked or recently played list
+      if (familiarTrackIds.has(candId) || familiarTrackIds.has(`spotify-${candId}`)) {
+        score -= 70;
+      }
+
+      // Refresh seed entropy (deterministic variation when user hits Refresh Mix)
+      const entropy = hashString(candId, options?.refreshSeed || 0) % 25;
+      score += entropy;
+
+      return {
+        ...cand,
+        score,
+      };
+    });
+
+    // Sort candidates descending by score
+    scoredCandidates.sort((a, b) => b.score - a.score);
+
+    // Artist Diversity: cap at max 2 tracks per artist to guarantee musical breadth
+    const artistCounts = new Map<string, number>();
+
+    for (const cand of scoredCandidates) {
+      if (matches.length >= targetCount) break;
+      const t = cand.track;
+      if (!t.id || seenIds.has(t.id)) continue;
+
+      const artistName = t.artists?.[0]?.name || "Unknown Artist";
+      const countForArtist = artistCounts.get(artistName.toLowerCase()) || 0;
+      if (countForArtist >= 2) continue; // Skip if artist already represented twice
+
+      artistCounts.set(artistName.toLowerCase(), countForArtist + 1);
+      seenIds.add(t.id);
+
+      const durMs = t.duration_ms || 210000;
+      let reason = `Curated for the ${moodConfig.name} journey.`;
+      if (cand.sourceStream === "related" && cand.matchKeyword) {
+        reason = `Discovered via ${cand.matchKeyword}'s soundscape for fresh exploration.`;
+      } else if (cand.sourceStream === "intent" && cand.matchKeyword) {
+        reason = `Matched with your recent search intent: "${cand.matchKeyword}".`;
+      } else if (cand.sourceStream === "mood") {
+        reason = `Resonant with ${moodConfig.name} atmospheric vibes.`;
+      }
+
+      matches.push({
+        id: `spotify-${t.id}`,
+        title: t.name,
+        artist: artistName,
+        album: t.album?.name || "Single",
+        reason,
+        art: t.album?.images?.[0]?.url ?? null,
+        durationMs: durMs,
+        duration: formatSeconds(durMs / 1000),
+        audio: "",
+        storeUrl: t.external_urls?.spotify,
+      });
     }
   }
 
-  // 3. Fallback catalog search
+  // 3. Fallback catalog search if still below target
   if (matches.length < 4) {
     const fallbackTerms = [options?.prompt, ...moodConfig.seedKeywords, "top hits"].filter(Boolean);
     for (const term of fallbackTerms) {
@@ -916,7 +1146,7 @@ export async function createAiSpotifyMix(userId?: number, options?: AiMixOptions
                 art: cand.album?.images?.[0]?.url ?? null,
                 durationMs: durMs,
                 duration: formatSeconds(durMs / 1000),
-                audio: cand.preview_url ?? undefined,
+                audio: "",
                 storeUrl: cand.external_urls?.spotify,
               });
             }
@@ -974,43 +1204,122 @@ export async function createAiSpotifyMix(userId?: number, options?: AiMixOptions
 }
 
 export async function syncSpotifyUserData(userId: number) {
+  // 1. Playlists pagination (up to 1,000 playlists)
   const playlistItems: NonNullable<SpotifyPlaylistResponse["items"]> = [];
   for (let offset = 0; offset < 1000; offset += 50) {
-    const page = await spotifyUserFetch<SpotifyPlaylistResponse>(userId, `/me/playlists?limit=50&offset=${offset}`);
-    const items = page.items ?? [];
-    playlistItems.push(...items);
-    if (items.length < 50) break;
+    try {
+      const page = await spotifyUserFetch<SpotifyPlaylistResponse>(userId, `/me/playlists?limit=50&offset=${offset}`);
+      const items = page.items ?? [];
+      playlistItems.push(...items);
+      if (items.length < 50) break;
+    } catch (err) {
+      console.warn(`[Spotify] Playlist page at offset ${offset} failed:`, err);
+      break;
+    }
   }
-  const recentPayload = await spotifyUserFetch<SpotifyRecentResponse>(userId, "/me/player/recently-played?limit=50");
 
-  const playlists = playlistItems.filter((item) => item.id && item.name).map((item) => ({
-    externalId: item.id!,
-    name: item.name!,
-    description: item.description ?? null,
-    imageUrl: item.images?.[0]?.url ?? null,
-    storeUrl: item.external_urls?.spotify ?? `https://open.spotify.com/playlist/${item.id}`,
-    trackCount: item.tracks?.total ?? 0,
-  }));
-  const recentTracks = (recentPayload.items ?? []).filter((item) => item.track?.id && item.track.name && item.played_at).map((item) => ({
-    externalId: item.track!.id,
-    title: item.track!.name,
-    artist: (item.track!.artists ?? []).map((artist) => artist.name).filter(Boolean).join(", ") || "Unknown artist",
-    album: item.track!.album?.name ?? null,
-    artworkUrl: item.track!.album?.images?.[0]?.url ?? null,
-    storeUrl: item.track!.external_urls?.spotify ?? `https://open.spotify.com/track/${item.track!.id}`,
-    playedAt: new Date(item.played_at!),
-  }));
-
-  let savedCount = 0;
+  // 2. Recently played tracks
+  let recentTracks: Array<{
+    externalId: string;
+    title: string;
+    artist: string;
+    album: string | null;
+    artworkUrl: string | null;
+    storeUrl: string;
+    playedAt: Date;
+  }> = [];
   try {
-    const savedPayload = await spotifyUserFetch<SpotifySavedTracksResponse>(userId, "/me/tracks?limit=50");
-    savedCount = savedPayload.total ?? (savedPayload.items?.length || 0);
+    const recentPayload = await spotifyUserFetch<SpotifyRecentResponse>(userId, "/me/player/recently-played?limit=50");
+    recentTracks = (recentPayload.items ?? [])
+      .filter((item) => item?.track?.id && item?.track?.name && item?.played_at)
+      .map((item) => ({
+        externalId: item.track!.id,
+        title: item.track!.name,
+        artist: (item.track!.artists ?? []).map((artist) => artist.name).filter(Boolean).join(", ") || "Unknown artist",
+        album: item.track!.album?.name ?? null,
+        artworkUrl: item.track!.album?.images?.[0]?.url ?? null,
+        storeUrl: item.track!.external_urls?.spotify ?? `https://open.spotify.com/track/${item.track!.id}`,
+        playedAt: new Date(item.played_at!),
+      }));
   } catch (err) {
-    console.warn("[Spotify] Saved tracks sync count failed:", err);
+    console.warn("[Spotify] Recently played sync failed:", err);
   }
+
+  // 3. Saved tracks (/me/tracks) - Full pagination & sync into Musivo's Liked Songs!
+  let savedCount = 0;
+  const savedTracksToSync: Array<{
+    externalId: string;
+    title: string;
+    artist: string;
+    album: string | null;
+    artworkUrl: string | null;
+    previewUrl: string | null;
+    storeUrl: string | null;
+    durationMs: number | null;
+  }> = [];
+
+  for (let offset = 0; offset < 500; offset += 50) {
+    try {
+      const savedPayload = await spotifyUserFetch<SpotifySavedTracksResponse>(
+        userId,
+        `/me/tracks?limit=50&offset=${offset}&market=${encodeURIComponent(ENV.spotifyMarket || "US")}`
+      );
+      if (typeof savedPayload.total === "number") {
+        savedCount = savedPayload.total;
+      }
+      const items = savedPayload.items ?? [];
+      for (const item of items) {
+        if (item?.track?.id && item?.track?.name) {
+          savedTracksToSync.push({
+            externalId: `spotify-${item.track.id}`,
+            title: item.track.name,
+            artist: (item.track.artists ?? []).map((a) => a.name).filter(Boolean).join(", ") || "Unknown artist",
+            album: item.track.album?.name ?? null,
+            artworkUrl: item.track.album?.images?.[0]?.url ?? null,
+            previewUrl: null,
+            storeUrl: item.track.external_urls?.spotify ?? `https://open.spotify.com/track/${item.track.id}`,
+            durationMs: item.track.duration_ms ?? null,
+          });
+        }
+      }
+      if (items.length < 50) break;
+    } catch (err) {
+      console.warn(`[Spotify] Saved tracks page at offset ${offset} failed:`, err);
+      break;
+    }
+  }
+
+  // Deduplicate saved tracks by externalId
+  const uniqueSavedTracks: typeof savedTracksToSync = [];
+  const seenSavedIds = new Set<string>();
+  for (const t of savedTracksToSync) {
+    if (!seenSavedIds.has(t.externalId)) {
+      seenSavedIds.add(t.externalId);
+      uniqueSavedTracks.push(t);
+    }
+  }
+
+  if (savedCount === 0) {
+    savedCount = uniqueSavedTracks.length;
+  }
+
+  const playlists = playlistItems
+    .filter((item) => item?.id && item?.name)
+    .map((item) => ({
+      externalId: item.id!,
+      name: item.name!,
+      description: item.description ?? null,
+      imageUrl: item.images?.[0]?.url ?? null,
+      storeUrl: item.external_urls?.spotify ?? `https://open.spotify.com/playlist/${item.id}`,
+      trackCount: item.tracks?.total ?? 0,
+    }));
 
   await db.replaceSpotifyPlaylists(userId, playlists);
   await db.replaceSpotifyRecentTracks(userId, recentTracks);
+  if (uniqueSavedTracks.length > 0) {
+    await db.syncSpotifySavedTracksToLiked(userId, uniqueSavedTracks);
+  }
+
   return {
     playlists: playlists.length,
     recentlyPlayed: recentTracks.length,
@@ -1024,11 +1333,28 @@ export async function getSpotifyPlaylistDetail(userId: number, externalId: strin
   if (!playlist) throw new Error("Spotify playlist not found in the connected account");
 
   const tracks: CatalogTrack[] = [];
-  for (let offset = 0; offset < 1000; offset += 100) {
-    const page = await spotifyUserFetch<SpotifyPlaylistTracksResponse>(userId, `/playlists/${encodeURIComponent(externalId)}/tracks?market=${encodeURIComponent(ENV.spotifyMarket || "US")}&limit=100&offset=${offset}`);
-    const items = page.items ?? [];
-    tracks.push(...items.filter((item) => item.track?.id && item.track.name).map((item) => toCatalogTrack(item.track!)));
-    if (items.length < 100) break;
+  const seenIds = new Set<string>();
+
+  for (let offset = 0; offset < 5000; offset += 100) {
+    try {
+      const page = await spotifyUserFetch<SpotifyPlaylistTracksResponse>(
+        userId,
+        `/playlists/${encodeURIComponent(externalId)}/tracks?market=${encodeURIComponent(
+          ENV.spotifyMarket || "US"
+        )}&limit=100&offset=${offset}`
+      );
+      const items = page.items ?? [];
+      for (const item of items) {
+        if (item?.track?.id && item.track.name && !seenIds.has(item.track.id)) {
+          seenIds.add(item.track.id);
+          tracks.push(toCatalogTrack(item.track));
+        }
+      }
+      if (items.length < 100) break;
+    } catch (err) {
+      console.warn(`[Spotify] Playlist detail page at offset ${offset} failed:`, err);
+      break;
+    }
   }
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -1080,10 +1406,10 @@ export function toCatalogTrack(track: SpotifyTrack): CatalogTrack {
     artist: (track.artists ?? []).map((artist) => artist.name).filter(Boolean).join(", ") || "Unknown artist",
     album: track.album?.name ?? "Single",
     art: artwork,
-    audio: track.preview_url ?? "",
+    audio: "",
     storeUrl: track.external_urls?.spotify ?? `https://open.spotify.com/track/${track.id}`,
     durationMs: typeof track.duration_ms === "number" ? track.duration_ms : null,
-    accent: "#d8ff57",
+    accent: "#f5ba42",
     source: "Spotify",
   };
 }

@@ -60,6 +60,8 @@ class MemoryStore {
 
   spotifyRecentTracks = new Map<number, SpotifyRecentTrack[]>(); // userId -> tracks
   nextSpotifyRecentId = 1;
+
+  userSearches = new Map<number, string[]>(); // userId -> recent queries
 }
 
 const memoryStore = new MemoryStore();
@@ -340,6 +342,89 @@ export async function toggleLikedTrack(userId: number, track: Omit<InsertLikedTr
   tracks.unshift(item);
   memoryStore.likedTracks.set(userId, tracks);
   return { liked: true } as const;
+}
+
+export async function syncSpotifySavedTracksToLiked(
+  userId: number,
+  tracks: Array<Omit<InsertLikedTrack, "userId">>
+): Promise<number> {
+  const db = await getDb();
+  if (db) {
+    try {
+      let insertedCount = 0;
+      for (const track of tracks) {
+        const existing = await db
+          .select({ id: likedTracks.id })
+          .from(likedTracks)
+          .where(and(eq(likedTracks.userId, userId), eq(likedTracks.externalId, track.externalId)))
+          .limit(1);
+        if (!existing.length) {
+          await db.insert(likedTracks).values({ ...track, userId });
+          insertedCount++;
+        }
+      }
+      return insertedCount;
+    } catch (err) {
+      console.warn("[Database] syncSpotifySavedTracksToLiked MySQL failed; using memory fallback:", err);
+    }
+  }
+
+  const existing = memoryStore.likedTracks.get(userId) ?? [];
+  const existingMap = new Map(existing.map((t) => [t.externalId, t]));
+  let added = 0;
+
+  for (const track of tracks) {
+    if (!existingMap.has(track.externalId)) {
+      const item: LikedTrack = {
+        id: memoryStore.nextLikedTrackId++,
+        userId,
+        externalId: track.externalId,
+        title: track.title,
+        artist: track.artist,
+        album: track.album ?? null,
+        artworkUrl: track.artworkUrl ?? null,
+        previewUrl: track.previewUrl ?? null,
+        storeUrl: track.storeUrl ?? null,
+        durationMs: track.durationMs ?? null,
+        createdAt: new Date(),
+      };
+      existing.push(item);
+      existingMap.set(track.externalId, item);
+      added++;
+    }
+  }
+
+  memoryStore.likedTracks.set(userId, existing);
+  return added;
+}
+
+export async function storeUserRecentSearch(userId: number, query: string): Promise<void> {
+  const trimmed = query.trim();
+  if (!trimmed) return;
+  const list = memoryStore.userSearches.get(userId) ?? [];
+  const filtered = list.filter((q) => q.toLowerCase() !== trimmed.toLowerCase());
+  filtered.unshift(trimmed);
+  memoryStore.userSearches.set(userId, filtered.slice(0, 10));
+}
+
+export async function getUserRecentSearches(userId: number): Promise<string[]> {
+  return memoryStore.userSearches.get(userId) ?? [];
+}
+
+export async function getFamiliarTrackIds(userId?: number): Promise<Set<string>> {
+  if (!userId) return new Set();
+  const liked = await listLikedTracks(userId).catch(() => []);
+  const recent = await listSpotifyRecentTracks(userId).catch(() => []);
+  const ids = new Set<string>();
+  liked.forEach((t) => {
+    ids.add(String(t.externalId));
+    ids.add(String(t.externalId).replace(/^spotify-/, ""));
+  });
+  recent.forEach((t) => {
+    ids.add(String(t.externalId));
+    ids.add(String(t.externalId).replace(/^spotify-/, ""));
+  });
+  return ids;
 }
 
 export async function getSpotifyConnection(userId: number) {

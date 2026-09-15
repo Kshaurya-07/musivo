@@ -94,7 +94,14 @@ export function useSpotifyPlayer({
 }: UseSpotifyPlayerOptions) {
   const trpcUtils = trpc.useUtils();
   const playerRef = useRef<SpotifySdkPlayer | null>(null);
-  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const deviceIdRef = useRef<string | null>(null);
+  const [deviceId, setDeviceIdState] = useState<string | null>(null);
+
+  const setDeviceId = useCallback((id: string | null) => {
+    deviceIdRef.current = id;
+    setDeviceIdState(id);
+  }, []);
+
   const [sdkLoaded, setSdkLoaded] = useState(
     Boolean(typeof window !== "undefined" && window.Spotify)
   );
@@ -227,7 +234,7 @@ export function useSpotifyPlayer({
           console.warn("[Musivo Spotify SDK] Account info (standard tier):", message);
           setIsPremium(false);
           setConnectionState("ready");
-          setError(null);
+          setError("Spotify Premium is required for full-track web playback.");
         });
 
         player.addListener("playback_error", ({ message }: { message: string }) => {
@@ -349,7 +356,20 @@ export function useSpotifyPlayer({
   // Play a specific Spotify track by Spotify ID or full Spotify URI
   const playTrack = useCallback(
     async (trackIdOrUri: string, contextUri?: string): Promise<void> => {
-      if (!deviceId) {
+      // If deviceId is not yet cached, wait up to 4 seconds if player is connecting/loading
+      let activeDeviceId = deviceIdRef.current || deviceId;
+      if (!activeDeviceId && (connectionState === "connecting" || connectionState === "loading" || connectionState === "ready")) {
+        const start = Date.now();
+        while (!activeDeviceId && Date.now() - start < 4000) {
+          await new Promise((r) => setTimeout(r, 200));
+          activeDeviceId = deviceIdRef.current || deviceId;
+        }
+      }
+
+      if (!activeDeviceId) {
+        if (isPremium === false) {
+          throw new Error("PREMIUM_REQUIRED");
+        }
         throw new Error(error || "Spotify Web Playback device is not ready");
       }
       const token = await getFreshToken();
@@ -365,7 +385,7 @@ export function useSpotifyPlayer({
         : { uris: [trackUri] };
 
       const url = `https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(
-        deviceId
+        activeDeviceId
       )}`;
 
       const response = await fetch(url, {
@@ -380,11 +400,13 @@ export function useSpotifyPlayer({
       if (!response.ok && response.status !== 204) {
         if (response.status === 403) {
           setIsPremium(false);
+          setError("Spotify Premium is required for full-track web playback.");
           throw new Error("PREMIUM_REQUIRED");
         }
         if (response.status === 404) {
           // Device might need explicit transfer first
           await transferPlayback(false);
+          await new Promise((r) => setTimeout(r, 350));
           const retryRes = await fetch(url, {
             method: "PUT",
             headers: {
@@ -394,6 +416,10 @@ export function useSpotifyPlayer({
             body: JSON.stringify(body),
           });
           if (!retryRes.ok && retryRes.status !== 204) {
+            if (retryRes.status === 403) {
+              setIsPremium(false);
+              throw new Error("PREMIUM_REQUIRED");
+            }
             throw new Error(`Spotify playback request failed with ${retryRes.status}`);
           }
         } else {
@@ -405,7 +431,7 @@ export function useSpotifyPlayer({
       setIsPlaying(true);
       setAutoplayFailed(false);
     },
-    [deviceId, error, getFreshToken, transferPlayback]
+    [deviceId, error, isPremium, connectionState, getFreshToken, transferPlayback]
   );
 
   const pause = useCallback(async () => {

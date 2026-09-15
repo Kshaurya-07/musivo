@@ -779,6 +779,7 @@ function AiMixStudio({
   customPrompt,
   onChangePrompt,
   onBuildMix,
+  onRefreshMix,
   buildingMix,
   onPlayMix,
   onPlayTrack,
@@ -806,6 +807,7 @@ function AiMixStudio({
   customPrompt: string;
   onChangePrompt: (val: string) => void;
   onBuildMix: () => void;
+  onRefreshMix?: () => void;
   buildingMix: boolean;
   onPlayMix: () => void;
   onPlayTrack: (track: Track) => void;
@@ -1133,6 +1135,18 @@ function AiMixStudio({
                   <Play className="h-4 w-4 fill-current" />
                   Play Entire Mix
                 </button>
+                {onRefreshMix && (
+                  <button
+                    type="button"
+                    onClick={onRefreshMix}
+                    disabled={buildingMix}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-full border border-white/20 bg-white/10 hover:bg-white/20 px-4 py-2.5 text-xs font-semibold text-[#f0eff5] transition"
+                    title="Discover new exploratory tracks with a refreshed seed"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${buildingMix ? "animate-spin" : ""}`} />
+                    Refresh Mix
+                  </button>
+                )}
                 {onAddAllToQueue && (
                   <button
                     type="button"
@@ -2170,18 +2184,22 @@ export default function Home() {
   const handleBuildAiMix = (
     moodOverride?: string,
     promptOverride?: string,
-    seedPlaylistOverride?: string | number | null
+    seedPlaylistOverride?: string | number | null,
+    isRefresh = false
   ) => {
     const mood = moodOverride ?? selectedMood;
     const prompt = promptOverride ?? customPrompt.trim();
     const seedId =
       seedPlaylistOverride !== undefined ? seedPlaylistOverride : selectedSeedPlaylistId;
+    const refreshSeed = isRefresh ? Math.floor(Math.random() * 1000000) : undefined;
     aiMixMutation.mutate({
       mood,
       prompt: prompt || undefined,
       count: 8,
       saveToSpotify: Boolean(spotifyStatusQuery.data?.connected),
       seedPlaylistId: seedId ? seedId : undefined,
+      searchIntent: searchQuery.trim() || undefined,
+      refreshSeed,
     });
   };
 
@@ -2746,6 +2764,7 @@ export default function Home() {
                 customPrompt={customPrompt}
                 onChangePrompt={setCustomPrompt}
                 onBuildMix={() => handleBuildAiMix()}
+                onRefreshMix={() => handleBuildAiMix(undefined, undefined, undefined, true)}
                 buildingMix={aiMixMutation.isPending}
                 onPlayMix={handlePlayAiMix}
                 onPlayTrack={(t) => void playTrack(t, aiRecommendations.map(aiRecommendationToTrack))}
