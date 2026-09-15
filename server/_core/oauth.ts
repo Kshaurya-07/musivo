@@ -8,7 +8,9 @@ import {
   completeSpotifyConnection,
   createSpotifyState,
   exchangeUserCode,
+  executeCodeExchangeOnce,
   fetchSpotifyProfile,
+  getCanonicalSpotifyRedirectUri,
   saveSpotifyConnectionFromTokens,
   verifySpotifyState,
 } from "../spotify";
@@ -172,13 +174,26 @@ export function registerOAuthRoutes(app: Express) {
   // -------------------------------------------------------------
   app.get("/api/auth/spotify", async (req: Request, res: Response) => {
     const origin = getAppOrigin(req);
-    const redirectUri = ENV.spotifyRedirectUri || `${origin}/api/spotify/callback`;
+    const redirectUri = getCanonicalSpotifyRedirectUri(origin);
     const returnTo = getQueryParam(req, "returnTo") || "/";
     const nonce = randomUUID();
     const isSecure = req.protocol === "https" || req.headers["x-forwarded-proto"] === "https";
     const cookieName = isSecure ? "__Host-spotify_state" : "spotify_state";
 
-    const state = await createSpotifyState({ isLogin: true, nonce, redirectUri, returnTo });
+    let existingUser: { id: number } | null = null;
+    try {
+      existingUser = await sdk.authenticateRequest(req);
+    } catch {
+      existingUser = null;
+    }
+
+    const state = await createSpotifyState({
+      userId: existingUser?.id,
+      isLogin: !existingUser?.id,
+      nonce,
+      redirectUri,
+      returnTo,
+    });
 
     res.cookie(cookieName, nonce, {
       httpOnly: true,
@@ -231,7 +246,7 @@ export function registerOAuthRoutes(app: Express) {
     try {
       if (payload.isLogin) {
         // Direct Spotify Login flow (State B)
-        const tokenPayload = await exchangeUserCode(code, payload.redirectUri);
+        const tokenPayload = await executeCodeExchangeOnce(code, payload.redirectUri);
         if (!tokenPayload.access_token) throw new Error("Spotify access token missing");
         const profile = await fetchSpotifyProfile(tokenPayload.access_token);
         if (!profile.id) throw new Error("Spotify user profile missing id");
@@ -304,7 +319,8 @@ export function registerOAuthRoutes(app: Express) {
       }
     } catch (error) {
       console.error("[Spotify OAuth] Callback failed:", error);
-      const detail = error instanceof Error ? error.message : "Spotify connection failed. Please try again.";
+      const isUserFriendly = error instanceof Error && !error.message.includes("400") && !error.message.includes("status") && !error.message.includes("fetch");
+      const detail = isUserFriendly ? error.message : "We couldn't connect to Spotify. Please try connecting again.";
       res.redirect(302, `${returnBase}${joinChar}spotify=error&message=${encodeURIComponent(detail)}`);
     }
   });

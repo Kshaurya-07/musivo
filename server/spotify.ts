@@ -125,6 +125,22 @@ export async function verifySpotifyState(state: string): Promise<SpotifyStatePay
   }
 }
 
+export function getCanonicalSpotifyRedirectUri(origin?: string): string {
+  if (ENV.spotifyRedirectUri) {
+    return ENV.spotifyRedirectUri.trim().replace(/\/+$/, "");
+  }
+  if (!origin) {
+    return "http://localhost:3000/api/spotify/callback";
+  }
+  try {
+    const parsed = new URL(origin);
+    const cleanOrigin = parsed.origin.replace(/\/+$/, "");
+    return `${cleanOrigin}/api/spotify/callback`;
+  } catch {
+    return "http://localhost:3000/api/spotify/callback";
+  }
+}
+
 export function buildSpotifyAuthorizeUrl(state: string, redirectUri: string) {
   if (!hasSpotifyCredentials()) throw new Error("Spotify credentials are not configured");
   const url = new URL("https://accounts.spotify.com/authorize");
@@ -175,21 +191,104 @@ export async function exchangeUserCode(code: string, redirectUri: string) {
   return requestSpotifyToken(new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: redirectUri }));
 }
 
+type ConsumedCodeEntry = {
+  data: SpotifyTokenResponse;
+  timestamp: number;
+};
+
+const consumedCodes = new Map<string, ConsumedCodeEntry>();
+const inFlightExchanges = new Map<string, Promise<SpotifyTokenResponse>>();
+const CODE_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+function pruneExpiredCodes() {
+  const now = Date.now();
+  consumedCodes.forEach((entry, key) => {
+    if (now - entry.timestamp > CODE_CACHE_TTL_MS) {
+      consumedCodes.delete(key);
+    }
+  });
+}
+
+export async function executeCodeExchangeOnce(
+  code: string,
+  redirectUri: string,
+  exchangeFn: (code: string, redirectUri: string) => Promise<SpotifyTokenResponse> = exchangeUserCode
+): Promise<SpotifyTokenResponse> {
+  pruneExpiredCodes();
+
+  // 1. If already consumed within TTL, return cached token response immediately
+  const existing = consumedCodes.get(code);
+  if (existing) {
+    console.log("[Spotify OAuth] Authorization code already consumed; returning cached token response (idempotent replay)");
+    return existing.data;
+  }
+
+  // 2. If currently being exchanged by a concurrent request, await active promise
+  const inFlight = inFlightExchanges.get(code);
+  if (inFlight) {
+    console.log("[Spotify OAuth] Authorization code exchange already in-flight; sharing promise");
+    return inFlight;
+  }
+
+  // 3. Initiate single exchange
+  const exchangePromise = (async () => {
+    try {
+      const redactedCode = code.length > 8 ? `${code.slice(0, 4)}...${code.slice(-4)}` : "[REDACTED]";
+      console.log(`[Spotify OAuth] Initiating code exchange with Spotify (code: ${redactedCode}, redirectUri: ${redirectUri})`);
+      const tokenResponse = await exchangeFn(code, redirectUri);
+      consumedCodes.set(code, {
+        data: tokenResponse,
+        timestamp: Date.now(),
+      });
+      return tokenResponse;
+    } finally {
+      inFlightExchanges.delete(code);
+    }
+  })();
+
+  inFlightExchanges.set(code, exchangePromise);
+  return exchangePromise;
+}
+
 export async function fetchSpotifyProfile(accessToken: string) {
   return spotifyUserFetchWithToken<SpotifyProfile & { email?: string }>(accessToken, "/me");
 }
 
-async function refreshUserAccessToken(userId: number) {
-  const connection = await db.getSpotifyConnection(userId);
-  if (!connection) throw new Error("Spotify account is not connected");
-  const payload = await requestSpotifyToken(new URLSearchParams({ grant_type: "refresh_token", refresh_token: decryptSpotifyToken(connection.refreshTokenEncrypted) }));
-  await db.updateSpotifyConnectionTokens(userId, {
-    accessTokenEncrypted: encryptSpotifyToken(payload.access_token!),
-    refreshTokenEncrypted: payload.refresh_token ? encryptSpotifyToken(payload.refresh_token) : connection.refreshTokenEncrypted,
-    accessTokenExpiresAt: new Date(Date.now() + Math.max(60, payload.expires_in ?? 3600) * 1000),
-    scope: payload.scope ?? connection.scope,
-  });
-  return payload.access_token!;
+const refreshPromises = new Map<number, Promise<string>>();
+
+export async function refreshUserAccessToken(userId: number): Promise<string> {
+  const existing = refreshPromises.get(userId);
+  if (existing) {
+    return existing;
+  }
+
+  const promise = (async () => {
+    try {
+      const connection = await db.getSpotifyConnection(userId);
+      if (!connection) throw new Error("Spotify account is not connected");
+      const payload = await requestSpotifyToken(
+        new URLSearchParams({
+          grant_type: "refresh_token",
+          refresh_token: decryptSpotifyToken(connection.refreshTokenEncrypted),
+        })
+      );
+      if (!payload.access_token) throw new Error("Spotify refresh did not return an access token");
+      await db.updateSpotifyConnectionTokens(userId, {
+        accessTokenEncrypted: encryptSpotifyToken(payload.access_token),
+        refreshTokenEncrypted: payload.refresh_token
+          ? encryptSpotifyToken(payload.refresh_token)
+          : connection.refreshTokenEncrypted,
+        accessTokenExpiresAt: new Date(Date.now() + Math.max(60, payload.expires_in ?? 3600) * 1000),
+        scope: payload.scope ?? connection.scope,
+      });
+      return payload.access_token;
+    } finally {
+      refreshPromises.delete(userId);
+    }
+  })();
+
+  refreshPromises.set(userId, promise);
+  return promise;
 }
 
 export async function getUserSpotifyAccessToken(userId: number) {
@@ -199,11 +298,21 @@ export async function getUserSpotifyAccessToken(userId: number) {
   return refreshUserAccessToken(userId);
 }
 
-async function spotifyUserFetch<T>(userId: number, path: string) {
-  const accessToken = await getUserSpotifyAccessToken(userId);
-  const response = await fetch(`https://api.spotify.com/v1${path}`, {
+async function spotifyUserFetch<T>(userId: number, path: string): Promise<T> {
+  let accessToken = await getUserSpotifyAccessToken(userId);
+  let response = await fetch(`https://api.spotify.com/v1${path}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
+  if (response.status === 401) {
+    try {
+      accessToken = await refreshUserAccessToken(userId);
+      response = await fetch(`https://api.spotify.com/v1${path}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+    } catch (refreshErr) {
+      console.warn("[Spotify] 401 token refresh retry failed:", refreshErr);
+    }
+  }
   if (!response.ok) throw new Error(`Spotify user API request failed with ${response.status}`);
   return (await response.json()) as T;
 }
@@ -231,7 +340,7 @@ export async function saveSpotifyConnectionFromTokens(
 }
 
 export async function completeSpotifyConnection(userId: number, code: string, redirectUri: string) {
-  const payload = await exchangeUserCode(code, redirectUri);
+  const payload = await executeCodeExchangeOnce(code, redirectUri);
   if (!payload.access_token) throw new Error("Spotify did not return an access token");
   const profile = await spotifyUserFetchWithToken<SpotifyProfile & { email?: string }>(payload.access_token, "/me");
   return saveSpotifyConnectionFromTokens(userId, payload as { access_token: string; refresh_token?: string; expires_in?: number; scope?: string }, profile);
@@ -245,12 +354,23 @@ async function spotifyUserFetchWithToken<T>(accessToken: string, path: string) {
   return (await response.json()) as T;
 }
 
-async function spotifyUserRequest<T>(userId: number, path: string, init: RequestInit) {
-  const accessToken = await getUserSpotifyAccessToken(userId);
-  const response = await fetch(`https://api.spotify.com/v1${path}`, {
+async function spotifyUserRequest<T>(userId: number, path: string, init: RequestInit): Promise<T> {
+  let accessToken = await getUserSpotifyAccessToken(userId);
+  let response = await fetch(`https://api.spotify.com/v1${path}`, {
     ...init,
     headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", ...(init.headers ?? {}) },
   });
+  if (response.status === 401) {
+    try {
+      accessToken = await refreshUserAccessToken(userId);
+      response = await fetch(`https://api.spotify.com/v1${path}`, {
+        ...init,
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", ...(init.headers ?? {}) },
+      });
+    } catch (refreshErr) {
+      console.warn("[Spotify] 401 token refresh retry failed:", refreshErr);
+    }
+  }
   if (!response.ok) throw new Error(`Spotify user API request failed with ${response.status}`);
   return (await response.json()) as T;
 }

@@ -1310,6 +1310,7 @@ function SpotifyPanel({
   user,
   savedTracksCount,
   syncStepText,
+  connecting,
 }: {
   connected: boolean;
   displayName: string | null;
@@ -1320,6 +1321,7 @@ function SpotifyPanel({
   loading: boolean;
   syncing: boolean;
   disconnecting: boolean;
+  connecting?: boolean;
   onConnect: () => void;
   onSync: () => void;
   onDisconnect: () => void;
@@ -1395,19 +1397,30 @@ function SpotifyPanel({
             {!streamingEnabled && (
               <button
                 onClick={onConnect}
-                className="rounded-full border border-[#f5ba42]/30 px-4 py-2.5 text-sm font-semibold text-[#f5ba42] hover:bg-[#f5ba42]/10"
+                disabled={connecting}
+                className="rounded-full border border-[#f5ba42]/30 px-4 py-2.5 text-sm font-semibold text-[#f5ba42] hover:bg-[#f5ba42]/10 disabled:opacity-60 transition"
               >
-                Reconnect for playback
+                {connecting ? "Connecting…" : "Reconnect for playback"}
               </button>
             )}
           </div>
         ) : (
           <button
             onClick={onConnect}
-            className="flex items-center gap-2 rounded-full bg-[#f5ba42] px-4 py-2.5 text-sm font-bold text-[#140f07]"
+            disabled={connecting}
+            className="flex items-center gap-2 rounded-full bg-[#f5ba42] px-4 py-2.5 text-sm font-bold text-[#140f07] hover:bg-[#ffd064] disabled:opacity-60 transition"
           >
-            <Link2 className="h-4 w-4" />
-            Connect Spotify
+            {connecting ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Connecting to Spotify…
+              </>
+            ) : (
+              <>
+                <Link2 className="h-4 w-4" />
+                Connect Spotify
+              </>
+            )}
           </button>
         )}
       </div>
@@ -1424,9 +1437,17 @@ function SpotifyPanel({
           </p>
           <button
             onClick={onConnect}
-            className="mt-6 rounded-full bg-[#f5ba42] px-5 py-3 text-sm font-bold text-[#140f07]"
+            disabled={connecting}
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#f5ba42] px-5 py-3 text-sm font-bold text-[#140f07] hover:bg-[#ffd064] disabled:opacity-60 transition"
           >
-            Continue with Spotify
+            {connecting ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Connecting to Spotify…
+              </>
+            ) : (
+              "Continue with Spotify"
+            )}
           </button>
         </div>
       ) : (
@@ -1720,6 +1741,7 @@ function SpotifyConnectSection({
   connected,
   displayName,
   syncing,
+  connecting,
   playlistCount,
   savedTracksCount,
   recentCount,
@@ -1733,6 +1755,7 @@ function SpotifyConnectSection({
   connected: boolean;
   displayName: string | null;
   syncing: boolean;
+  connecting?: boolean;
   playlistCount: number;
   savedTracksCount: number;
   recentCount: number;
@@ -1809,9 +1832,19 @@ function SpotifyConnectSection({
           ) : (
             <button
               onClick={onConnect}
-              className="rounded-full bg-[#f5ba42] px-5 py-2.5 text-sm font-bold text-[#140f07] hover:bg-[#ffd064]"
+              disabled={connecting}
+              className="inline-flex items-center gap-2 rounded-full bg-[#f5ba42] px-5 py-2.5 text-sm font-bold text-[#140f07] hover:bg-[#ffd064] disabled:opacity-60 transition"
             >
-              {isAuthenticated ? "Connect Spotify" : "Log in to connect Spotify"}
+              {connecting ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Connecting to Spotify…
+                </>
+              ) : isAuthenticated ? (
+                "Connect Spotify"
+              ) : (
+                "Log in to connect Spotify"
+              )}
             </button>
           )}
         </div>
@@ -2099,6 +2132,8 @@ export default function Home() {
     },
   });
 
+  const [isConnectingSpotify, setIsConnectingSpotify] = useState(false);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -2111,14 +2146,21 @@ export default function Home() {
     }
 
     if (spotifyParam === "connected") {
-      toast.success("Spotify connected successfully! Library sync is ready.");
-      spotifyStatusQuery.refetch();
-      spotifyPlaylistsQuery.refetch();
-      spotifyRecentQuery.refetch();
-      playlistUtils.auth.me.invalidate();
+      setIsConnectingSpotify(false);
+      toast.success("Spotify connected ✓ Library sync and Web Playback are ready.");
+      void spotifyStatusQuery.refetch();
+      void spotifyPlaylistsQuery.refetch();
+      void spotifyRecentQuery.refetch();
+      void playlistUtils.auth.me.invalidate();
     } else if (spotifyParam === "error") {
-      toast.error(message ? `Spotify connection error: ${message}` : "Spotify connection failed. Please try again.");
+      setIsConnectingSpotify(false);
+      const friendlyMessage =
+        message && !message.includes("400") && !message.includes("status") && !message.includes("token request")
+          ? message
+          : "We couldn't connect to Spotify. Please try connecting again.";
+      toast.error(friendlyMessage);
     } else if (spotifyParam === "denied") {
+      setIsConnectingSpotify(false);
       toast.info(message ? `Spotify: ${message}` : "Spotify connection was cancelled.");
     }
 
@@ -2136,7 +2178,10 @@ export default function Home() {
     onSuccess: ({ authorizeUrl }) => {
       window.location.href = authorizeUrl;
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => {
+      setIsConnectingSpotify(false);
+      toast.error(error.message || "Failed to initiate Spotify connection.");
+    },
   });
 
   const spotifySyncMutation = trpc.spotify.sync.useMutation({
@@ -2333,20 +2378,6 @@ export default function Home() {
   }, []);
   const [dashboardFilter, setDashboardFilter] = useState<"all" | "music" | "podcasts" | "aimix">("all");
 
-  useEffect(() => {
-    const result = new URLSearchParams(window.location.search).get("spotify");
-    if (!result) return;
-    if (result === "connected") {
-      toast.success("Spotify connected — in-app Web Playback SDK is active.");
-      void spotifyStatusQuery.refetch();
-    } else if (result === "denied") {
-      toast.info("Spotify connection was cancelled.");
-    } else if (result === "error") {
-      toast.error("Spotify could not be connected. Please try again.");
-    }
-    window.history.replaceState({}, "", window.location.pathname);
-  }, [spotifyStatusQuery]);
-
   function toServerTrack(track: Track) {
     return {
       id: String(track.id),
@@ -2389,8 +2420,10 @@ export default function Home() {
   };
 
   const connectSpotify = () => {
+    setIsConnectingSpotify(true);
     if (!isAuthenticated) {
-      startLogin();
+      const returnPath = window.location.pathname + window.location.search;
+      window.location.href = `/api/auth/spotify?returnTo=${encodeURIComponent(returnPath)}`;
       return;
     }
     spotifyConnectMutation.mutate({ origin: window.location.origin });
@@ -2735,6 +2768,7 @@ export default function Home() {
                 }
                 syncing={spotifySyncMutation.isPending}
                 disconnecting={spotifyDisconnectMutation.isPending}
+                connecting={isConnectingSpotify}
                 onConnect={connectSpotify}
                 onSync={syncSpotify}
                 onDisconnect={disconnectSpotify}
@@ -3377,6 +3411,7 @@ export default function Home() {
                   connected={isSpotifyConnected}
                   displayName={spotifyStatusQuery.data?.displayName ?? null}
                   syncing={spotifySyncMutation.isPending}
+                  connecting={isConnectingSpotify}
                   playlistCount={(spotifyPlaylistsQuery.data ?? []).length}
                   savedTracksCount={lastSyncStats?.savedTracks ?? spotifyStatusQuery.data?.savedTracksCount ?? (likedTracks ?? []).length}
                   recentCount={(spotifyRecentQuery.data ?? []).length}

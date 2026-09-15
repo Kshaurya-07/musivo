@@ -25,6 +25,7 @@ import {
   catalogStatus,
   clearAiProfileCache,
   createSpotifyState,
+  getCanonicalSpotifyRedirectUri,
   getSpotifyHomeTracks,
   getSpotifyPlaylistDetail,
   getUserSpotifyAccessToken,
@@ -121,7 +122,7 @@ const trackInput = z.object({
 });
 
 function getSpotifyRedirectUri(origin: string) {
-  if (ENV.spotifyRedirectUri) return ENV.spotifyRedirectUri;
+  if (ENV.spotifyRedirectUri) return getCanonicalSpotifyRedirectUri();
   let parsed: URL;
   try {
     parsed = new URL(origin);
@@ -131,7 +132,7 @@ function getSpotifyRedirectUri(origin: string) {
   if (parsed.protocol !== "https:" && !(parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1")) {
     throw new TRPCError({ code: "BAD_REQUEST", message: "Spotify connections require a secure app origin." });
   }
-  return `${parsed.origin}/api/spotify/callback`;
+  return getCanonicalSpotifyRedirectUri(parsed.origin);
 }
 
 export const appRouter = router({

@@ -722,7 +722,9 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const connectSpotify = useCallback(() => {
-    window.location.href = "/api/auth/spotify";
+    if (typeof window === "undefined") return;
+    const returnPath = window.location.pathname + window.location.search;
+    window.location.href = `/api/auth/spotify?returnTo=${encodeURIComponent(returnPath)}`;
   }, []);
 
   // Media Session API & Background Audio Focus for Mobile/Tablet/Desktop lock screen and background streaming
