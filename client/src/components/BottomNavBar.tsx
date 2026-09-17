@@ -1,5 +1,5 @@
 import React from "react";
-import { Home, Search, Compass, Podcast, Library } from "lucide-react";
+import { Home, Compass, Sparkles, Library } from "lucide-react";
 
 interface BottomNavBarProps {
   activeView: string;
@@ -14,10 +14,9 @@ export function BottomNavBar({
 }: BottomNavBarProps) {
   const tabs = [
     { id: "home", label: "Home", icon: Home },
-    { id: "search", label: "Search", icon: Search },
-    { id: "podcasts", label: "Podcasts", icon: Podcast },
     { id: "discover", label: "Discover", icon: Compass },
-    { id: "library", label: "Library", icon: Library, badge: likedCount > 0 ? String(likedCount) : undefined },
+    { id: "aimix", label: "AI Mix", icon: Sparkles, highlight: true },
+    { id: "liked", label: "Library", icon: Library, badge: likedCount > 0 ? String(likedCount) : undefined },
   ];
 
   return (
@@ -27,7 +26,7 @@ export function BottomNavBar({
       style={{ minHeight: "var(--bottom-nav-height)" }}
     >
       <div className="mx-auto flex max-w-md items-center justify-around">
-        {tabs.map(({ id, label, icon: Icon, badge }) => {
+        {tabs.map(({ id, label, icon: Icon, highlight, badge }) => {
           const isActive = activeView === id;
           return (
             <button
@@ -43,7 +42,7 @@ export function BottomNavBar({
                 <Icon
                   className={`h-5 w-5 transition-transform duration-200 ${
                     isActive ? "scale-110 drop-shadow-[0_0_10px_rgba(245,186,66,0.4)]" : "group-hover:scale-105"
-                  }`}
+                  } ${highlight && !isActive ? "text-[#ffd064]" : ""}`}
                 />
                 {badge && (
                   <span className="absolute -right-2 -top-1 grid h-3.5 min-w-[14px] place-items-center rounded-full bg-[#f5ba42] px-1 text-[9px] font-bold text-[#140f07]">

@@ -17,8 +17,6 @@ import {
   Home as HomeIcon,
   Layers,
   ListMusic,
-  Laptop,
-  Moon,
   ListPlus,
   Link2,
   Menu,
@@ -57,16 +55,6 @@ import {
   PlaybackMode,
 } from "@/contexts/PlaybackContext";
 import { SpotifyConnectionState } from "@/hooks/useSpotifyPlayer";
-import { UniversalSearch } from "@/components/UniversalSearch";
-import { PodcastView } from "@/components/PodcastView";
-import { PodcastDetailModal } from "@/components/PodcastDetailModal";
-import { ArtistDetailModal } from "@/components/ArtistDetailModal";
-import { AlbumDetailModal } from "@/components/AlbumDetailModal";
-import { DeviceSelectorModal } from "@/components/DeviceSelectorModal";
-import { SleepTimerModal } from "@/components/SleepTimerModal";
-import { ProfileView } from "@/components/ProfileView";
-import { DiscoveryView } from "@/components/DiscoveryView";
-import { LibraryView } from "@/components/LibraryView";
 
 type NavItem = { id: string; label: string; icon: LucideIcon };
 
@@ -99,11 +87,10 @@ const mixes = [
 
 const navItems: NavItem[] = [
   { id: "home", label: "Home", icon: HomeIcon },
-  { id: "search", label: "Search", icon: Search },
   { id: "aimix", label: "AI Mix Studio", icon: Sparkles },
   { id: "discover", label: "Discover", icon: Compass },
+  { id: "releases", label: "New releases", icon: Sparkles },
   { id: "podcasts", label: "Podcasts", icon: Podcast },
-  { id: "releases", label: "New releases", icon: Radio },
 ];
 
 const MOOD_OPTIONS = [
@@ -167,12 +154,10 @@ const INSPIRATION_TAGS = [
 ];
 
 const libraryItems: NavItem[] = [
-  { id: "library", label: "Your library", icon: ListMusic },
   { id: "liked", label: "Liked songs", icon: Heart },
   { id: "albums", label: "Albums", icon: Album },
-  { id: "playlists", label: "Your playlists", icon: ListPlus },
+  { id: "playlists", label: "Your playlists", icon: ListMusic },
   { id: "spotify", label: "Spotify sync", icon: Link2 },
-  { id: "profile", label: "Profile & Settings", icon: Settings2 },
 ];
 
 function toUiTrack(item: {
@@ -2052,16 +2037,6 @@ export default function Home() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [canInstallPwa, setCanInstallPwa] = useState(false);
 
-  // Modals for premium features: podcasts, artist/album details, sleep timer, spotify connect devices
-  const [selectedShowId, setSelectedShowId] = useState<string | null>(null);
-  const [isPodcastDetailOpen, setIsPodcastDetailOpen] = useState(false);
-  const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null);
-  const [isArtistDetailOpen, setIsArtistDetailOpen] = useState(false);
-  const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null);
-  const [isAlbumDetailOpen, setIsAlbumDetailOpen] = useState(false);
-  const [isSleepTimerOpen, setIsSleepTimerOpen] = useState(false);
-  const [isDeviceSelectorOpen, setIsDeviceSelectorOpen] = useState(false);
-
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
@@ -2419,12 +2394,11 @@ export default function Home() {
   const handleNav = (id: string) => {
     setActiveView(id);
     if (id !== "spotify") setSelectedSpotifyPlaylist(null);
-    if (id !== "search") setSearchQuery("");
-    if ((id === "liked" || id === "playlists" || id === "spotify" || id === "profile" || id === "library") && !isAuthenticated)
+    setSearchQuery("");
+    if ((id === "liked" || id === "playlists" || id === "spotify") && !isAuthenticated)
       startLogin();
-    if (id === "albums") {
-      setActiveView("search");
-    }
+    if (id === "albums")
+      toast.info("Albums are available from every Spotify catalog result.");
   };
 
   const openPlaylistDialog = (track?: Track) => {
@@ -2680,9 +2654,8 @@ export default function Home() {
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <button
-                onClick={() => handleNav("profile")}
-                className="hidden h-10 w-10 place-items-center rounded-xl text-[#a49481] transition-colors hover:bg-white/[0.05] hover:text-[#f5ba42] sm:grid"
-                title="Profile & Settings"
+                onClick={() => toast.info("Settings are ready for your account and provider connections.")}
+                className="hidden h-10 w-10 place-items-center rounded-xl text-[#a49481] transition-colors hover:bg-white/[0.05] hover:text-white sm:grid"
               >
                 <Settings2 className="h-[17px] w-[17px]" />
               </button>
@@ -2729,22 +2702,44 @@ export default function Home() {
               </div>
             )}
 
-            {showSearch || activeView === "search" ? (
-              <UniversalSearch
-                onSelectArtist={(artistId) => {
-                  setSelectedArtistId(artistId);
-                  setIsArtistDetailOpen(true);
-                }}
-                onSelectAlbum={(albumId) => {
-                  setSelectedAlbumId(albumId);
-                  setIsAlbumDetailOpen(true);
-                }}
-                onSelectShow={(showId) => {
-                  setSelectedShowId(showId);
-                  setIsPodcastDetailOpen(true);
-                }}
-                initialQuery={searchQuery}
-              />
+            {showSearch ? (
+              <section>
+                <div className="mb-8 flex items-end justify-between gap-4">
+                  <div>
+                    <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#a2927f]">
+                      Live catalog search · {statusQuery.data?.label ?? "catalog"}
+                    </p>
+                    <h1 className="font-display text-3xl font-semibold tracking-[-0.05em] md:text-4xl">
+                      Results for “{searchQuery}”
+                    </h1>
+                  </div>
+                  <span className="font-mono text-xs text-[#90816f]">
+                    {liveSearchQuery.isFetching ? "Searching…" : `${visibleSearchResults.length} matches`}
+                  </span>
+                </div>
+                {visibleSearchResults.length > 0 ? (
+                  <div className="max-w-3xl space-y-1">
+                    {visibleSearchResults.map((track) => (
+                      <TrackRow
+                        key={track.id}
+                        track={track}
+                        onPlay={(t) => void playTrack(t, visibleSearchResults)}
+                        onSave={openPlaylistDialog}
+                        onLike={toggleLike}
+                        onAddToQueue={(t) => addToQueue(t)}
+                        active={String(currentTrack.id) === String(track.id) && isPlaying}
+                        liked={likedIds.has(String(track.id))}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-white/[0.12] px-6 py-16 text-center">
+                    <Search className="mx-auto mb-4 h-7 w-7 text-[#8f806e]" />
+                    <p className="font-display text-lg font-semibold">No tracks found yet</p>
+                    <p className="mt-1 text-sm text-[#9c8c79]">Try an artist, album, or a different mood.</p>
+                  </div>
+                )}
+              </section>
             ) : activeView === "spotify" && selectedSpotifyPlaylist ? (
               <SpotifyPlaylistDetail
                 key={selectedSpotifyPlaylist}
@@ -2901,43 +2896,140 @@ export default function Home() {
                 )}
               </section>
             ) : activeView === "podcasts" ? (
-              <PodcastView
-                onSelectShow={(showId) => {
-                  setSelectedShowId(showId);
-                  setIsPodcastDetailOpen(true);
-                }}
-              />
+              <section>
+                <SectionHeading eyebrow="Listen" title="Podcasts" />
+                <div className="rounded-2xl border border-white/[0.08] bg-[#17110a] p-8">
+                  <Podcast className="h-7 w-7 text-[#f5ba42]" />
+                  <h1 className="mt-5 font-display text-3xl font-semibold tracking-[-0.05em]">
+                    Podcasts, coming next.
+                  </h1>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-[#a2927f]">
+                    Musivo is connected to music catalog metadata first. Podcast discovery can be added as a separate provider surface without mixing playback or user data.
+                  </p>
+                </div>
+              </section>
             ) : activeView === "discover" ? (
-              <DiscoveryView
-                onSelectArtist={(artistId) => {
-                  setSelectedArtistId(artistId);
-                  setIsArtistDetailOpen(true);
-                }}
-                onSelectAlbum={(albumId) => {
-                  setSelectedAlbumId(albumId);
-                  setIsAlbumDetailOpen(true);
-                }}
-              />
-            ) : activeView === "library" ? (
-              <LibraryView
-                onSelectShow={(showId) => {
-                  setSelectedShowId(showId);
-                  setIsPodcastDetailOpen(true);
-                }}
-                onSelectPlaylist={(id) => {
-                  setSelectedSpotifyPlaylist(String(id));
-                  setActiveView("spotify");
-                }}
-                onCreatePlaylist={() => openPlaylistDialog()}
-              />
-            ) : activeView === "profile" ? (
-              <ProfileView
-                onSelectArtist={(artistId) => {
-                  setSelectedArtistId(artistId);
-                  setIsArtistDetailOpen(true);
-                }}
-                onOpenSleepTimer={() => setIsSleepTimerOpen(true)}
-              />
+              <section className="space-y-8">
+                <SectionHeading
+                  eyebrow="Explore"
+                  title="Discover"
+                  action="Back home"
+                  onAction={() => setActiveView("home")}
+                />
+
+                {/* Mood & Soundscapes Grid */}
+                <div>
+                  <h2 className="font-display text-lg sm:text-xl font-bold text-[#faf5ee] mb-3">
+                    Curated Moods & Vibes
+                  </h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+                    {MOOD_OPTIONS.map((mood) => (
+                      <button
+                        key={mood.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedMood(mood.id);
+                          setActiveView("aimix");
+                          handleBuildAiMix(mood.id, undefined);
+                        }}
+                        className={`group flex flex-col justify-between p-4 rounded-2xl bg-gradient-to-br ${mood.gradient} border border-white/[0.08] hover:border-white/[0.2] transition-all duration-300 text-left cursor-pointer hover:scale-[1.02] shadow-lg`}
+                      >
+                        <span className="text-2xl sm:text-3xl mb-3 block">{mood.emoji}</span>
+                        <div>
+                          <p className="font-semibold text-xs sm:text-sm text-[#faf5ee] group-hover:text-[#f5ba42] transition-colors">
+                            {mood.name}
+                          </p>
+                          <p className="text-[10px] text-[#9a8976] line-clamp-2 mt-1">
+                            {mood.vibe}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Full Catalog Multi-Column Responsive Grid */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-display text-lg sm:text-xl font-bold text-[#faf5ee]">
+                      All Tracks & Catalog ({catalog.length})
+                    </h2>
+                    <span className="font-mono text-xs text-[#90816f]">
+                      {catalog.length} items
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                    {catalog.map((track) => (
+                      <div
+                        key={`discover-track-${track.id}`}
+                        onClick={() => void playTrack(track, catalog)}
+                        className="group flex flex-col p-3 rounded-2xl bg-[#17110a] hover:bg-[#231a10] border border-white/[0.06] hover:border-white/[0.14] transition-all duration-300 cursor-pointer shadow-md"
+                      >
+                        <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-2.5 bg-[#24170c] shadow-md">
+                          <img
+                            src={track.art}
+                            alt=""
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                          <button
+                            type="button"
+                            aria-label={`Play ${track.title}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void playTrack(track, catalog);
+                            }}
+                            className="absolute bottom-2 right-2 h-9 w-9 rounded-full bg-[#f5ba42] text-[#140f07] shadow-2xl flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:scale-105"
+                          >
+                            <Play className="h-4 w-4 fill-current ml-0.5" />
+                          </button>
+                        </div>
+                        <p className="font-semibold text-xs sm:text-sm text-[#faf5ee] truncate">
+                          {track.title}
+                        </p>
+                        <p className="text-[11px] sm:text-xs text-[#9a8976] truncate mt-0.5">
+                          {track.artist}
+                        </p>
+                        <div className="mt-2 flex items-center justify-between pt-1.5 border-t border-white/[0.05]">
+                          <span className="font-mono text-[10px] text-[#7d6e5d]">
+                            {track.duration}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              title="Add to queue"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                addToQueue(track);
+                              }}
+                              className="p-1 text-[#8c7b68] hover:text-[#f5ba42] transition"
+                            >
+                              <ListPlus className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              title="Save to liked"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleLike(track);
+                              }}
+                              className={`p-1 transition ${
+                                likedIds.has(String(track.id))
+                                  ? "text-[#f5ba42]"
+                                  : "text-[#8c7b68] hover:text-white"
+                              }`}
+                            >
+                              <Heart
+                                className="h-3.5 w-3.5"
+                                fill={likedIds.has(String(track.id)) ? "currentColor" : "none"}
+                              />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
             ) : activeView === "releases" ? (
               <section className="space-y-8">
                 <SectionHeading
@@ -3712,22 +3804,6 @@ export default function Home() {
             {/* Right Tools & Volume */}
             <div className="hidden w-[28%] items-center justify-end gap-3 md:flex">
               <button
-                aria-label="Spotify Connect Devices"
-                onClick={() => setIsDeviceSelectorOpen(true)}
-                className="relative rounded-xl p-1.5 text-[#8e7f6e] hover:bg-white/[0.06] hover:text-[#f5ba42] transition"
-                title="Connect to a device"
-              >
-                <Laptop className="h-4 w-4" />
-              </button>
-              <button
-                aria-label="Sleep Timer"
-                onClick={() => setIsSleepTimerOpen(true)}
-                className="relative rounded-xl p-1.5 text-[#8e7f6e] hover:bg-white/[0.06] hover:text-[#f5ba42] transition"
-                title="Sleep Timer"
-              >
-                <Moon className="h-4 w-4" />
-              </button>
-              <button
                 aria-label="Toggle playback queue"
                 onClick={() => setIsQueueOpen((prev) => !prev)}
                 className={`relative rounded-xl p-1.5 transition ${
@@ -3982,58 +4058,6 @@ export default function Home() {
         onToggleRepeat={toggleRepeatMode}
         onShuffle={shuffleQueue}
         onOpenQueue={() => setIsQueueOpen(true)}
-        onOpenSleepTimer={() => setIsSleepTimerOpen(true)}
-        onOpenDeviceSelector={() => setIsDeviceSelectorOpen(true)}
-      />
-
-      {/* Sleep Timer Modal */}
-      <SleepTimerModal
-        isOpen={isSleepTimerOpen}
-        onClose={() => setIsSleepTimerOpen(false)}
-      />
-
-      {/* Spotify Connect Device Selector Modal */}
-      <DeviceSelectorModal
-        isOpen={isDeviceSelectorOpen}
-        onClose={() => setIsDeviceSelectorOpen(false)}
-      />
-
-      {/* Podcast Detail Modal */}
-      <PodcastDetailModal
-        isOpen={isPodcastDetailOpen}
-        onClose={() => {
-          setIsPodcastDetailOpen(false);
-          setSelectedShowId(null);
-        }}
-        showId={selectedShowId}
-      />
-
-      {/* Artist Detail Modal */}
-      <ArtistDetailModal
-        isOpen={isArtistDetailOpen}
-        onClose={() => {
-          setIsArtistDetailOpen(false);
-          setSelectedArtistId(null);
-        }}
-        artistId={selectedArtistId}
-        onSelectAlbum={(albumId) => {
-          setSelectedAlbumId(albumId);
-          setIsAlbumDetailOpen(true);
-        }}
-      />
-
-      {/* Album Detail Modal */}
-      <AlbumDetailModal
-        isOpen={isAlbumDetailOpen}
-        onClose={() => {
-          setIsAlbumDetailOpen(false);
-          setSelectedAlbumId(null);
-        }}
-        albumId={selectedAlbumId}
-        onSelectArtist={(artistId) => {
-          setSelectedArtistId(artistId);
-          setIsArtistDetailOpen(true);
-        }}
       />
     </main>
   );
