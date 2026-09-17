@@ -471,6 +471,11 @@ export function useSpotifyPlayer({
     }
   }, []);
 
+  const getCurrentState = useCallback(async () => {
+    if (!playerRef.current) return null;
+    return await playerRef.current.getCurrentState();
+  }, []);
+
   return {
     player: playerRef.current,
     isReady: connectionState === "ready",
@@ -493,5 +498,6 @@ export function useSpotifyPlayer({
     nextTrack,
     previousTrack,
     activateElement,
+    getCurrentState,
   };
 }

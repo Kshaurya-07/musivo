@@ -49,11 +49,15 @@ const USER_SCOPES = [
   "user-read-playback-state",
   "user-modify-playback-state",
   "user-read-currently-playing",
+  "user-read-playback-position",
   "user-library-read",
+  "user-library-modify",
   "playlist-read-private",
   "playlist-read-collaborative",
   "playlist-modify-private",
+  "playlist-modify-public",
   "user-read-recently-played",
+  "user-top-read",
   "user-read-private",
   "user-read-email",
 ].join(" ");
@@ -372,7 +376,10 @@ async function spotifyUserRequest<T>(userId: number, path: string, init: Request
     }
   }
   if (!response.ok) throw new Error(`Spotify user API request failed with ${response.status}`);
-  return (await response.json()) as T;
+  if (response.status === 204) return { success: true } as unknown as T;
+  const text = await response.text();
+  if (!text) return { success: true } as unknown as T;
+  return JSON.parse(text) as T;
 }
 
 async function searchSpotifyUserTrack(userId: number, title: string, artist: string) {
@@ -1547,3 +1554,586 @@ export function catalogStatus() {
 }
 
 export const spotifyUserScopes = USER_SCOPES;
+
+// ==========================================
+// PREMIUM UPGRADE: UNIVERSAL SEARCH & PODCASTS & CONNECT
+// ==========================================
+
+export type SpotifyShowItem = {
+  id: string;
+  name: string;
+  publisher: string;
+  description: string;
+  images: Array<{ url: string }>;
+  totalEpisodes: number;
+  uri: string;
+  externalUrls?: { spotify?: string };
+};
+
+export type SpotifyEpisodeItem = {
+  id: string;
+  name: string;
+  description: string;
+  durationMs: number;
+  releaseDate: string;
+  images: Array<{ url: string }>;
+  uri: string;
+  resumePositionMs?: number;
+  isPlayable?: boolean;
+  show?: { id: string; name: string; publisher: string; images?: Array<{ url: string }> };
+  externalUrls?: { spotify?: string };
+};
+
+export type SpotifyArtistItem = {
+  id: string;
+  name: string;
+  images: Array<{ url: string }>;
+  genres: string[];
+  followers: number;
+  popularity?: number;
+  externalUrls?: { spotify?: string };
+};
+
+export type SpotifyAlbumItem = {
+  id: string;
+  name: string;
+  artists: Array<{ id: string; name: string }>;
+  images: Array<{ url: string }>;
+  releaseDate: string;
+  totalTracks: number;
+  externalUrls?: { spotify?: string };
+};
+
+export type SpotifyPlaylistItem = {
+  id: string;
+  name: string;
+  description: string | null;
+  images: Array<{ url: string }>;
+  tracksCount: number;
+  ownerName: string;
+  externalUrls?: { spotify?: string };
+};
+
+export type UniversalSearchResult = {
+  tracks: CatalogTrack[];
+  artists: SpotifyArtistItem[];
+  albums: SpotifyAlbumItem[];
+  playlists: SpotifyPlaylistItem[];
+  shows: SpotifyShowItem[];
+  episodes: SpotifyEpisodeItem[];
+  topResult?: {
+    type: "track" | "artist" | "album" | "playlist" | "show" | "episode";
+    item: any;
+  } | null;
+};
+
+export type SpotifyDeviceItem = {
+  id: string | null;
+  name: string;
+  type: string;
+  isActive: boolean;
+  isRestricted: boolean;
+  volumePercent: number | null;
+  supportsVolume: boolean;
+};
+
+async function fetchSpotifyApi<T>(userId: number | undefined, path: string, init?: RequestInit): Promise<T> {
+  if (userId) {
+    try {
+      if (init && init.method && init.method !== "GET") {
+        return await spotifyUserRequest<T>(userId, path, init);
+      }
+      return await spotifyUserFetch<T>(userId, path);
+    } catch (err) {
+      if (init && init.method && init.method !== "GET") throw err;
+      // Fallback to client credentials if GET request
+    }
+  }
+  const token = await getSpotifyAccessToken();
+  if (!token) throw new Error("Spotify credentials are not configured");
+  const url = path.startsWith("http") ? path : `https://api.spotify.com/v1${path}`;
+  const response = await fetch(url, {
+    ...init,
+    headers: { Authorization: `Bearer ${token}`, ...(init?.headers ?? {}) },
+  });
+  if (!response.ok) {
+    throw new Error(`Spotify API request to ${path} failed with ${response.status}`);
+  }
+  if (response.status === 204) return { success: true } as unknown as T;
+  const text = await response.text();
+  if (!text) return { success: true } as unknown as T;
+  return JSON.parse(text) as T;
+}
+
+export async function searchSpotifyCatalog(
+  userId: number | undefined,
+  query: string,
+  types: string[] = ["track", "artist", "album", "playlist", "show"],
+  limit = 20,
+  offset = 0
+): Promise<UniversalSearchResult> {
+  const allowed = ["track", "artist", "album", "playlist", "show", "episode"];
+  const validTypes = types.filter((t) => allowed.includes(t));
+  const typesParam = validTypes.length > 0 ? validTypes.join(",") : "track,artist,album,playlist,show";
+
+  const url = `/search?q=${encodeURIComponent(query)}&type=${typesParam}&market=${ENV.spotifyMarket || "US"}&limit=${Math.min(Math.max(limit, 1), 50)}&offset=${Math.max(offset, 0)}`;
+
+  try {
+    const data = await fetchSpotifyApi<any>(userId, url);
+    const tracks: CatalogTrack[] = (data.tracks?.items ?? []).filter((t: any) => t && t.id && t.name).map(toCatalogTrack);
+
+    const artists: SpotifyArtistItem[] = (data.artists?.items ?? []).filter((a: any) => a && a.id && a.name).map((a: any) => ({
+      id: a.id,
+      name: a.name,
+      images: a.images ?? [],
+      genres: a.genres ?? [],
+      followers: a.followers?.total ?? 0,
+      popularity: a.popularity,
+      externalUrls: a.external_urls,
+    }));
+
+    const albums: SpotifyAlbumItem[] = (data.albums?.items ?? []).filter((al: any) => al && al.id && al.name).map((al: any) => ({
+      id: al.id,
+      name: al.name,
+      artists: (al.artists ?? []).map((art: any) => ({ id: art.id, name: art.name })),
+      images: al.images ?? [],
+      releaseDate: al.release_date ?? "",
+      totalTracks: al.total_tracks ?? 0,
+      externalUrls: al.external_urls,
+    }));
+
+    const playlists: SpotifyPlaylistItem[] = (data.playlists?.items ?? []).filter((pl: any) => pl && pl.id && pl.name).map((pl: any) => ({
+      id: pl.id,
+      name: pl.name,
+      description: pl.description ?? null,
+      images: pl.images ?? [],
+      tracksCount: pl.tracks?.total ?? 0,
+      ownerName: pl.owner?.display_name ?? "Spotify",
+      externalUrls: pl.external_urls,
+    }));
+
+    const shows: SpotifyShowItem[] = (data.shows?.items ?? []).filter((s: any) => s && s.id && s.name).map((s: any) => ({
+      id: s.id,
+      name: s.name,
+      publisher: s.publisher ?? "Unknown Publisher",
+      description: s.description ?? "",
+      images: s.images ?? [],
+      totalEpisodes: s.total_episodes ?? 0,
+      uri: s.uri ?? `spotify:show:${s.id}`,
+      externalUrls: s.external_urls,
+    }));
+
+    const episodes: SpotifyEpisodeItem[] = (data.episodes?.items ?? []).filter((e: any) => e && e.id && e.name).map((e: any) => ({
+      id: e.id,
+      name: e.name,
+      description: e.description ?? "",
+      durationMs: e.duration_ms ?? 0,
+      releaseDate: e.release_date ?? "",
+      images: e.images ?? [],
+      uri: e.uri ?? `spotify:episode:${e.id}`,
+      resumePositionMs: e.resume_point?.resume_position_ms,
+      isPlayable: e.is_playable ?? true,
+      externalUrls: e.external_urls,
+    }));
+
+    // Determine Top Result intelligently
+    let topResult: UniversalSearchResult["topResult"] = null;
+    const qNorm = query.trim().toLowerCase();
+
+    // Check exact artist match
+    const exactArtist = artists.find((a) => a.name.toLowerCase() === qNorm);
+    if (exactArtist) {
+      topResult = { type: "artist", item: exactArtist };
+    } else if (tracks.length > 0) {
+      topResult = { type: "track", item: tracks[0] };
+    } else if (artists.length > 0) {
+      topResult = { type: "artist", item: artists[0] };
+    } else if (shows.length > 0) {
+      topResult = { type: "show", item: shows[0] };
+    } else if (albums.length > 0) {
+      topResult = { type: "album", item: albums[0] };
+    } else if (playlists.length > 0) {
+      topResult = { type: "playlist", item: playlists[0] };
+    }
+
+    return { tracks, artists, albums, playlists, shows, episodes, topResult };
+  } catch (error) {
+    console.error("[Spotify Universal Search] Error searching catalog:", error);
+    return { tracks: [], artists: [], albums: [], playlists: [], shows: [], episodes: [], topResult: null };
+  }
+}
+
+// ---------------- Podcast Endpoints ----------------
+
+export async function getSpotifyShow(userId: number | undefined, showId: string): Promise<(SpotifyShowItem & { episodes: SpotifyEpisodeItem[] }) | null> {
+  try {
+    const data = await fetchSpotifyApi<any>(userId, `/shows/${showId}?market=${ENV.spotifyMarket || "US"}`);
+    if (!data || !data.id) return null;
+
+    const episodes: SpotifyEpisodeItem[] = (data.episodes?.items ?? []).map((e: any) => ({
+      id: e.id,
+      name: e.name,
+      description: e.description ?? "",
+      durationMs: e.duration_ms ?? 0,
+      releaseDate: e.release_date ?? "",
+      images: e.images?.length ? e.images : data.images ?? [],
+      uri: e.uri ?? `spotify:episode:${e.id}`,
+      resumePositionMs: e.resume_point?.resume_position_ms,
+      isPlayable: e.is_playable ?? true,
+      show: { id: data.id, name: data.name, publisher: data.publisher, images: data.images },
+      externalUrls: e.external_urls,
+    }));
+
+    return {
+      id: data.id,
+      name: data.name,
+      publisher: data.publisher ?? "Unknown Publisher",
+      description: data.description ?? "",
+      images: data.images ?? [],
+      totalEpisodes: data.total_episodes ?? episodes.length,
+      uri: data.uri ?? `spotify:show:${data.id}`,
+      externalUrls: data.external_urls,
+      episodes,
+    };
+  } catch (error) {
+    console.error(`[Spotify Show] Error getting show ${showId}:`, error);
+    return null;
+  }
+}
+
+export async function getSpotifyShowEpisodes(userId: number | undefined, showId: string, limit = 20, offset = 0) {
+  try {
+    const data = await fetchSpotifyApi<any>(
+      userId,
+      `/shows/${showId}/episodes?market=${ENV.spotifyMarket || "US"}&limit=${Math.min(Math.max(limit, 1), 50)}&offset=${Math.max(offset, 0)}`
+    );
+    const items: SpotifyEpisodeItem[] = (data.items ?? []).map((e: any) => ({
+      id: e.id,
+      name: e.name,
+      description: e.description ?? "",
+      durationMs: e.duration_ms ?? 0,
+      releaseDate: e.release_date ?? "",
+      images: e.images ?? [],
+      uri: e.uri ?? `spotify:episode:${e.id}`,
+      resumePositionMs: e.resume_point?.resume_position_ms,
+      isPlayable: e.is_playable ?? true,
+      externalUrls: e.external_urls,
+    }));
+    return { items, total: data.total ?? items.length };
+  } catch (error) {
+    console.error(`[Spotify Show Episodes] Error getting episodes for ${showId}:`, error);
+    return { items: [], total: 0 };
+  }
+}
+
+export async function getSpotifyEpisode(userId: number | undefined, episodeId: string): Promise<SpotifyEpisodeItem | null> {
+  try {
+    const data = await fetchSpotifyApi<any>(userId, `/episodes/${episodeId}?market=${ENV.spotifyMarket || "US"}`);
+    if (!data || !data.id) return null;
+    return {
+      id: data.id,
+      name: data.name,
+      description: data.description ?? "",
+      durationMs: data.duration_ms ?? 0,
+      releaseDate: data.release_date ?? "",
+      images: data.images ?? [],
+      uri: data.uri ?? `spotify:episode:${data.id}`,
+      resumePositionMs: data.resume_point?.resume_position_ms,
+      isPlayable: data.is_playable ?? true,
+      show: data.show ? { id: data.show.id, name: data.show.name, publisher: data.show.publisher, images: data.show.images } : undefined,
+      externalUrls: data.external_urls,
+    };
+  } catch (error) {
+    console.error(`[Spotify Episode] Error getting episode ${episodeId}:`, error);
+    return null;
+  }
+}
+
+export async function getUserSavedShows(userId: number, limit = 20, offset = 0) {
+  try {
+    const data = await spotifyUserFetch<any>(
+      userId,
+      `/me/shows?limit=${Math.min(Math.max(limit, 1), 50)}&offset=${Math.max(offset, 0)}`
+    );
+    const items: SpotifyShowItem[] = (data.items ?? []).map((item: any) => {
+      const s = item.show ?? item;
+      return {
+        id: s.id,
+        name: s.name,
+        publisher: s.publisher ?? "",
+        description: s.description ?? "",
+        images: s.images ?? [],
+        totalEpisodes: s.total_episodes ?? 0,
+        uri: s.uri ?? `spotify:show:${s.id}`,
+        externalUrls: s.external_urls,
+      };
+    });
+    return { items, total: data.total ?? items.length };
+  } catch (error) {
+    console.warn("[Spotify Saved Shows] Failed to fetch user shows:", error);
+    return { items: [], total: 0 };
+  }
+}
+
+export async function toggleSaveUserShow(userId: number, showId: string, save = true) {
+  return spotifyUserRequest<{ success: boolean }>(userId, `/me/shows?ids=${showId}`, {
+    method: save ? "PUT" : "DELETE",
+  });
+}
+
+// ---------------- Artist & Album Endpoints ----------------
+
+export async function getSpotifyArtist(userId: number | undefined, artistId: string): Promise<SpotifyArtistItem | null> {
+  try {
+    const a = await fetchSpotifyApi<any>(userId, `/artists/${artistId}`);
+    if (!a || !a.id) return null;
+    return {
+      id: a.id,
+      name: a.name,
+      images: a.images ?? [],
+      genres: a.genres ?? [],
+      followers: a.followers?.total ?? 0,
+      popularity: a.popularity,
+      externalUrls: a.external_urls,
+    };
+  } catch (error) {
+    console.error(`[Spotify Artist] Error fetching artist ${artistId}:`, error);
+    return null;
+  }
+}
+
+export async function getSpotifyArtistTopTracks(userId: number | undefined, artistId: string): Promise<CatalogTrack[]> {
+  try {
+    const data = await fetchSpotifyApi<any>(userId, `/artists/${artistId}/top-tracks?market=${ENV.spotifyMarket || "US"}`);
+    return (data.tracks ?? []).filter((t: any) => t && t.id && t.name).map(toCatalogTrack);
+  } catch (error) {
+    console.error(`[Spotify Artist Top Tracks] Error for ${artistId}:`, error);
+    return [];
+  }
+}
+
+export async function getSpotifyArtistAlbums(userId: number | undefined, artistId: string, limit = 20): Promise<SpotifyAlbumItem[]> {
+  try {
+    const data = await fetchSpotifyApi<any>(
+      userId,
+      `/artists/${artistId}/albums?include_groups=album,single&market=${ENV.spotifyMarket || "US"}&limit=${Math.min(Math.max(limit, 1), 50)}`
+    );
+    return (data.items ?? []).map((al: any) => ({
+      id: al.id,
+      name: al.name,
+      artists: (al.artists ?? []).map((art: any) => ({ id: art.id, name: art.name })),
+      images: al.images ?? [],
+      releaseDate: al.release_date ?? "",
+      totalTracks: al.total_tracks ?? 0,
+      externalUrls: al.external_urls,
+    }));
+  } catch (error) {
+    console.error(`[Spotify Artist Albums] Error for ${artistId}:`, error);
+    return [];
+  }
+}
+
+export async function getSpotifyAlbum(userId: number | undefined, albumId: string): Promise<(SpotifyAlbumItem & { tracks: CatalogTrack[] }) | null> {
+  try {
+    const al = await fetchSpotifyApi<any>(userId, `/albums/${albumId}?market=${ENV.spotifyMarket || "US"}`);
+    if (!al || !al.id) return null;
+
+    const albumInfo: SpotifyAlbumItem = {
+      id: al.id,
+      name: al.name,
+      artists: (al.artists ?? []).map((art: any) => ({ id: art.id, name: art.name })),
+      images: al.images ?? [],
+      releaseDate: al.release_date ?? "",
+      totalTracks: al.total_tracks ?? 0,
+      externalUrls: al.external_urls,
+    };
+
+    const tracks: CatalogTrack[] = (al.tracks?.items ?? []).map((t: any) =>
+      toCatalogTrack({
+        ...t,
+        album: { name: al.name, images: al.images },
+      })
+    );
+
+    return { ...albumInfo, tracks };
+  } catch (error) {
+    console.error(`[Spotify Album] Error fetching album ${albumId}:`, error);
+    return null;
+  }
+}
+
+// ---------------- Spotify Connect Devices ----------------
+
+export async function getSpotifyDevices(userId: number): Promise<SpotifyDeviceItem[]> {
+  try {
+    const data = await spotifyUserFetch<{ devices?: any[] }>(userId, "/me/player/devices");
+    return (data.devices ?? []).map((d: any) => ({
+      id: d.id ?? null,
+      name: d.name || "Unknown Device",
+      type: d.type || "Speaker",
+      isActive: Boolean(d.is_active),
+      isRestricted: Boolean(d.is_restricted),
+      volumePercent: typeof d.volume_percent === "number" ? d.volume_percent : null,
+      supportsVolume: d.supports_volume ?? true,
+    }));
+  } catch (error) {
+    console.warn("[Spotify Devices] Error listing devices:", error);
+    return [];
+  }
+}
+
+export async function transferSpotifyPlayback(userId: number, deviceId: string, play = false): Promise<{ success: boolean }> {
+  try {
+    await spotifyUserRequest<{ success: boolean }>(userId, "/me/player", {
+      method: "PUT",
+      body: JSON.stringify({ device_ids: [deviceId], play }),
+    });
+    return { success: true };
+  } catch (error) {
+    console.error(`[Spotify Transfer] Failed to transfer playback to device ${deviceId}:`, error);
+    throw error;
+  }
+}
+
+// ---------------- User Top Items (Profile Insights) ----------------
+
+export async function getUserTopTracks(userId: number, timeRange = "medium_term", limit = 10): Promise<CatalogTrack[]> {
+  try {
+    const data = await spotifyUserFetch<{ items?: any[] }>(
+      userId,
+      `/me/top/tracks?time_range=${timeRange}&limit=${Math.min(Math.max(limit, 1), 50)}`
+    );
+    return (data.items ?? []).filter((t) => t && t.id && t.name).map(toCatalogTrack);
+  } catch (error) {
+    console.warn("[Spotify Top Tracks] Error fetching top tracks:", error);
+    return [];
+  }
+}
+
+export async function getUserTopArtists(userId: number, timeRange = "medium_term", limit = 10): Promise<SpotifyArtistItem[]> {
+  try {
+    const data = await spotifyUserFetch<{ items?: any[] }>(
+      userId,
+      `/me/top/artists?time_range=${timeRange}&limit=${Math.min(Math.max(limit, 1), 50)}`
+    );
+    return (data.items ?? []).map((a: any) => ({
+      id: a.id,
+      name: a.name,
+      images: a.images ?? [],
+      genres: a.genres ?? [],
+      followers: a.followers?.total ?? 0,
+      popularity: a.popularity,
+      externalUrls: a.external_urls,
+    }));
+  } catch (error) {
+    console.warn("[Spotify Top Artists] Error fetching top artists:", error);
+    return [];
+  }
+}
+
+// ---------------- Smart Queue Auto-Continuation ----------------
+
+export async function generateSmartQueueContinuation(
+  userId: number | undefined,
+  seedTrackIds: string[] = []
+): Promise<CatalogTrack[]> {
+  const excludedIds = new Set<string>();
+  const excludedTitles = new Set<string>();
+
+  // Extract clean track IDs from input seeds
+  const cleanSeedIds = seedTrackIds
+    .map((id) => id.replace(/^spotify-/, "").trim())
+    .filter((id) => id && id.length > 5);
+
+  cleanSeedIds.forEach((id) => excludedIds.add(id));
+
+  // If user is connected, build exclusion set from listening history and liked tracks
+  if (userId) {
+    try {
+      const [recentHistory, likedTracks] = await Promise.all([
+        db.listSpotifyRecentTracks(userId).catch(() => []),
+        db.listLikedTracks(userId).catch(() => []),
+      ]);
+      recentHistory.forEach((r: any) => {
+        if (r.externalId) excludedIds.add(String(r.externalId).replace(/^spotify-/, ""));
+        if (r.title) excludedTitles.add(r.title.toLowerCase().trim());
+      });
+      likedTracks.forEach((l: any) => {
+        if (l.externalId) excludedIds.add(String(l.externalId).replace(/^spotify-/, ""));
+        if (l.title) excludedTitles.add(l.title.toLowerCase().trim());
+      });
+    } catch (e) {
+      console.warn("[Smart Queue] Could not fetch user history for exclusion:", e);
+    }
+  }
+
+  const effectiveSeeds = cleanSeedIds.slice(0, 5);
+  let recommendedTracks: CatalogTrack[] = [];
+
+  // 1. Try Spotify Recommendations endpoint with track seeds
+  if (effectiveSeeds.length > 0) {
+    try {
+      const data = await fetchSpotifyApi<any>(
+        userId,
+        `/recommendations?seed_tracks=${effectiveSeeds.join(",")}&limit=25&market=${ENV.spotifyMarket || "US"}`
+      );
+      if (data.tracks && Array.isArray(data.tracks)) {
+        recommendedTracks = data.tracks
+          .filter((t: any) => t && t.id && t.name)
+          .map(toCatalogTrack);
+      }
+    } catch (err) {
+      console.warn("[Smart Queue] Recommendations API call failed, falling back to discovery search:", err);
+    }
+  }
+
+  // 2. If recommendations yielded insufficient results, search for related artists / tracks
+  if (recommendedTracks.length < 5 && effectiveSeeds.length > 0) {
+    try {
+      // Look up seed track artist to get related artists
+      const seedTrack = await fetchSpotifyApi<any>(userId, `/tracks/${effectiveSeeds[0]}`).catch(() => null);
+      const artistId = seedTrack?.artists?.[0]?.id;
+      if (artistId) {
+        const related = await fetchSpotifyApi<any>(userId, `/artists/${artistId}/related-artists`).catch(() => null);
+        const relatedArtists = (related?.artists ?? []).slice(0, 3);
+        for (const rel of relatedArtists) {
+          const topTracks = await getSpotifyArtistTopTracks(userId, rel.id);
+          recommendedTracks.push(...topTracks);
+        }
+      }
+    } catch (err) {
+      console.warn("[Smart Queue] Related artist fallback failed:", err);
+    }
+  }
+
+  // 3. Fallback to generic fresh discovery if still empty
+  if (recommendedTracks.length < 5) {
+    const discoveryQueries = ["tag:new", "discover weekly", "trending indie"];
+    for (const q of discoveryQueries) {
+      const searchRes = await searchSpotifyTracks(q, 8).catch(() => []);
+      if (searchRes && searchRes.length > 0) {
+        recommendedTracks.push(...searchRes);
+      }
+    }
+  }
+
+  // 4. Strict exclusion filter: Never recommend tracks the user already has in history or seeds!
+  const finalCandidates: CatalogTrack[] = [];
+  const seenInResult = new Set<string>();
+
+  for (const track of recommendedTracks) {
+    const cleanId = track.id.replace(/^spotify-/, "");
+    const titleNorm = track.title.toLowerCase().trim();
+
+    if (excludedIds.has(cleanId) || excludedTitles.has(titleNorm) || seenInResult.has(cleanId)) {
+      continue;
+    }
+
+    seenInResult.add(cleanId);
+    finalCandidates.push(track);
+    if (finalCandidates.length >= 8) break;
+  }
+
+  return finalCandidates;
+}
+
