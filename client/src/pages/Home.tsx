@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
   Album,
   ArrowRight,
+  BarChart3,
   Brain,
   ChevronDown,
   CheckCircle2,
@@ -46,6 +47,11 @@ import { formatTime, matchesTrackQuery } from "@/lib/musivo";
 import { MobileNavDrawer } from "@/components/MobileNavDrawer";
 import { BottomNavBar } from "@/components/BottomNavBar";
 import { NowPlayingModal } from "@/components/NowPlayingModal";
+import { UniversalSearch } from "@/components/UniversalSearch";
+import { PodcastView } from "@/components/PodcastView";
+import { ListeningStatsView } from "@/components/ListeningStatsView";
+import { ArtistDetailModal } from "@/components/ArtistDetailModal";
+import { AlbumDetailModal } from "@/components/AlbumDetailModal";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
@@ -87,10 +93,12 @@ const mixes = [
 
 const navItems: NavItem[] = [
   { id: "home", label: "Home", icon: HomeIcon },
+  { id: "search", label: "Search Catalog", icon: Search },
+  { id: "podcasts", label: "Podcasts & Shows", icon: Podcast },
+  { id: "stats", label: "Listening Stats", icon: BarChart3 },
   { id: "aimix", label: "AI Mix Studio", icon: Sparkles },
   { id: "discover", label: "Discover", icon: Compass },
   { id: "releases", label: "New releases", icon: Sparkles },
-  { id: "podcasts", label: "Podcasts", icon: Podcast },
 ];
 
 const MOOD_OPTIONS = [
@@ -2096,6 +2104,78 @@ export default function Home() {
 
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [selectedSeedPlaylistId, setSelectedSeedPlaylistId] = useState<string | number | null>(null);
+  const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null);
+  const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null);
+
+  const prevVolumeRef = useRef(70);
+
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      switch (e.code) {
+        case "Space":
+          e.preventDefault();
+          void togglePlay();
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          void seek(Math.min(duration, progress + 5));
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          void seek(Math.max(0, progress - 5));
+          break;
+        case "KeyN":
+          e.preventDefault();
+          void skip(1);
+          break;
+        case "KeyP":
+          e.preventDefault();
+          void skip(-1);
+          break;
+        case "KeyM":
+          e.preventDefault();
+          if (volume > 0) {
+            prevVolumeRef.current = volume;
+            void setVolume(0);
+          } else {
+            void setVolume(prevVolumeRef.current || 70);
+          }
+          break;
+        case "KeyS":
+          e.preventDefault();
+          toggleRepeatMode();
+          break;
+        case "KeyQ":
+          e.preventDefault();
+          setIsQueueOpen((prev) => !prev);
+          break;
+        case "Escape":
+          setIsQueueOpen(false);
+          setIsNowPlayingModalOpen(false);
+          setIsMobileNavOpen(false);
+          setShowPlaylistDialog(false);
+          setShowSpotifyPlaylistDialog(false);
+          setShowPlaybackDiagnostics(false);
+          setSelectedArtistId(null);
+          setSelectedAlbumId(null);
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [togglePlay, seek, skip, duration, progress, volume, setVolume, toggleRepeatMode]);
 
   const statusQuery = trpc.music.status.useQuery(undefined, { staleTime: 1000 * 60 * 10 });
   const homeQuery = trpc.music.home.useQuery(undefined, { staleTime: 1000 * 60 * 10, retry: 1 });
@@ -2397,8 +2477,9 @@ export default function Home() {
     setSearchQuery("");
     if ((id === "liked" || id === "playlists" || id === "spotify") && !isAuthenticated)
       startLogin();
-    if (id === "albums")
-      toast.info("Albums are available from every Spotify catalog result.");
+    if (id === "albums") {
+      setActiveView("search");
+    }
   };
 
   const openPlaylistDialog = (track?: Track) => {
@@ -2702,7 +2783,7 @@ export default function Home() {
               </div>
             )}
 
-            {showSearch ? (
+            {showSearch && activeView !== "search" ? (
               <section>
                 <div className="mb-8 flex items-end justify-between gap-4">
                   <div>
@@ -2739,6 +2820,14 @@ export default function Home() {
                     <p className="mt-1 text-sm text-[#9c8c79]">Try an artist, album, or a different mood.</p>
                   </div>
                 )}
+              </section>
+            ) : activeView === "search" ? (
+              <section className="space-y-6">
+                <UniversalSearch />
+              </section>
+            ) : activeView === "stats" ? (
+              <section className="space-y-6">
+                <ListeningStatsView />
               </section>
             ) : activeView === "spotify" && selectedSpotifyPlaylist ? (
               <SpotifyPlaylistDetail
@@ -2896,17 +2985,8 @@ export default function Home() {
                 )}
               </section>
             ) : activeView === "podcasts" ? (
-              <section>
-                <SectionHeading eyebrow="Listen" title="Podcasts" />
-                <div className="rounded-2xl border border-white/[0.08] bg-[#17110a] p-8">
-                  <Podcast className="h-7 w-7 text-[#f5ba42]" />
-                  <h1 className="mt-5 font-display text-3xl font-semibold tracking-[-0.05em]">
-                    Podcasts, coming next.
-                  </h1>
-                  <p className="mt-2 max-w-xl text-sm leading-6 text-[#a2927f]">
-                    Musivo is connected to music catalog metadata first. Podcast discovery can be added as a separate provider surface without mixing playback or user data.
-                  </p>
-                </div>
+              <section className="space-y-6">
+                <PodcastView />
               </section>
             ) : activeView === "discover" ? (
               <section className="space-y-8">
@@ -4058,6 +4138,24 @@ export default function Home() {
         onToggleRepeat={toggleRepeatMode}
         onShuffle={shuffleQueue}
         onOpenQueue={() => setIsQueueOpen(true)}
+      />
+
+      {/* Artist Detail Modal */}
+      <ArtistDetailModal
+        artistId={selectedArtistId}
+        isOpen={Boolean(selectedArtistId)}
+        onClose={() => setSelectedArtistId(null)}
+        onSelectAlbum={(albId) => {
+          setSelectedArtistId(null);
+          setSelectedAlbumId(albId);
+        }}
+      />
+
+      {/* Album Detail Modal */}
+      <AlbumDetailModal
+        albumId={selectedAlbumId}
+        isOpen={Boolean(selectedAlbumId)}
+        onClose={() => setSelectedAlbumId(null)}
       />
     </main>
   );

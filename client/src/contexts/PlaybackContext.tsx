@@ -48,6 +48,12 @@ export type PlaybackTrack = {
 export type PlaybackMode = "spotify" | "full" | "preview" | "idle";
 export type RepeatMode = "off" | "all" | "one";
 
+export type SleepTimer = {
+  minutes: number;
+  targetTimestamp: number;
+  mode: "minutes" | "track_end";
+} | null;
+
 export interface PlaybackContextType {
   currentTrack: PlaybackTrack;
   isPlaying: boolean;
@@ -80,6 +86,16 @@ export interface PlaybackContextType {
   setQueue: (queue: PlaybackTrack[]) => void;
   clearError: () => void;
   connectSpotify: () => void;
+  sleepTimer: SleepTimer;
+  sleepTimerRemainingSec: number | null;
+  setSleepTimer: (minutes: number | null, isTrackEnd?: boolean) => void;
+  activeEpisodeId: string | null;
+  setActiveEpisodeId: (id: string | null) => void;
+  videoMode: boolean;
+  setVideoMode: (enabled: boolean) => void;
+  playbackSpeed: number;
+  setPlaybackSpeed: (speed: number) => void;
+  seekRelative: (seconds: number) => Promise<void>;
 }
 
 const fallbackDefaultTrack: PlaybackTrack = {
@@ -119,6 +135,91 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
   const [queue, setQueue] = useState<PlaybackTrack[]>([]);
   const [repeatMode, setRepeatMode] = useState<RepeatMode>("off");
   const [userError, setUserError] = useState<string | null>(null);
+
+  const recordSessionMutation = trpc.music.recordSession.useMutation();
+
+  // Sleep timer state
+  const [sleepTimer, setSleepTimerState] = useState<SleepTimer>(null);
+  const [sleepTimerRemainingSec, setSleepTimerRemainingSec] = useState<number | null>(null);
+  const baseVolumeRef = useRef(volume);
+
+  // Podcast state
+  const [activeEpisodeId, setActiveEpisodeId] = useState<string | null>(null);
+  const [videoMode, setVideoMode] = useState<boolean>(false);
+  const [playbackSpeed, setPlaybackSpeedState] = useState<number>(1.0);
+
+  // Active listening session tracker (>=30 seconds active listening threshold)
+  const activeSessionRef = useRef<{
+    contentId: string;
+    contentType: "track" | "episode";
+    title: string;
+    artist: string;
+    artworkUrl?: string;
+    durationMs?: number;
+    startedAt: Date;
+    accumulatedMs: number;
+    lastTick: number;
+  } | null>(null);
+
+  const prefetchingQueueRef = useRef(false);
+
+  const flushListeningSession = useCallback(
+    async (completed = 0) => {
+      const session = activeSessionRef.current;
+      if (!session) return;
+      if (isAuthenticated && session.accumulatedMs >= 30000) {
+        try {
+          await recordSessionMutation.mutateAsync({
+            contentId: session.contentId,
+            contentType: session.contentType,
+            title: session.title,
+            artist: session.artist,
+            artworkUrl: session.artworkUrl,
+            durationMs: session.durationMs,
+            listenedMs: Math.round(session.accumulatedMs),
+            completed,
+            startedAt: session.startedAt,
+            endedAt: new Date(),
+          });
+        } catch (err) {
+          console.warn("[Session Tracking] Could not record session:", err);
+        }
+      }
+      activeSessionRef.current = null;
+    },
+    [isAuthenticated, recordSessionMutation]
+  );
+
+  const flushListeningSessionRef = useRef(flushListeningSession);
+  useEffect(() => {
+    flushListeningSessionRef.current = flushListeningSession;
+  }, [flushListeningSession]);
+
+  // Session accumulation ticker (every second during active playback)
+  useEffect(() => {
+    if (!isPlaying) return;
+    const timer = setInterval(() => {
+      if (activeSessionRef.current) {
+        const now = Date.now();
+        const delta = Math.min(2000, now - activeSessionRef.current.lastTick);
+        activeSessionRef.current.accumulatedMs += delta;
+        activeSessionRef.current.lastTick = now;
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isPlaying]);
+
+  // Flush session on window unload or tab close
+  useEffect(() => {
+    const handleUnload = () => {
+      void flushListeningSessionRef.current(0);
+    };
+    window.addEventListener("beforeunload", handleUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleUnload);
+      void flushListeningSessionRef.current(0);
+    };
+  }, []);
 
   const skipRef = useRef<(direction: 1 | -1) => Promise<void>>(() => Promise.resolve());
 
@@ -246,6 +347,7 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
     };
 
     const handleEnded = () => {
+      void flushListeningSessionRef.current(1);
       void skipRef.current(1);
     };
 
@@ -314,6 +416,7 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
               } else if (event.data === 2) {
                 setIsPlaying(false);
               } else if (event.data === 0) {
+                void flushListeningSessionRef.current(1);
                 void skipRef.current(1);
               }
             },
@@ -371,8 +474,35 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
         setQueue(newQueue);
       }
 
+      // Pre-warm audio elements on user gesture to comply with browser autoplay policies
+      void spotifyPlayer.activateElement().catch(() => undefined);
+
+      // Flush previous listening session if active
+      void flushListeningSessionRef.current(0);
+
       let playTarget = track;
       const initialDuration = parseDuration(playTarget.durationMs || playTarget.duration);
+
+      const isPodcast =
+        playTarget.source === "spotify-episode" ||
+        playTarget.badge === "PODCAST EPISODE" ||
+        Boolean((playTarget as any).isEpisode);
+
+      activeSessionRef.current = {
+        contentId: String(playTarget.id),
+        contentType: isPodcast ? "episode" : "track",
+        title: playTarget.title,
+        artist: playTarget.artist,
+        artworkUrl: playTarget.art,
+        durationMs: playTarget.durationMs || undefined,
+        startedAt: new Date(),
+        accumulatedMs: 0,
+        lastTick: Date.now(),
+      };
+
+      if (isPodcast) {
+        setActiveEpisodeId(String(playTarget.id).replace(/^spotify-/, ""));
+      }
 
       // 1. Authoritative path: Spotify Web Playback SDK (if Spotify is connected)
       if (isSpotifyConnected) {
@@ -524,6 +654,7 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
   }, [playbackMode, spotifyPlayer]);
 
   const resume = useCallback(async () => {
+    void spotifyPlayer.activateElement().catch(() => undefined);
     if (playbackMode === "spotify") {
       await spotifyPlayer.resume().catch(() => undefined);
       setIsPlaying(true);
@@ -541,6 +672,7 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
   }, [playbackMode, spotifyPlayer, currentTrack]);
 
   const togglePlay = useCallback(async () => {
+    void spotifyPlayer.activateElement().catch(() => undefined);
     if (isPlaying) {
       await pause();
     } else {
@@ -550,7 +682,7 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
         await resume();
       }
     }
-  }, [isPlaying, pause, resume, playbackMode, playTrack, currentTrack]);
+  }, [isPlaying, pause, resume, playbackMode, playTrack, currentTrack, spotifyPlayer]);
 
   const seek = useCallback(
     async (seconds: number) => {
@@ -590,6 +722,153 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
     },
     [spotifyPlayer]
   );
+
+  const setSleepTimer = useCallback(
+    (minutes: number | null, isTrackEnd = false) => {
+      if (minutes === null) {
+        setSleepTimerState(null);
+        setSleepTimerRemainingSec(null);
+        if (baseVolumeRef.current) {
+          void setVolume(baseVolumeRef.current);
+        }
+        toast.info("Sleep timer turned off");
+        return;
+      }
+
+      baseVolumeRef.current = volume;
+
+      if (isTrackEnd) {
+        setSleepTimerState({ minutes: 0, targetTimestamp: 0, mode: "track_end" });
+        setSleepTimerRemainingSec(null);
+        toast.success("Sleep timer set: Stop at end of track");
+        return;
+      }
+
+      const target = Date.now() + minutes * 60 * 1000;
+      setSleepTimerState({ minutes, targetTimestamp: target, mode: "minutes" });
+      setSleepTimerRemainingSec(minutes * 60);
+      toast.success(`Sleep timer set for ${minutes} minutes`);
+    },
+    [volume, setVolume]
+  );
+
+  // Sleep timer ticker with 10-second volume fade-out
+  useEffect(() => {
+    if (!sleepTimer || sleepTimer.mode !== "minutes") return;
+
+    const interval = setInterval(() => {
+      const remainingMs = sleepTimer.targetTimestamp - Date.now();
+      if (remainingMs <= 0) {
+        void pause();
+        void setVolume(baseVolumeRef.current);
+        setSleepTimerState(null);
+        setSleepTimerRemainingSec(null);
+        toast.info("Sleep timer ended — playback paused");
+      } else {
+        const remSec = Math.ceil(remainingMs / 1000);
+        setSleepTimerRemainingSec(remSec);
+
+        // Smooth 10s volume fade out
+        if (remSec <= 10) {
+          const fraction = Math.max(0, remSec / 10);
+          const fadedVolume = Math.round(baseVolumeRef.current * fraction);
+          if (audioRef.current) audioRef.current.volume = fadedVolume / 100;
+          if (ytPlayerRef.current?.setVolume) {
+            try {
+              ytPlayerRef.current.setVolume(fadedVolume);
+            } catch {}
+          }
+          void spotifyPlayer.setVolume(fadedVolume / 100).catch(() => undefined);
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [sleepTimer, pause, setVolume, spotifyPlayer]);
+
+  // Podcast / general playback speed control
+  const setPlaybackSpeed = useCallback((speed: number) => {
+    const clamped = Math.max(0.5, Math.min(2.0, speed));
+    setPlaybackSpeedState(clamped);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = clamped;
+    }
+    if (ytPlayerRef.current?.setPlaybackRate) {
+      try {
+        ytPlayerRef.current.setPlaybackRate(clamped);
+      } catch {}
+    }
+  }, []);
+
+  // Relative seek (e.g. ±15 seconds for podcasts)
+  const seekRelative = useCallback(
+    async (offsetSeconds: number) => {
+      const newPos = Math.max(0, Math.min(duration || 9999, progress + offsetSeconds));
+      await seek(newPos);
+    },
+    [duration, progress, seek]
+  );
+
+  // Foreground / background audio position reconciliation
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && isPlaying) {
+        if (playbackMode === "full" && ytPlayerRef.current?.getCurrentTime) {
+          try {
+            const cur = Math.floor(ytPlayerRef.current.getCurrentTime() || 0);
+            if (cur > 0) setProgress(cur);
+          } catch {}
+        } else if (audioRef.current && (playbackMode === "full" || playbackMode === "preview")) {
+          setProgress(Math.round(audioRef.current.currentTime || 0));
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [isPlaying, playbackMode]);
+
+  // Smart Queue auto-continuation prefetching when queue has <= 1 track remaining
+  useEffect(() => {
+    if (
+      queue.length <= 1 &&
+      isPlaying &&
+      repeatMode === "off" &&
+      !prefetchingQueueRef.current &&
+      currentTrack.id &&
+      String(currentTrack.id) !== "fallback-1"
+    ) {
+      prefetchingQueueRef.current = true;
+      const seedId = String(currentTrack.id).replace(/^spotify-/, "");
+      trpcUtils.music.smartQueueContinuation
+        .fetch({ seedTrackIds: [seedId], count: 5 })
+        .then((newTracks) => {
+          if (newTracks && newTracks.length > 0) {
+            const mapped: PlaybackTrack[] = newTracks.map((t) => ({
+              id: t.id,
+              title: t.title,
+              artist: t.artist,
+              album: t.album,
+              duration: formatTime((t.durationMs || 180000) / 1000),
+              art: t.art,
+              audio: t.audio,
+              accent: t.accent || "#f5ba42",
+              durationMs: t.durationMs,
+              storeUrl: t.storeUrl,
+              source: "Spotify",
+            }));
+            setQueue((prev) => {
+              const existingIds = new Set(prev.map((x) => String(x.id)));
+              const unique = mapped.filter((m) => !existingIds.has(String(m.id)));
+              return [...prev, ...unique];
+            });
+          }
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          prefetchingQueueRef.current = false;
+        });
+    }
+  }, [queue.length, isPlaying, repeatMode, currentTrack.id, trpcUtils]);
 
   const toggleRepeatMode = useCallback(() => {
     setRepeatMode((prev) => {
@@ -665,6 +944,23 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
 
   const skip = useCallback(
     async (direction: 1 | -1) => {
+      void spotifyPlayer.activateElement().catch(() => undefined);
+
+      if (sleepTimer?.mode === "track_end" && direction === 1) {
+        if (playbackMode === "full" && ytPlayerRef.current?.pauseVideo) {
+          ytPlayerRef.current.pauseVideo();
+        } else if (audioRef.current) {
+          audioRef.current.pause();
+        } else if (playbackMode === "spotify") {
+          await spotifyPlayer.pause().catch(() => undefined);
+        }
+        setIsPlaying(false);
+        setSleepTimerState(null);
+        setSleepTimerRemainingSec(null);
+        toast.info("Track ended — sleep timer paused playback");
+        return;
+      }
+
       if (repeatMode === "one" && direction === 1) {
         if (playbackMode === "full" && ytPlayerRef.current?.seekTo) {
           ytPlayerRef.current.seekTo(0, true);
@@ -710,7 +1006,7 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
         }
       }
     },
-    [queue, currentTrack, repeatMode, playbackMode, playTrack]
+    [queue, currentTrack, repeatMode, playbackMode, playTrack, sleepTimer, pause, spotifyPlayer]
   );
 
   useEffect(() => {
@@ -971,6 +1267,16 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
       setQueue,
       clearError,
       connectSpotify,
+      sleepTimer,
+      sleepTimerRemainingSec,
+      setSleepTimer,
+      activeEpisodeId,
+      setActiveEpisodeId,
+      videoMode,
+      setVideoMode,
+      playbackSpeed,
+      setPlaybackSpeed,
+      seekRelative,
     }),
     [
       currentTrack,
@@ -1005,6 +1311,14 @@ export function PlaybackProvider({ children }: { children: React.ReactNode }) {
       setQueue,
       clearError,
       connectSpotify,
+      sleepTimer,
+      sleepTimerRemainingSec,
+      setSleepTimer,
+      activeEpisodeId,
+      videoMode,
+      playbackSpeed,
+      setPlaybackSpeed,
+      seekRelative,
     ]
   );
 

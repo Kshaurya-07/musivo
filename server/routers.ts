@@ -19,6 +19,13 @@ import {
   listUserPlaylists,
   toggleLikedTrack,
   storeUserRecentSearch,
+  addRecentSearch,
+  listRecentSearches,
+  removeRecentSearch,
+  clearRecentSearches,
+  recordListeningSession,
+  getListeningStats,
+  getListeningHistory,
 } from "./db";
 import {
   buildSpotifyAuthorizeUrl,
@@ -37,6 +44,22 @@ import {
   resolveSpotifyTrack,
   syncSpotifyUserData,
   trainUserAiProfile,
+  searchSpotifyCatalog,
+  getSearchSuggestions,
+  getSpotifyShow,
+  getSpotifyShowEpisodes,
+  getSpotifyEpisode,
+  getUserSavedShows,
+  toggleSaveUserShow,
+  getSpotifyArtist,
+  getSpotifyArtistTopTracks,
+  getSpotifyArtistAlbums,
+  getSpotifyAlbum,
+  getSpotifyDevices,
+  transferSpotifyPlayback,
+  getUserTopTracks,
+  getUserTopArtists,
+  generateSmartQueueContinuation,
 } from "./spotify";
 import { randomUUID } from "node:crypto";
 import { ENV } from "./_core/env";
@@ -245,6 +268,136 @@ export const appRouter = router({
           });
         }
       }),
+    universalSearch: publicProcedure
+      .input(
+        z.object({
+          query: z.string().trim().min(1).max(100),
+          types: z.array(z.string()).optional(),
+          limit: z.number().int().min(1).max(10).default(10).optional(),
+          offset: z.number().int().min(0).default(0).optional(),
+        })
+      )
+      .query(async ({ input, ctx }) => {
+        if (ctx.user?.id) {
+          void addRecentSearch(ctx.user.id, input.query).catch(() => undefined);
+        }
+        return await searchSpotifyCatalog(
+          ctx.user?.id,
+          input.query,
+          input.types,
+          input.limit ?? 10,
+          input.offset ?? 0
+        );
+      }),
+    searchSuggestions: publicProcedure
+      .input(z.object({ query: z.string().trim().min(1).max(100) }))
+      .query(async ({ input, ctx }) => {
+        return await getSearchSuggestions(ctx.user?.id, input.query);
+      }),
+    recentSearches: protectedProcedure.query(async ({ ctx }) => {
+      return await listRecentSearches(ctx.user.id);
+    }),
+    addRecentSearch: protectedProcedure
+      .input(z.object({ query: z.string().trim().min(1).max(100) }))
+      .mutation(async ({ input, ctx }) => {
+        await addRecentSearch(ctx.user.id, input.query);
+        return { success: true };
+      }),
+    removeRecentSearch: protectedProcedure
+      .input(z.object({ query: z.string().trim().min(1) }))
+      .mutation(async ({ input, ctx }) => {
+        await removeRecentSearch(ctx.user.id, input.query);
+        return { success: true };
+      }),
+    clearRecentSearches: protectedProcedure.mutation(async ({ ctx }) => {
+      await clearRecentSearches(ctx.user.id);
+      return { success: true };
+    }),
+    getShow: publicProcedure
+      .input(z.object({ showId: z.string().min(1) }))
+      .query(async ({ input, ctx }) => {
+        return await getSpotifyShow(ctx.user?.id, input.showId);
+      }),
+    getShowEpisodes: publicProcedure
+      .input(
+        z.object({
+          showId: z.string().min(1),
+          limit: z.number().int().min(1).max(10).default(10).optional(),
+          offset: z.number().int().min(0).default(0).optional(),
+        })
+      )
+      .query(async ({ input, ctx }) => {
+        return await getSpotifyShowEpisodes(ctx.user?.id, input.showId, input.limit ?? 10, input.offset ?? 0);
+      }),
+    getEpisode: publicProcedure
+      .input(z.object({ episodeId: z.string().min(1) }))
+      .query(async ({ input, ctx }) => {
+        return await getSpotifyEpisode(ctx.user?.id, input.episodeId);
+      }),
+    getArtistDetails: publicProcedure
+      .input(z.object({ artistId: z.string().min(1) }))
+      .query(async ({ input, ctx }) => {
+        const [artist, topTracks, albums] = await Promise.all([
+          getSpotifyArtist(ctx.user?.id, input.artistId),
+          getSpotifyArtistTopTracks(ctx.user?.id, input.artistId),
+          getSpotifyArtistAlbums(ctx.user?.id, input.artistId),
+        ]);
+        return { artist, topTracks, albums };
+      }),
+    getAlbumDetails: publicProcedure
+      .input(z.object({ albumId: z.string().min(1) }))
+      .query(async ({ input, ctx }) => {
+        return await getSpotifyAlbum(ctx.user?.id, input.albumId);
+      }),
+    recordSession: protectedProcedure
+      .input(
+        z.object({
+          contentId: z.string().min(1),
+          contentType: z.enum(["track", "episode"]),
+          title: z.string().min(1),
+          artist: z.string().min(1),
+          artworkUrl: z.string().optional().nullable(),
+          durationMs: z.number().int().optional().nullable(),
+          listenedMs: z.number().int().min(0),
+          completed: z.number().int().min(0).max(1).default(0).optional(),
+          startedAt: z.coerce.date(),
+          endedAt: z.coerce.date(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        await recordListeningSession({
+          userId: ctx.user.id,
+          contentId: input.contentId,
+          contentType: input.contentType,
+          title: input.title,
+          artist: input.artist,
+          artworkUrl: input.artworkUrl ?? undefined,
+          durationMs: input.durationMs ?? undefined,
+          listenedMs: input.listenedMs,
+          completed: input.completed ?? 0,
+          startedAt: input.startedAt,
+          endedAt: input.endedAt,
+        });
+        return { success: true };
+      }),
+    getListeningStats: protectedProcedure.query(async ({ ctx }) => {
+      return await getListeningStats(ctx.user.id);
+    }),
+    getListeningHistory: protectedProcedure
+      .input(z.object({ limit: z.number().int().min(1).max(50).default(20).optional() }).optional())
+      .query(async ({ input, ctx }) => {
+        return await getListeningHistory(ctx.user.id, input?.limit ?? 20);
+      }),
+    smartQueueContinuation: publicProcedure
+      .input(
+        z.object({
+          seedTrackIds: z.array(z.string()).min(1),
+          count: z.number().int().min(1).max(10).default(5).optional(),
+        })
+      )
+      .query(async ({ input, ctx }) => {
+        return await generateSmartQueueContinuation(ctx.user?.id, input.seedTrackIds, input.count ?? 5);
+      }),
   }),
   spotify: router({
     status: protectedProcedure.query(({ ctx }) => getSpotifyConnectionStatus(ctx.user.id)),
@@ -337,6 +490,65 @@ export const appRouter = router({
           title: input.title,
           artist: input.artist,
         });
+      }),
+    getDevices: protectedProcedure.query(async ({ ctx }) => {
+      return await getSpotifyDevices(ctx.user.id);
+    }),
+    transferPlayback: protectedProcedure
+      .input(
+        z.object({
+          deviceId: z.string().min(1),
+          play: z.boolean().default(true).optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        return await transferSpotifyPlayback(ctx.user.id, input.deviceId, input.play ?? true);
+      }),
+    savedShows: protectedProcedure
+      .input(
+        z
+          .object({
+            limit: z.number().int().min(1).max(10).default(10).optional(),
+            offset: z.number().int().min(0).default(0).optional(),
+          })
+          .optional()
+      )
+      .query(async ({ input, ctx }) => {
+        return await getUserSavedShows(ctx.user.id, input?.limit ?? 10, input?.offset ?? 0);
+      }),
+    toggleSaveShow: protectedProcedure
+      .input(
+        z.object({
+          showId: z.string().min(1),
+          save: z.boolean(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        return await toggleSaveUserShow(ctx.user.id, input.showId, input.save);
+      }),
+    userTopTracks: protectedProcedure
+      .input(
+        z
+          .object({
+            timeRange: z.enum(["short_term", "medium_term", "long_term"]).default("medium_term").optional(),
+            limit: z.number().int().min(1).max(20).default(10).optional(),
+          })
+          .optional()
+      )
+      .query(async ({ input, ctx }) => {
+        return await getUserTopTracks(ctx.user.id, input?.timeRange ?? "medium_term", input?.limit ?? 10);
+      }),
+    userTopArtists: protectedProcedure
+      .input(
+        z
+          .object({
+            timeRange: z.enum(["short_term", "medium_term", "long_term"]).default("medium_term").optional(),
+            limit: z.number().int().min(1).max(20).default(10).optional(),
+          })
+          .optional()
+      )
+      .query(async ({ input, ctx }) => {
+        return await getUserTopArtists(ctx.user.id, input?.timeRange ?? "medium_term", input?.limit ?? 10);
       }),
   }),
   playlists: router({

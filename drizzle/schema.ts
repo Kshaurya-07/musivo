@@ -100,6 +100,28 @@ export const spotifyRecentTracks = mysqlTable("spotifyRecentTracks", {
   spotifyRecentUnique: unique("spotifyRecentUnique").on(table.userId, table.externalId, table.playedAt),
 }));
 
+export const listeningSessions = mysqlTable("listeningSessions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  contentId: varchar("contentId", { length: 128 }).notNull(),
+  contentType: varchar("contentType", { length: 32 }).default("track").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  artist: varchar("artist", { length: 255 }).notNull(),
+  artworkUrl: text("artworkUrl"),
+  durationMs: int("durationMs"),
+  listenedMs: int("listenedMs").notNull(),
+  completed: int("completed").default(0).notNull(),
+  startedAt: timestamp("startedAt").defaultNow().notNull(),
+  endedAt: timestamp("endedAt").defaultNow().notNull(),
+});
+
+export const userSearches = mysqlTable("userSearches", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  query: varchar("query", { length: 255 }).notNull(),
+  searchedAt: timestamp("searchedAt").defaultNow().notNull(),
+});
+
 export type Playlist = typeof playlists.$inferSelect;
 export type InsertPlaylist = typeof playlists.$inferInsert;
 export type PlaylistTrack = typeof playlistTracks.$inferSelect;
@@ -110,3 +132,7 @@ export type SpotifyConnection = typeof spotifyConnections.$inferSelect;
 export type InsertSpotifyConnection = typeof spotifyConnections.$inferInsert;
 export type SpotifyPlaylist = typeof spotifyPlaylists.$inferSelect;
 export type SpotifyRecentTrack = typeof spotifyRecentTracks.$inferSelect;
+export type ListeningSession = typeof listeningSessions.$inferSelect;
+export type InsertListeningSession = typeof listeningSessions.$inferInsert;
+export type UserSearch = typeof userSearches.$inferSelect;
+export type InsertUserSearch = typeof userSearches.$inferInsert;

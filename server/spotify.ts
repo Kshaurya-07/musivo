@@ -36,6 +36,14 @@ type SpotifyPlaylistTracksResponse = { items?: Array<{ track?: SpotifyTrack | nu
 
 type SpotifySavedTracksResponse = { total?: number; items?: Array<{ added_at?: string; track?: SpotifyTrack | null }> };
 
+const isTestEnv = process.env.NODE_ENV === "test";
+function logWarn(...args: any[]) {
+  if (!isTestEnv) console.warn(...args);
+}
+function logError(...args: any[]) {
+  if (!isTestEnv) console.error(...args);
+}
+
 export type SpotifyStatePayload = {
   userId?: number;
   isLogin?: boolean;
@@ -50,10 +58,14 @@ const USER_SCOPES = [
   "user-modify-playback-state",
   "user-read-currently-playing",
   "user-library-read",
+  "user-library-modify",
   "playlist-read-private",
   "playlist-read-collaborative",
   "playlist-modify-private",
+  "playlist-modify-public",
   "user-read-recently-played",
+  "user-read-playback-position",
+  "user-top-read",
   "user-read-private",
   "user-read-email",
 ].join(" ");
@@ -372,6 +384,7 @@ async function spotifyUserRequest<T>(userId: number, path: string, init: Request
     }
   }
   if (!response.ok) throw new Error(`Spotify user API request failed with ${response.status}`);
+  if (response.status === 204) return { success: true } as T;
   return (await response.json()) as T;
 }
 
@@ -1547,3 +1560,770 @@ export function catalogStatus() {
 }
 
 export const spotifyUserScopes = USER_SCOPES;
+
+// ---------------- Universal Catalog Multi-Content Search & Suggestions ----------------
+
+export interface SpotifyArtistItem {
+  id: string;
+  name: string;
+  genres: string[];
+  followersCount: number;
+  images: Array<{ url: string; width?: number; height?: number }>;
+  popularity?: number;
+  externalUrls?: { spotify?: string };
+}
+
+export interface SpotifyAlbumItem {
+  id: string;
+  name: string;
+  albumType: string;
+  artists: Array<{ id?: string; name: string }>;
+  images: Array<{ url: string; width?: number; height?: number }>;
+  releaseDate: string;
+  totalTracks: number;
+  externalUrls?: { spotify?: string };
+}
+
+export interface SpotifyPlaylistItem {
+  id: string;
+  name: string;
+  description: string;
+  images: Array<{ url: string; width?: number; height?: number }>;
+  ownerName: string;
+  totalTracks: number;
+  externalUrls?: { spotify?: string };
+}
+
+export interface SpotifyShowItem {
+  id: string;
+  name: string;
+  publisher: string;
+  description: string;
+  images: Array<{ url: string; width?: number; height?: number }>;
+  totalEpisodes: number;
+  uri: string;
+  externalUrls?: { spotify?: string };
+}
+
+export interface SpotifyEpisodeItem {
+  id: string;
+  name: string;
+  description: string;
+  durationMs: number;
+  releaseDate: string;
+  images: Array<{ url: string; width?: number; height?: number }>;
+  uri: string;
+  resumePositionMs?: number;
+  isPlayable: boolean;
+  show?: { id: string; name: string; publisher?: string; images?: Array<{ url: string }> };
+  externalUrls?: { spotify?: string };
+}
+
+export interface SpotifyAudiobookItem {
+  id: string;
+  name: string;
+  authors: Array<{ name: string }>;
+  narrators: Array<{ name: string }>;
+  description: string;
+  images: Array<{ url: string; width?: number; height?: number }>;
+  totalChapters: number;
+  externalUrls?: { spotify?: string };
+}
+
+export interface UniversalSearchResult {
+  tracks: CatalogTrack[];
+  artists: SpotifyArtistItem[];
+  albums: SpotifyAlbumItem[];
+  playlists: SpotifyPlaylistItem[];
+  shows: SpotifyShowItem[];
+  episodes: SpotifyEpisodeItem[];
+  audiobooks: SpotifyAudiobookItem[];
+  topResult: {
+    type: "artist" | "track" | "album" | "playlist" | "show" | "episode" | "audiobook";
+    item: any;
+  } | null;
+  pagination: {
+    limit: number;
+    offset: number;
+    total: {
+      tracks?: number;
+      artists?: number;
+      albums?: number;
+      playlists?: number;
+      shows?: number;
+      episodes?: number;
+      audiobooks?: number;
+    };
+    hasMore: {
+      tracks?: boolean;
+      artists?: boolean;
+      albums?: boolean;
+      playlists?: boolean;
+      shows?: boolean;
+      episodes?: boolean;
+      audiobooks?: boolean;
+    };
+  };
+}
+
+export interface SearchSuggestion {
+  title: string;
+  type: "track" | "artist" | "album" | "show";
+  id?: string;
+  subtitle?: string;
+  artworkUrl?: string;
+}
+
+export interface SpotifyDeviceItem {
+  id: string | null;
+  name: string;
+  type: string;
+  isActive: boolean;
+  isRestricted: boolean;
+  volumePercent: number | null;
+  supportsVolume: boolean;
+}
+
+export async function fetchSpotifyApi<T>(userId: number | undefined, endpoint: string): Promise<T> {
+  let token: string | null = null;
+  if (userId) {
+    try {
+      token = await getUserSpotifyAccessToken(userId);
+    } catch {
+      token = null;
+    }
+  }
+  if (!token) {
+    token = await getSpotifyAccessToken();
+  }
+  if (!token) throw new Error("Spotify credentials are not configured");
+
+  const url = endpoint.startsWith("http") ? endpoint : `https://api.spotify.com/v1${endpoint}`;
+  let response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (response.status === 401) {
+    if (userId) {
+      try {
+        token = await refreshUserAccessToken(userId);
+      } catch {
+        token = await getSpotifyAccessToken();
+      }
+    } else {
+      cachedToken = null;
+      token = await getSpotifyAccessToken();
+    }
+    if (token) {
+      response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    }
+  }
+  if (!response.ok) {
+    if (response.status === 204) return { success: true } as T;
+    const text = await response.text();
+    logWarn(`[Spotify API] Request to ${endpoint} failed with ${response.status}:`, text);
+    throw new Error(`Spotify API request to ${endpoint} failed with ${response.status}`);
+  }
+  if (response.status === 204) return { success: true } as T;
+  const text = await response.text();
+  if (!text) return {} as T;
+  return JSON.parse(text) as T;
+}
+
+export async function searchSpotifyCatalog(
+  userId: number | undefined,
+  query: string,
+  types: string[] = ["track", "artist", "album", "playlist", "show", "episode"],
+  limit = 10,
+  offset = 0
+): Promise<UniversalSearchResult> {
+  const allowed = ["track", "artist", "album", "playlist", "show", "episode", "audiobook"];
+  const validTypes = (Array.isArray(types) ? types : ["track", "artist", "album", "playlist", "show"]).filter((t) => allowed.includes(t));
+  const typesParam = validTypes.length > 0 ? validTypes.join(",") : "track,artist,album,playlist,show";
+
+  // Enforce Spotify's strict max limit of 10 per type (February 2026 update)
+  const safeLimit = Math.min(Math.max(limit, 1), 10);
+  const safeOffset = Math.max(offset, 0);
+
+  const url = `/search?q=${encodeURIComponent(query)}&type=${typesParam}&market=${ENV.spotifyMarket || "US"}&limit=${safeLimit}&offset=${safeOffset}`;
+
+  try {
+    const data = await fetchSpotifyApi<any>(userId, url);
+
+    const tracks: CatalogTrack[] = (data.tracks?.items ?? []).filter((t: any) => t && t.id && t.name).map(toCatalogTrack);
+
+    const artists: SpotifyArtistItem[] = (data.artists?.items ?? []).filter((a: any) => a && a.id && a.name).map((a: any) => ({
+      id: a.id,
+      name: a.name,
+      genres: a.genres ?? [],
+      followersCount: a.followers?.total ?? 0,
+      images: a.images ?? [],
+      popularity: a.popularity,
+      externalUrls: a.external_urls,
+    }));
+
+    const albums: SpotifyAlbumItem[] = (data.albums?.items ?? []).filter((al: any) => al && al.id && al.name).map((al: any) => ({
+      id: al.id,
+      name: al.name,
+      albumType: al.album_type || "album",
+      artists: (al.artists ?? []).map((art: any) => ({ id: art.id, name: art.name })),
+      images: al.images ?? [],
+      releaseDate: al.release_date ?? "",
+      totalTracks: al.total_tracks ?? 0,
+      externalUrls: al.external_urls,
+    }));
+
+    const playlists: SpotifyPlaylistItem[] = (data.playlists?.items ?? []).filter((p: any) => p && p.id && p.name).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description ?? "",
+      images: p.images ?? [],
+      ownerName: p.owner?.display_name || "Spotify",
+      totalTracks: p.tracks?.total ?? 0,
+      externalUrls: p.external_urls,
+    }));
+
+    const shows: SpotifyShowItem[] = (data.shows?.items ?? []).filter((s: any) => s && s.id && s.name).map((s: any) => ({
+      id: s.id,
+      name: s.name,
+      publisher: s.publisher ?? "",
+      description: s.description ?? "",
+      images: s.images ?? [],
+      totalEpisodes: s.total_episodes ?? 0,
+      uri: s.uri ?? `spotify:show:${s.id}`,
+      externalUrls: s.external_urls,
+    }));
+
+    const episodes: SpotifyEpisodeItem[] = (data.episodes?.items ?? []).filter((e: any) => e && e.id && e.name).map((e: any) => ({
+      id: e.id,
+      name: e.name,
+      description: e.description ?? "",
+      durationMs: e.duration_ms ?? 0,
+      releaseDate: e.release_date ?? "",
+      images: e.images ?? [],
+      uri: e.uri ?? `spotify:episode:${e.id}`,
+      resumePositionMs: e.resume_point?.resume_position_ms,
+      isPlayable: e.is_playable ?? true,
+      externalUrls: e.external_urls,
+    }));
+
+    const audiobooks: SpotifyAudiobookItem[] = (data.audiobooks?.items ?? []).filter((ab: any) => ab && ab.id && ab.name).map((ab: any) => ({
+      id: ab.id,
+      name: ab.name,
+      authors: ab.authors ?? [],
+      narrators: ab.narrators ?? [],
+      description: ab.description ?? "",
+      images: ab.images ?? [],
+      totalChapters: ab.total_chapters ?? 0,
+      externalUrls: ab.external_urls,
+    }));
+
+    // Determine Top Result spotlight
+    let topResult: UniversalSearchResult["topResult"] = null;
+    const qNorm = query.trim().toLowerCase();
+
+    const exactArtist = artists.find((a) => a.name.toLowerCase() === qNorm);
+    const exactTrack = tracks.find((t) => t.title.toLowerCase() === qNorm);
+    const exactShow = shows.find((s) => s.name.toLowerCase() === qNorm);
+
+    if (exactArtist) {
+      topResult = { type: "artist", item: exactArtist };
+    } else if (exactTrack) {
+      topResult = { type: "track", item: exactTrack };
+    } else if (exactShow) {
+      topResult = { type: "show", item: exactShow };
+    } else if (artists.length > 0) {
+      topResult = { type: "artist", item: artists[0] };
+    } else if (tracks.length > 0) {
+      topResult = { type: "track", item: tracks[0] };
+    } else if (shows.length > 0) {
+      topResult = { type: "show", item: shows[0] };
+    } else if (albums.length > 0) {
+      topResult = { type: "album", item: albums[0] };
+    } else if (playlists.length > 0) {
+      topResult = { type: "playlist", item: playlists[0] };
+    }
+
+    const totalCounts = {
+      tracks: data.tracks?.total ?? tracks.length,
+      artists: data.artists?.total ?? artists.length,
+      albums: data.albums?.total ?? albums.length,
+      playlists: data.playlists?.total ?? playlists.length,
+      shows: data.shows?.total ?? shows.length,
+      episodes: data.episodes?.total ?? episodes.length,
+      audiobooks: data.audiobooks?.total ?? audiobooks.length,
+    };
+
+    const hasMore = {
+      tracks: safeOffset + tracks.length < totalCounts.tracks,
+      artists: safeOffset + artists.length < totalCounts.artists,
+      albums: safeOffset + albums.length < totalCounts.albums,
+      playlists: safeOffset + playlists.length < totalCounts.playlists,
+      shows: safeOffset + shows.length < totalCounts.shows,
+      episodes: safeOffset + episodes.length < totalCounts.episodes,
+      audiobooks: safeOffset + audiobooks.length < totalCounts.audiobooks,
+    };
+
+    return {
+      tracks,
+      artists,
+      albums,
+      playlists,
+      shows,
+      episodes,
+      audiobooks,
+      topResult,
+      pagination: {
+        limit: safeLimit,
+        offset: safeOffset,
+        total: totalCounts,
+        hasMore,
+      },
+    };
+  } catch (error) {
+    logError("[Spotify Universal Search] Error searching catalog:", error);
+    return {
+      tracks: [],
+      artists: [],
+      albums: [],
+      playlists: [],
+      shows: [],
+      episodes: [],
+      audiobooks: [],
+      topResult: null,
+      pagination: { limit: safeLimit, offset: safeOffset, total: {}, hasMore: {} },
+    };
+  }
+}
+
+export async function getSearchSuggestions(userId: number | undefined, query: string): Promise<SearchSuggestion[]> {
+  const clean = query.trim();
+  if (!clean || clean.length < 2) return [];
+
+  try {
+    const url = `/search?q=${encodeURIComponent(clean)}&type=artist,track,album,show&limit=3&market=${ENV.spotifyMarket || "US"}`;
+    const data = await fetchSpotifyApi<any>(userId, url);
+    const suggestions: SearchSuggestion[] = [];
+
+    (data.artists?.items ?? []).slice(0, 2).forEach((a: any) => {
+      if (a && a.id && a.name) {
+        suggestions.push({
+          title: a.name,
+          type: "artist",
+          id: a.id,
+          subtitle: "Artist",
+          artworkUrl: a.images?.[0]?.url,
+        });
+      }
+    });
+
+    (data.tracks?.items ?? []).slice(0, 3).forEach((t: any) => {
+      if (t && t.id && t.name) {
+        suggestions.push({
+          title: t.name,
+          type: "track",
+          id: t.id,
+          subtitle: `Song • ${(t.artists ?? []).map((x: any) => x.name).join(", ")}`,
+          artworkUrl: t.album?.images?.[0]?.url,
+        });
+      }
+    });
+
+    (data.albums?.items ?? []).slice(0, 2).forEach((al: any) => {
+      if (al && al.id && al.name) {
+        suggestions.push({
+          title: al.name,
+          type: "album",
+          id: al.id,
+          subtitle: `Album • ${(al.artists ?? []).map((x: any) => x.name).join(", ")}`,
+          artworkUrl: al.images?.[0]?.url,
+        });
+      }
+    });
+
+    (data.shows?.items ?? []).slice(0, 2).forEach((s: any) => {
+      if (s && s.id && s.name) {
+        suggestions.push({
+          title: s.name,
+          type: "show",
+          id: s.id,
+          subtitle: `Podcast • ${s.publisher || ""}`,
+          artworkUrl: s.images?.[0]?.url,
+        });
+      }
+    });
+
+    return suggestions.slice(0, 7);
+  } catch {
+    return [];
+  }
+}
+
+// ---------------- Podcast Endpoints ----------------
+
+export async function getSpotifyShow(userId: number | undefined, showId: string): Promise<(SpotifyShowItem & { episodes: SpotifyEpisodeItem[] }) | null> {
+  try {
+    const data = await fetchSpotifyApi<any>(userId, `/shows/${showId}?market=${ENV.spotifyMarket || "US"}`);
+    if (!data || !data.id) return null;
+
+    const episodes: SpotifyEpisodeItem[] = (data.episodes?.items ?? []).map((e: any) => ({
+      id: e.id,
+      name: e.name,
+      description: e.description ?? "",
+      durationMs: e.duration_ms ?? 0,
+      releaseDate: e.release_date ?? "",
+      images: e.images?.length ? e.images : data.images ?? [],
+      uri: e.uri ?? `spotify:episode:${e.id}`,
+      resumePositionMs: e.resume_point?.resume_position_ms,
+      isPlayable: e.is_playable ?? true,
+      show: { id: data.id, name: data.name, publisher: data.publisher, images: data.images },
+      externalUrls: e.external_urls,
+    }));
+
+    return {
+      id: data.id,
+      name: data.name,
+      publisher: data.publisher ?? "Unknown Publisher",
+      description: data.description ?? "",
+      images: data.images ?? [],
+      totalEpisodes: data.total_episodes ?? episodes.length,
+      uri: data.uri ?? `spotify:show:${data.id}`,
+      externalUrls: data.external_urls,
+      episodes,
+    };
+  } catch (error) {
+    logError(`[Spotify Show] Error getting show ${showId}:`, error);
+    return null;
+  }
+}
+
+export async function getSpotifyShowEpisodes(userId: number | undefined, showId: string, limit = 10, offset = 0): Promise<{ items: SpotifyEpisodeItem[]; total: number }> {
+  try {
+    const safeLimit = Math.min(Math.max(limit, 1), 20);
+    const data = await fetchSpotifyApi<any>(userId, `/shows/${showId}/episodes?market=${ENV.spotifyMarket || "US"}&limit=${safeLimit}&offset=${Math.max(offset, 0)}`);
+    const items: SpotifyEpisodeItem[] = (data.items ?? []).map((e: any) => ({
+      id: e.id,
+      name: e.name,
+      description: e.description ?? "",
+      durationMs: e.duration_ms ?? 0,
+      releaseDate: e.release_date ?? "",
+      images: e.images ?? [],
+      uri: e.uri ?? `spotify:episode:${e.id}`,
+      resumePositionMs: e.resume_point?.resume_position_ms,
+      isPlayable: e.is_playable ?? true,
+      externalUrls: e.external_urls,
+    }));
+    return { items, total: data.total ?? items.length };
+  } catch (error) {
+    logError(`[Spotify Show Episodes] Error getting episodes for ${showId}:`, error);
+    return { items: [], total: 0 };
+  }
+}
+
+export async function getSpotifyEpisode(userId: number | undefined, episodeId: string): Promise<SpotifyEpisodeItem | null> {
+  try {
+    const data = await fetchSpotifyApi<any>(userId, `/episodes/${episodeId}?market=${ENV.spotifyMarket || "US"}`);
+    if (!data || !data.id) return null;
+    return {
+      id: data.id,
+      name: data.name,
+      description: data.description ?? "",
+      durationMs: data.duration_ms ?? 0,
+      releaseDate: data.release_date ?? "",
+      images: data.images ?? [],
+      uri: data.uri ?? `spotify:episode:${data.id}`,
+      resumePositionMs: data.resume_point?.resume_position_ms,
+      isPlayable: data.is_playable ?? true,
+      show: data.show ? { id: data.show.id, name: data.show.name, publisher: data.show.publisher, images: data.show.images } : undefined,
+      externalUrls: data.external_urls,
+    };
+  } catch (error) {
+    logError(`[Spotify Episode] Error getting episode ${episodeId}:`, error);
+    return null;
+  }
+}
+
+export async function getUserSavedShows(userId: number, limit = 20, offset = 0): Promise<{ items: SpotifyShowItem[]; total: number }> {
+  try {
+    const data = await spotifyUserFetch<{ items?: Array<{ show: any }>; total?: number }>(userId, `/me/shows?limit=${limit}&offset=${offset}`);
+    const items: SpotifyShowItem[] = (data.items ?? []).map((entry) => ({
+      id: entry.show.id,
+      name: entry.show.name,
+      publisher: entry.show.publisher ?? "",
+      description: entry.show.description ?? "",
+      images: entry.show.images ?? [],
+      totalEpisodes: entry.show.total_episodes ?? 0,
+      uri: entry.show.uri,
+      externalUrls: entry.show.external_urls,
+    }));
+    return { items, total: data.total ?? items.length };
+  } catch (error) {
+    logWarn("[Spotify Saved Shows] Failed to fetch user shows:", error);
+    return { items: [], total: 0 };
+  }
+}
+
+export async function toggleSaveUserShow(userId: number, showId: string, save = true): Promise<{ success: boolean }> {
+  try {
+    await spotifyUserRequest<{ success: boolean }>(userId, `/me/shows?ids=${showId}`, {
+      method: save ? "PUT" : "DELETE",
+    });
+    return { success: true };
+  } catch (error) {
+    logError(`[Spotify Save Show] Failed to ${save ? "save" : "remove"} show ${showId}:`, error);
+    throw error;
+  }
+}
+
+// ---------------- Artists & Albums Navigation (Feb 2026 Compatible) ----------------
+
+export async function getSpotifyArtist(userId: number | undefined, artistId: string): Promise<SpotifyArtistItem | null> {
+  try {
+    const a = await fetchSpotifyApi<any>(userId, `/artists/${artistId}`);
+    if (!a || !a.id) return null;
+    return {
+      id: a.id,
+      name: a.name,
+      genres: a.genres ?? [],
+      followersCount: a.followers?.total ?? 0,
+      images: a.images ?? [],
+      popularity: a.popularity,
+      externalUrls: a.external_urls,
+    };
+  } catch (error) {
+    logError(`[Spotify Artist] Error fetching artist ${artistId}:`, error);
+    return null;
+  }
+}
+
+export async function getSpotifyArtistTopTracks(userId: number | undefined, artistId: string, artistName?: string): Promise<CatalogTrack[]> {
+  try {
+    // Spotify removed the standalone Artist Top Tracks endpoint in February 2026.
+    // We resolve the artist's most prominent works through catalog search.
+    let name = artistName;
+    if (!name) {
+      const artist = await getSpotifyArtist(userId, artistId);
+      name = artist?.name || artistId;
+    }
+    const searchRes = await searchSpotifyCatalog(userId, `artist:"${name}"`, ["track"], 10, 0);
+    return searchRes.tracks;
+  } catch (error) {
+    logError(`[Spotify Artist Top Tracks] Error for ${artistId}:`, error);
+    return [];
+  }
+}
+
+export async function getSpotifyArtistAlbums(userId: number | undefined, artistId: string, limit = 10, offset = 0): Promise<SpotifyAlbumItem[]> {
+  try {
+    const data = await fetchSpotifyApi<any>(userId, `/artists/${artistId}/albums?include_groups=album,single&limit=${Math.min(limit, 20)}&offset=${offset}&market=${ENV.spotifyMarket || "US"}`);
+    return (data.items ?? []).map((al: any) => ({
+      id: al.id,
+      name: al.name,
+      albumType: al.album_type || "album",
+      artists: (al.artists ?? []).map((art: any) => ({ id: art.id, name: art.name })),
+      images: al.images ?? [],
+      releaseDate: al.release_date ?? "",
+      totalTracks: al.total_tracks ?? 0,
+      externalUrls: al.external_urls,
+    }));
+  } catch (error) {
+    logError(`[Spotify Artist Albums] Error for ${artistId}:`, error);
+    return [];
+  }
+}
+
+export async function getSpotifyAlbum(userId: number | undefined, albumId: string): Promise<(SpotifyAlbumItem & { tracks: CatalogTrack[] }) | null> {
+  try {
+    const data = await fetchSpotifyApi<any>(userId, `/albums/${albumId}?market=${ENV.spotifyMarket || "US"}`);
+    if (!data || !data.id) return null;
+
+    const albumArtwork = data.images?.[0]?.url || "";
+    const tracks: CatalogTrack[] = (data.tracks?.items ?? []).map((t: any) => ({
+      id: `spotify-${t.id}`,
+      title: t.name,
+      artist: (t.artists ?? []).map((a: any) => a.name).join(", ") || "Unknown artist",
+      album: data.name,
+      art: albumArtwork,
+      audio: "",
+      storeUrl: t.external_urls?.spotify ?? `https://open.spotify.com/track/${t.id}`,
+      durationMs: t.duration_ms ?? null,
+      accent: "#f5ba42",
+      source: "Spotify",
+    }));
+
+    return {
+      id: data.id,
+      name: data.name,
+      albumType: data.album_type || "album",
+      artists: (data.artists ?? []).map((art: any) => ({ id: art.id, name: art.name })),
+      images: data.images ?? [],
+      releaseDate: data.release_date ?? "",
+      totalTracks: data.total_tracks ?? tracks.length,
+      externalUrls: data.external_urls,
+      tracks,
+    };
+  } catch (error) {
+    logError(`[Spotify Album] Error fetching album ${albumId}:`, error);
+    return null;
+  }
+}
+
+// ---------------- Spotify Connect Devices ----------------
+
+export async function getSpotifyDevices(userId: number): Promise<SpotifyDeviceItem[]> {
+  try {
+    const data = await spotifyUserFetch<{ devices?: any[] }>(userId, "/me/player/devices");
+    return (data.devices ?? []).map((d: any) => ({
+      id: d.id ?? null,
+      name: d.name || "Unknown Device",
+      type: d.type || "Speaker",
+      isActive: Boolean(d.is_active),
+      isRestricted: Boolean(d.is_restricted),
+      volumePercent: typeof d.volume_percent === "number" ? d.volume_percent : null,
+      supportsVolume: d.supports_volume ?? true,
+    }));
+  } catch (error) {
+    logWarn("[Spotify Devices] Error listing devices:", error);
+    return [];
+  }
+}
+
+export async function transferSpotifyPlayback(userId: number, deviceId: string, play = false): Promise<{ success: boolean }> {
+  try {
+    await spotifyUserRequest<{ success: boolean }>(userId, "/me/player", {
+      method: "PUT",
+      body: JSON.stringify({ device_ids: [deviceId], play }),
+    });
+    return { success: true };
+  } catch (error) {
+    logError(`[Spotify Transfer] Failed to transfer playback to device ${deviceId}:`, error);
+    throw error;
+  }
+}
+
+// ---------------- User Top Items (Profile Insights) ----------------
+
+export async function getUserTopTracks(userId: number, timeRange = "medium_term", limit = 10): Promise<CatalogTrack[]> {
+  try {
+    const safeLimit = Math.min(Math.max(limit, 1), 20);
+    const data = await spotifyUserFetch<{ items?: any[] }>(userId, `/me/top/tracks?time_range=${timeRange}&limit=${safeLimit}`);
+    return (data.items ?? []).filter((t) => t && t.id && t.name).map(toCatalogTrack);
+  } catch (error) {
+    logWarn("[Spotify Top Tracks] Error fetching top tracks:", error);
+    return [];
+  }
+}
+
+export async function getUserTopArtists(userId: number, timeRange = "medium_term", limit = 10): Promise<SpotifyArtistItem[]> {
+  try {
+    const safeLimit = Math.min(Math.max(limit, 1), 20);
+    const data = await spotifyUserFetch<{ items?: any[] }>(userId, `/me/top/artists?time_range=${timeRange}&limit=${safeLimit}`);
+    return (data.items ?? []).filter((a) => a && a.id && a.name).map((a: any) => ({
+      id: a.id,
+      name: a.name,
+      genres: a.genres ?? [],
+      followersCount: a.followers?.total ?? 0,
+      images: a.images ?? [],
+      popularity: a.popularity,
+      externalUrls: a.external_urls,
+    }));
+  } catch (error) {
+    logWarn("[Spotify Top Artists] Error fetching top artists:", error);
+    return [];
+  }
+}
+
+// ---------------- Smart Queue Auto-Continuation ----------------
+
+export async function generateSmartQueueContinuation(
+  userId: number | undefined,
+  seedTrackIds: string[] = [],
+  count = 5
+): Promise<CatalogTrack[]> {
+  const excludedIds = new Set<string>();
+  const excludedTitles = new Set<string>();
+
+  // Extract clean track IDs from input seeds
+  const cleanSeedIds = (Array.isArray(seedTrackIds) ? seedTrackIds : [])
+    .map((id) => String(id).replace(/^spotify-/, "").trim())
+    .filter((id) => id && id.length > 5);
+
+  cleanSeedIds.forEach((id) => excludedIds.add(id));
+
+  // If user is connected, build exclusion set from listening history and liked tracks
+  if (userId) {
+    try {
+      const [recentHistory, likedTracks] = await Promise.all([
+        db.listSpotifyRecentTracks(userId).catch(() => []),
+        db.listLikedTracks(userId).catch(() => []),
+      ]);
+      recentHistory.forEach((r: any) => {
+        if (r.externalId) excludedIds.add(String(r.externalId).replace(/^spotify-/, ""));
+        if (r.title) excludedTitles.add(String(r.title).toLowerCase().trim());
+      });
+      likedTracks.forEach((l: any) => {
+        if (l.externalId) excludedIds.add(String(l.externalId).replace(/^spotify-/, ""));
+        if (l.title) excludedTitles.add(String(l.title).toLowerCase().trim());
+      });
+    } catch (e) {
+      logWarn("[Smart Queue] Could not fetch user history for exclusion:", e);
+    }
+  }
+
+  const candidateTracks: CatalogTrack[] = [];
+  const candidateIds = new Set<string>();
+
+  // Use seed track IDs to query recommendations
+  if (cleanSeedIds.length > 0) {
+    try {
+      const seedParam = cleanSeedIds.slice(0, 5).join(",");
+      const recs = await fetchSpotifyApi<{ tracks?: any[] }>(
+        userId,
+        `/recommendations?seed_tracks=${encodeURIComponent(seedParam)}&limit=10&market=${ENV.spotifyMarket || "US"}`
+      );
+      (recs.tracks ?? []).forEach((t: any) => {
+        if (t && t.id && t.name) {
+          const rawId = String(t.id);
+          const tNorm = t.name.toLowerCase().trim();
+          if (!excludedIds.has(rawId) && !excludedTitles.has(tNorm) && !candidateIds.has(rawId)) {
+            candidateIds.add(rawId);
+            candidateTracks.push(toCatalogTrack(t));
+          }
+        }
+      });
+    } catch (err) {
+      logWarn("[Smart Queue] Recommendations API call failed, falling back to discovery search:", err);
+    }
+  }
+
+  // If recommendations didn't yield enough, search related genres and exploratory tracks
+  if (candidateTracks.length < 5) {
+    const discoveryQueries = ["tag:new", "discover weekly", "indie gems", "ambient chill", "neo soul"];
+    for (const q of discoveryQueries) {
+      if (candidateTracks.length >= 8) break;
+      try {
+        const searchRes = await searchSpotifyCatalog(userId, q, ["track"], 6, 0);
+        for (const t of searchRes.tracks) {
+          const rawId = t.id.replace(/^spotify-/, "");
+          const tNorm = t.title.toLowerCase().trim();
+          if (!excludedIds.has(rawId) && !excludedTitles.has(tNorm) && !candidateIds.has(rawId)) {
+            candidateIds.add(rawId);
+            candidateTracks.push(t);
+            if (candidateTracks.length >= 8) break;
+          }
+        }
+      } catch {
+        // Continue search
+      }
+    }
+  }
+
+  // Ensure artist diversity: no identical artists consecutively
+  const diverseTracks: CatalogTrack[] = [];
+  let lastArtist = "";
+  for (const t of candidateTracks) {
+    if (t.artist.toLowerCase() !== lastArtist) {
+      diverseTracks.push(t);
+      lastArtist = t.artist.toLowerCase();
+    }
+  }
+
+  return diverseTracks.length > 0 ? diverseTracks.slice(0, count) : candidateTracks.slice(0, count);
+}
