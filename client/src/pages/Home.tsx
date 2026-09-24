@@ -62,6 +62,8 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { MusicCard } from "@/components/MusicCard";
 import { ArtistCard } from "@/components/ArtistCard";
 import { QuickAccessCard } from "@/components/QuickAccessCard";
+import { ChartBannerCard } from "@/components/ChartBannerCard";
+import { SubNavRibbon } from "@/components/SubNavRibbon";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
@@ -2472,6 +2474,33 @@ export default function Home() {
   }, []);
 
   const [dashboardFilter, setDashboardFilter] = useState<"all" | "music" | "podcasts" | "aimix">("all");
+  const [selectedGenreFilter, setSelectedGenreFilter] = useState<string>("all");
+
+  const handleSurpriseMe = useCallback(() => {
+    if (!catalog.length) return;
+    const randomIndex = Math.floor(Math.random() * catalog.length);
+    const surpriseTrack = catalog[randomIndex];
+    void playTrack(surpriseTrack, catalog);
+    toast.success(`Surprise Pick! Now streaming "${surpriseTrack.title}" by ${surpriseTrack.artist}`);
+  }, [catalog, playTrack]);
+
+  const filteredCatalog = useMemo(() => {
+    if (selectedGenreFilter === "all") return catalog;
+    const filterLower = selectedGenreFilter.toLowerCase();
+    const matched = catalog.filter((track) => {
+      const combined = `${track.title} ${track.artist} ${track.album ?? ""}`.toLowerCase();
+      if (selectedGenreFilter === "pop") return combined.includes("pop") || combined.includes("love") || combined.includes("hit") || combined.includes("anthem");
+      if (selectedGenreFilter === "lofi") return combined.includes("chill") || combined.includes("flow") || combined.includes("late") || combined.includes("soft") || combined.includes("rain");
+      if (selectedGenreFilter === "electronic") return combined.includes("drive") || combined.includes("neon") || combined.includes("synth") || combined.includes("club") || combined.includes("vibe");
+      if (selectedGenreFilter === "indie") return combined.includes("indie") || combined.includes("launch") || combined.includes("acoustic") || combined.includes("cafe");
+      if (selectedGenreFilter === "rock") return combined.includes("rock") || combined.includes("faster") || combined.includes("guitar") || combined.includes("power");
+      if (selectedGenreFilter === "acoustic") return combined.includes("acoustic") || combined.includes("soft") || combined.includes("morning") || combined.includes("coffee");
+      if (selectedGenreFilter === "focus") return combined.includes("focus") || combined.includes("flow") || combined.includes("no lyrics") || combined.includes("deep");
+      if (selectedGenreFilter === "ambient") return combined.includes("ambient") || combined.includes("night") || combined.includes("sleep") || combined.includes("dream");
+      return combined.includes(filterLower);
+    });
+    return matched.length >= 4 ? matched : catalog;
+  }, [catalog, selectedGenreFilter]);
 
   const popularArtists = useMemo(() => {
     const seen = new Set<string>();
@@ -2759,6 +2788,44 @@ export default function Home() {
                 />
               </div>
 
+              {/* JioSaavn Primary Category Navigation Tabs */}
+              <div className="hidden md:flex items-center gap-1 shrink-0 mr-2">
+                <button
+                  type="button"
+                  onClick={() => handleNav("home")}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
+                    activeView === "home" || activeView === "discover" || activeView === "releases"
+                      ? "bg-white/[0.08] text-[#f5ba42]"
+                      : "text-[#9a8976] hover:text-[#faf5ee] hover:bg-white/[0.04]"
+                  }`}
+                >
+                  Music
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNav("podcasts")}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
+                    activeView === "podcasts"
+                      ? "bg-white/[0.08] text-[#f5ba42]"
+                      : "text-[#9a8976] hover:text-[#faf5ee] hover:bg-white/[0.04]"
+                  }`}
+                >
+                  Podcasts
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNav("aimix")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition ${
+                    activeView === "aimix"
+                      ? "bg-[#f5ba42]/20 text-[#f5ba42] border border-[#f5ba42]/30"
+                      : "text-[#9a8976] hover:text-[#f5ba42] hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <Sparkles className="h-3 w-3 text-[#f5ba42]" />
+                  <span>AI Mix</span>
+                </button>
+              </div>
+
               {/* JioSaavn-style Rounded-Full Universal Search Pill */}
               <div className="relative w-full max-w-[460px] group">
                 <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8c7b68] group-focus-within:text-[#f5ba42] transition-colors" />
@@ -2929,41 +2996,50 @@ export default function Home() {
                 syncStepText={syncStepText}
               />
             ) : activeView === "aimix" ? (
-              <AiMixStudio
-                recommendations={aiRecommendations}
-                meta={aiMixMeta}
-                selectedMood={selectedMood}
-                onSelectMood={(mood) => {
-                  setSelectedMood(mood);
-                  handleBuildAiMix(mood, undefined);
-                }}
-                customPrompt={customPrompt}
-                onChangePrompt={setCustomPrompt}
-                onBuildMix={() => handleBuildAiMix()}
-                onRefreshMix={() => handleBuildAiMix(undefined, undefined, undefined, true)}
-                buildingMix={aiMixMutation.isPending}
-                onPlayMix={handlePlayAiMix}
-                onPlayTrack={(t) => void playTrack(t, aiRecommendations.map(aiRecommendationToTrack))}
-                onSaveToLibrary={handleSaveAiMixToLibrary}
-                onExportToSpotify={handleExportAiMixToSpotify}
-                exportingSpotify={spotifyCreatePlaylistMutation.isPending}
-                isSpotifyConnected={Boolean(spotifyStatusQuery.data?.connected)}
-                activeTrackId={currentTrack.id}
-                isPlaying={isPlaying}
-                likedIds={likedIds}
-                onLike={toggleLike}
-                tasteProfile={aiTasteProfileQuery.data}
-                trainingModel={trainAiMixMutation.isPending}
-                onRetrainModel={() => trainAiMixMutation.mutate()}
-                pastAiPlaylists={pastAiPlaylistsQuery.data ?? []}
-                selectedSeedPlaylistId={selectedSeedPlaylistId}
-                onSelectSeedPlaylist={(id) => {
-                  setSelectedSeedPlaylistId(id);
-                  handleBuildAiMix(undefined, undefined, id);
-                }}
-                onAddToQueue={(track) => addToQueue(track)}
-                onAddAllToQueue={handleLoadAiMixToQueue}
-              />
+              <section className="space-y-6">
+                <SubNavRibbon
+                  activeTab="aimix"
+                  onSelectTab={handleNav}
+                  activeFilter={selectedGenreFilter}
+                  onSelectFilter={setSelectedGenreFilter}
+                  onSurpriseMe={handleSurpriseMe}
+                />
+                <AiMixStudio
+                  recommendations={aiRecommendations}
+                  meta={aiMixMeta}
+                  selectedMood={selectedMood}
+                  onSelectMood={(mood) => {
+                    setSelectedMood(mood);
+                    handleBuildAiMix(mood, undefined);
+                  }}
+                  customPrompt={customPrompt}
+                  onChangePrompt={setCustomPrompt}
+                  onBuildMix={() => handleBuildAiMix()}
+                  onRefreshMix={() => handleBuildAiMix(undefined, undefined, undefined, true)}
+                  buildingMix={aiMixMutation.isPending}
+                  onPlayMix={handlePlayAiMix}
+                  onPlayTrack={(t) => void playTrack(t, aiRecommendations.map(aiRecommendationToTrack))}
+                  onSaveToLibrary={handleSaveAiMixToLibrary}
+                  onExportToSpotify={handleExportAiMixToSpotify}
+                  exportingSpotify={spotifyCreatePlaylistMutation.isPending}
+                  isSpotifyConnected={Boolean(spotifyStatusQuery.data?.connected)}
+                  activeTrackId={currentTrack.id}
+                  isPlaying={isPlaying}
+                  likedIds={likedIds}
+                  onLike={toggleLike}
+                  tasteProfile={aiTasteProfileQuery.data}
+                  trainingModel={trainAiMixMutation.isPending}
+                  onRetrainModel={() => trainAiMixMutation.mutate()}
+                  pastAiPlaylists={pastAiPlaylistsQuery.data ?? []}
+                  selectedSeedPlaylistId={selectedSeedPlaylistId}
+                  onSelectSeedPlaylist={(id) => {
+                    setSelectedSeedPlaylistId(id);
+                    handleBuildAiMix(undefined, undefined, id);
+                  }}
+                  onAddToQueue={(track) => addToQueue(track)}
+                  onAddAllToQueue={handleLoadAiMixToQueue}
+                />
+              </section>
             ) : activeView === "liked" ? (
               <section>
                 <SectionHeading
@@ -2998,63 +3074,213 @@ export default function Home() {
                 )}
               </section>
             ) : activeView === "playlists" ? (
-              <section>
-                <SectionHeading
-                  eyebrow="Your library"
-                  title="Playlists"
-                  action="Create new"
-                  onAction={() => openPlaylistDialog()}
+              <section className="space-y-8">
+                <SubNavRibbon
+                  activeTab="playlists"
+                  onSelectTab={handleNav}
+                  activeFilter={selectedGenreFilter}
+                  onSelectFilter={setSelectedGenreFilter}
+                  onSurpriseMe={handleSurpriseMe}
                 />
-                {(playlistsQuery.data ?? []).length > 0 ? (
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {(playlistsQuery.data ?? []).map((playlist) => (
+                <div>
+                  <SectionHeader
+                    eyebrow="Your Library"
+                    title="Playlists"
+                    subtitle="Collections and playlists saved to your account"
+                    action="Create New"
+                    onAction={() => openPlaylistDialog()}
+                  />
+                  {(playlistsQuery.data ?? []).length > 0 ? (
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {(playlistsQuery.data ?? []).map((playlist) => (
+                        <button
+                          key={playlist.id}
+                          onClick={() => toast.info(`${playlist.name} is ready for track additions.`)}
+                          className="flex min-h-[132px] flex-col justify-between rounded-2xl border border-white/[0.08] bg-[#17110a] p-5 text-left transition-colors hover:border-[#c88719] hover:bg-[#231a10]"
+                        >
+                          <ListMusic className="h-5 w-5 text-[#f5ba42]" />
+                          <span>
+                            <p className="font-display text-lg font-semibold">{playlist.name}</p>
+                            <p className="mt-1 text-xs text-[#948472]">Synced to your account</p>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-white/[0.12] px-6 py-12 text-center">
+                      <ListMusic className="mx-auto mb-4 h-7 w-7 text-[#f5ba42]" />
+                      <p className="font-display text-lg font-semibold">Build your first playlist</p>
+                      <p className="mt-1 text-sm text-[#9c8c79]">
+                        Save catalog tracks into a collection that follows you.
+                      </p>
                       <button
-                        key={playlist.id}
-                        onClick={() => toast.info(`${playlist.name} is ready for track additions.`)}
-                        className="flex min-h-[132px] flex-col justify-between rounded-2xl border border-white/[0.08] bg-[#17110a] p-5 text-left transition-colors hover:border-[#c88719] hover:bg-[#231a10]"
+                        onClick={() => openPlaylistDialog()}
+                        className="mt-5 rounded-full bg-[#f5ba42] px-4 py-2 text-sm font-bold text-[#140f07]"
                       >
-                        <ListMusic className="h-5 w-5 text-[#f5ba42]" />
-                        <span>
-                          <p className="font-display text-lg font-semibold">{playlist.name}</p>
-                          <p className="mt-1 text-xs text-[#948472]">Synced to your account</p>
-                        </span>
+                        Create playlist
                       </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* JioSaavn-style Top Playlists Shelf */}
+                <div className="mt-8">
+                  <SectionHeader
+                    eyebrow="Top Playlists"
+                    title="Featured Playlists"
+                    subtitle="Curated collections ready to stream right now"
+                    action="Explore All"
+                    onAction={() => setActiveView("discover")}
+                  />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4">
+                    {mixes.map((mix, idx) => (
+                      <div
+                        key={`playlist-shelf-${mix.title}`}
+                        onClick={() => {
+                          const target = catalog[idx % Math.max(catalog.length, 1)] ?? fallbackTracks[0];
+                          void playTrack(target, catalog);
+                          toast.success(`${mix.title} is now playing`);
+                        }}
+                        className="group relative flex flex-col p-3 rounded-2xl bg-[#16110a] hover:bg-[#20180f] border border-white/[0.06] hover:border-[#f5ba42]/30 transition-all duration-300 cursor-pointer shadow-md hover:shadow-xl hover:-translate-y-1"
+                      >
+                        <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-2.5 bg-[#24170c] shadow-md">
+                          <img
+                            src={mix.art}
+                            alt={mix.title}
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                          <button
+                            type="button"
+                            aria-label={`Play ${mix.title}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const target = catalog[idx % Math.max(catalog.length, 1)] ?? fallbackTracks[0];
+                              void playTrack(target, catalog);
+                              toast.success(`${mix.title} is now playing`);
+                            }}
+                            className="absolute bottom-2 right-2 h-10 w-10 rounded-full bg-[#f5ba42] text-[#140f07] shadow-2xl flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:scale-110 active:scale-95 z-10"
+                          >
+                            <Play className="h-4 w-4 fill-current ml-0.5" />
+                          </button>
+                        </div>
+                        <p className="font-semibold text-xs sm:text-sm text-[#faf5ee] truncate group-hover:text-[#f5ba42] transition-colors">
+                          {mix.title}
+                        </p>
+                        <p className="text-[11px] sm:text-xs text-[#9a8976] truncate mt-0.5">
+                          {mix.detail}
+                        </p>
+                      </div>
                     ))}
                   </div>
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-white/[0.12] px-6 py-16 text-center">
-                    <ListMusic className="mx-auto mb-4 h-7 w-7 text-[#f5ba42]" />
-                    <p className="font-display text-lg font-semibold">Build your first playlist</p>
-                    <p className="mt-1 text-sm text-[#9c8c79]">
-                      Save catalog tracks into a collection that follows you.
-                    </p>
-                    <button
-                      onClick={() => openPlaylistDialog()}
-                      className="mt-5 rounded-full bg-[#f5ba42] px-4 py-2 text-sm font-bold text-[#140f07]"
-                    >
-                      Create playlist
-                    </button>
-                  </div>
-                )}
+                </div>
               </section>
             ) : activeView === "podcasts" ? (
               <section className="space-y-6">
+                <SubNavRibbon
+                  activeTab="podcasts"
+                  onSelectTab={handleNav}
+                  activeFilter={selectedGenreFilter}
+                  onSelectFilter={setSelectedGenreFilter}
+                  onSurpriseMe={handleSurpriseMe}
+                />
                 <PodcastView />
               </section>
             ) : activeView === "discover" ? (
               <section className="space-y-8">
-                <SectionHeading
-                  eyebrow="Explore"
-                  title="Discover"
-                  action="Back home"
-                  onAction={() => setActiveView("home")}
+                <SubNavRibbon
+                  activeTab="discover"
+                  onSelectTab={handleNav}
+                  activeFilter={selectedGenreFilter}
+                  onSelectFilter={setSelectedGenreFilter}
+                  onSurpriseMe={handleSurpriseMe}
                 />
+
+                {/* Top Music Charts Banner Shelf (Screenshot 3) */}
+                <div>
+                  <SectionHeader
+                    eyebrow="Charts & Leaderboards"
+                    title="Top Music Charts"
+                    subtitle="The most played and trending soundscapes across Musivo"
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <ChartBannerCard
+                      title="Top 50 - Musivo Global"
+                      subtitle="Updated daily · Worldwide most streamed"
+                      badge="TOP 50"
+                      image={catalog[0]?.art}
+                      gradient="from-[#3a2211] via-[#22160d] to-[#140d08]"
+                      isCurrent={Boolean(catalog[0] && currentTrack.id === catalog[0].id)}
+                      isPlaying={isPlaying && Boolean(catalog[0] && currentTrack.id === catalog[0].id)}
+                      onClick={() => catalog[0] && void playTrack(catalog[0], catalog)}
+                      onPlay={() => catalog[0] && void playTrack(catalog[0], catalog)}
+                    />
+                    <ChartBannerCard
+                      title="Trending Today"
+                      subtitle="Viral breakout hits & indie discoveries"
+                      badge="TRENDING"
+                      image={catalog[1]?.art}
+                      gradient="from-[#2e1919] via-[#1e1310] to-[#120d09]"
+                      isCurrent={Boolean(catalog[1] && currentTrack.id === catalog[1].id)}
+                      isPlaying={isPlaying && Boolean(catalog[1] && currentTrack.id === catalog[1].id)}
+                      onClick={() => catalog[1] && void playTrack(catalog[1], catalog)}
+                      onPlay={() => catalog[1] && void playTrack(catalog[1], catalog)}
+                    />
+                    <ChartBannerCard
+                      title="Musivo Superhits"
+                      subtitle="Certified chart-toppers & crowd favorites"
+                      badge="SUPERHITS"
+                      image={catalog[2]?.art}
+                      gradient="from-[#1c271e] via-[#151c14] to-[#0e140d]"
+                      isCurrent={Boolean(catalog[2] && currentTrack.id === catalog[2].id)}
+                      isPlaying={isPlaying && Boolean(catalog[2] && currentTrack.id === catalog[2].id)}
+                      onClick={() => catalog[2] && void playTrack(catalog[2], catalog)}
+                      onPlay={() => catalog[2] && void playTrack(catalog[2], catalog)}
+                    />
+                    <ChartBannerCard
+                      title="Late Night Lo-Fi"
+                      subtitle="Smooth ambient & relaxing chill sessions"
+                      badge="LO-FI"
+                      image={catalog[3]?.art}
+                      gradient="from-[#1e1e32] via-[#151522] to-[#0d0d16]"
+                      isCurrent={Boolean(catalog[3] && currentTrack.id === catalog[3].id)}
+                      isPlaying={isPlaying && Boolean(catalog[3] && currentTrack.id === catalog[3].id)}
+                      onClick={() => catalog[3] && void playTrack(catalog[3], catalog)}
+                      onPlay={() => catalog[3] && void playTrack(catalog[3], catalog)}
+                    />
+                  </div>
+                </div>
+
+                {/* Top Ranked Songs */}
+                <div>
+                  <SectionHeader
+                    eyebrow="Right Now"
+                    title="Chart Toppers"
+                    subtitle="Ranked in real-time by total streams"
+                  />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                    {catalog.slice(0, 12).map((track, idx) => (
+                      <MusicCard
+                        key={`chart-top-${track.id}`}
+                        track={track}
+                        rank={idx + 1}
+                        isCurrent={currentTrack.id === track.id}
+                        isPlaying={isPlaying && currentTrack.id === track.id}
+                        isLiked={likedIds.has(String(track.id))}
+                        onPlay={() => void playTrack(track, catalog)}
+                        onLike={() => toggleLike(track)}
+                        onAddToQueue={() => addToQueue(track)}
+                      />
+                    ))}
+                  </div>
+                </div>
 
                 {/* Mood & Soundscapes Grid */}
                 <div>
-                  <h2 className="font-display text-lg sm:text-xl font-bold text-[#faf5ee] mb-3">
-                    Curated Moods & Vibes
-                  </h2>
+                  <SectionHeader
+                    eyebrow="Moods & Genres"
+                    title="Curated Moods & Vibes"
+                    subtitle="Soundscapes tailored for every frame of mind"
+                  />
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
                     {MOOD_OPTIONS.map((mood) => (
                       <button
@@ -3083,93 +3309,35 @@ export default function Home() {
 
                 {/* Full Catalog Multi-Column Responsive Grid */}
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="font-display text-lg sm:text-xl font-bold text-[#faf5ee]">
-                      All Tracks & Catalog ({catalog.length})
-                    </h2>
-                    <span className="font-mono text-xs text-[#90816f]">
-                      {catalog.length} items
-                    </span>
-                  </div>
+                  <SectionHeader
+                    eyebrow="Complete Collection"
+                    title={`All Tracks & Catalog (${catalog.length})`}
+                    subtitle="Every master recording available in your current audio library"
+                  />
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
                     {catalog.map((track) => (
-                      <div
+                      <MusicCard
                         key={`discover-track-${track.id}`}
-                        onClick={() => void playTrack(track, catalog)}
-                        className="group flex flex-col p-3 rounded-2xl bg-[#17110a] hover:bg-[#231a10] border border-white/[0.06] hover:border-white/[0.14] transition-all duration-300 cursor-pointer shadow-md"
-                      >
-                        <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-2.5 bg-[#24170c] shadow-md">
-                          <img
-                            src={track.art}
-                            alt=""
-                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          />
-                          <button
-                            type="button"
-                            aria-label={`Play ${track.title}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void playTrack(track, catalog);
-                            }}
-                            className="absolute bottom-2 right-2 h-9 w-9 rounded-full bg-[#f5ba42] text-[#140f07] shadow-2xl flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:scale-105"
-                          >
-                            <Play className="h-4 w-4 fill-current ml-0.5" />
-                          </button>
-                        </div>
-                        <p className="font-semibold text-xs sm:text-sm text-[#faf5ee] truncate">
-                          {track.title}
-                        </p>
-                        <p className="text-[11px] sm:text-xs text-[#9a8976] truncate mt-0.5">
-                          {track.artist}
-                        </p>
-                        <div className="mt-2 flex items-center justify-between pt-1.5 border-t border-white/[0.05]">
-                          <span className="font-mono text-[10px] text-[#7d6e5d]">
-                            {track.duration}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              title="Add to queue"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                addToQueue(track);
-                              }}
-                              className="p-1 text-[#8c7b68] hover:text-[#f5ba42] transition"
-                            >
-                              <ListPlus className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              title="Save to liked"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleLike(track);
-                              }}
-                              className={`p-1 transition ${
-                                likedIds.has(String(track.id))
-                                  ? "text-[#f5ba42]"
-                                  : "text-[#8c7b68] hover:text-white"
-                              }`}
-                            >
-                              <Heart
-                                className="h-3.5 w-3.5"
-                                fill={likedIds.has(String(track.id)) ? "currentColor" : "none"}
-                              />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
+                        track={track}
+                        isCurrent={currentTrack.id === track.id}
+                        isPlaying={isPlaying && currentTrack.id === track.id}
+                        isLiked={likedIds.has(String(track.id))}
+                        onPlay={() => void playTrack(track, catalog)}
+                        onLike={() => toggleLike(track)}
+                        onAddToQueue={() => addToQueue(track)}
+                      />
                     ))}
                   </div>
                 </div>
               </section>
             ) : activeView === "releases" ? (
               <section className="space-y-8">
-                <SectionHeading
-                  eyebrow="Fresh drops"
-                  title="New Releases"
-                  action="Back home"
-                  onAction={() => setActiveView("home")}
+                <SubNavRibbon
+                  activeTab="releases"
+                  onSelectTab={handleNav}
+                  activeFilter={selectedGenreFilter}
+                  onSelectFilter={setSelectedGenreFilter}
+                  onSurpriseMe={handleSurpriseMe}
                 />
 
                 {/* Featured Release Hero Banner */}
@@ -3218,149 +3386,38 @@ export default function Home() {
 
                 {/* New Releases Multi-Column Grid */}
                 <div>
-                  <h2 className="font-display text-lg sm:text-xl font-bold text-[#faf5ee] mb-4">
-                    Latest Singles & Drops
-                  </h2>
+                  <SectionHeader
+                    eyebrow="Fresh Drops"
+                    title="Latest Singles & Drops"
+                    subtitle="Newly released singles, master recordings, and recent album cuts"
+                  />
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
                     {catalog.map((track) => (
-                      <div
+                      <MusicCard
                         key={`release-track-${track.id}`}
-                        onClick={() => void playTrack(track, catalog)}
-                        className="group relative flex flex-col p-3 rounded-2xl bg-[#17110a] hover:bg-[#231a10] border border-white/[0.06] hover:border-white/[0.14] transition-all duration-300 cursor-pointer shadow-md"
-                      >
-                        <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-2.5 bg-[#24170c] shadow-md">
-                          <img
-                            src={track.art}
-                            alt=""
-                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          />
-                          <span className="absolute top-2 left-2 rounded-md bg-[#f5ba42] px-1.5 py-0.5 text-[9px] font-mono font-bold text-[#140f07] shadow-md">
-                            NEW
-                          </span>
-                          <button
-                            type="button"
-                            aria-label={`Play ${track.title}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void playTrack(track, catalog);
-                            }}
-                            className="absolute bottom-2 right-2 h-9 w-9 rounded-full bg-[#f5ba42] text-[#140f07] shadow-2xl flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:scale-105"
-                          >
-                            <Play className="h-4 w-4 fill-current ml-0.5" />
-                          </button>
-                        </div>
-                        <p className="font-semibold text-xs sm:text-sm text-[#faf5ee] truncate">
-                          {track.title}
-                        </p>
-                        <p className="text-[11px] sm:text-xs text-[#9a8976] truncate mt-0.5">
-                          {track.artist}
-                        </p>
-                        <div className="mt-2 flex items-center justify-between pt-1.5 border-t border-white/[0.05]">
-                          <span className="font-mono text-[10px] text-[#7d6e5d]">
-                            {track.duration}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              title="Add to queue"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                addToQueue(track);
-                              }}
-                              className="p-1 text-[#8c7b68] hover:text-[#f5ba42] transition"
-                            >
-                              <ListPlus className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              title="Save to liked"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleLike(track);
-                              }}
-                              className={`p-1 transition ${
-                                likedIds.has(String(track.id))
-                                  ? "text-[#f5ba42]"
-                                  : "text-[#8c7b68] hover:text-white"
-                              }`}
-                            >
-                              <Heart
-                                className="h-3.5 w-3.5"
-                                fill={likedIds.has(String(track.id)) ? "currentColor" : "none"}
-                              />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
+                        track={track}
+                        badge="NEW"
+                        isCurrent={currentTrack.id === track.id}
+                        isPlaying={isPlaying && currentTrack.id === track.id}
+                        isLiked={likedIds.has(String(track.id))}
+                        onPlay={() => void playTrack(track, catalog)}
+                        onLike={() => toggleLike(track)}
+                        onAddToQueue={() => addToQueue(track)}
+                      />
                     ))}
                   </div>
                 </div>
               </section>
             ) : (
               <>
-                {/* Modern Greeting Header & Categorical Filter Pills */}
-                <div className="mb-7 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-[#faf5ee] tracking-tight">
-                        {timeGreeting}, {greeting}
-                      </h1>
-                      <p className="mt-1 text-xs sm:text-sm text-[#9a8976]">
-                        {isSpotifyConnected
-                          ? "Welcome back to your synced Spotify listening room"
-                          : "Explore curated playlists, neural AI mixes, and your personal library"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Categorical Filter Pills */}
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar">
-                    <button
-                      type="button"
-                      onClick={() => setDashboardFilter("all")}
-                      className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
-                        dashboardFilter === "all"
-                          ? "bg-gradient-to-r from-[#f5ba42] to-[#ffd064] text-[#140f07] shadow-md shadow-[#f5ba42]/20"
-                          : "bg-white/[0.06] text-[#dfd2be] hover:bg-white/[0.1] hover:text-white"
-                      }`}
-                    >
-                      All
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDashboardFilter("music")}
-                      className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
-                        dashboardFilter === "music"
-                          ? "bg-gradient-to-r from-[#f5ba42] to-[#ffd064] text-[#140f07] shadow-md shadow-[#f5ba42]/20"
-                          : "bg-white/[0.06] text-[#dfd2be] hover:bg-white/[0.1] hover:text-white"
-                      }`}
-                    >
-                      Music
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveView("podcasts")}
-                      className="rounded-full bg-white/[0.06] px-4 py-1.5 text-xs font-semibold text-[#dfd2be] hover:bg-white/[0.1] hover:text-white transition"
-                    >
-                      Podcasts
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveView("aimix")}
-                      className="rounded-full bg-white/[0.06] px-4 py-1.5 text-xs font-semibold text-[#dfd2be] hover:bg-[#f5ba42]/20 hover:text-[#f5ba42] transition flex items-center gap-1.5"
-                    >
-                      <Sparkles className="h-3 w-3 text-[#f5ba42]" />
-                      AI Mix Studio
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveView("discover")}
-                      className="rounded-full bg-white/[0.06] px-4 py-1.5 text-xs font-semibold text-[#dfd2be] hover:bg-white/[0.1] hover:text-white transition"
-                    >
-                      Discover
-                    </button>
-                  </div>
-                </div>
+                {/* JioSaavn-style Sub-Navigation Ribbon (Tabs + Surprise Me + Genre/Vibe Scroller) */}
+                <SubNavRibbon
+                  activeTab="home"
+                  onSelectTab={handleNav}
+                  activeFilter={selectedGenreFilter}
+                  onSelectFilter={setSelectedGenreFilter}
+                  onSurpriseMe={handleSurpriseMe}
+                />
 
                 {/* JioSaavn-style Quick-Access 6-Tile Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3.5 mb-7 sm:mb-10">
@@ -3507,24 +3564,24 @@ export default function Home() {
                   onOpen={() => setActiveView("spotify")}
                 />
 
-                {/* Section 1: "Jump Back In" Horizontal Snap Carousel */}
+                {/* Section 1: "Trending Now" (JioSaavn Screenshot 1) */}
                 <section className="mt-8 sm:mt-10">
                   <SectionHeader
-                    eyebrow="Continue Listening"
-                    title="Jump back in"
-                    subtitle="Pick up right where you left off"
+                    eyebrow="Trending Now"
+                    title="Trending Now"
+                    subtitle={selectedGenreFilter === "all" ? "The hottest tracks streaming across Musivo right now" : `Top trending tracks for ${selectedGenreFilter}`}
                     action="See all"
                     onAction={() => setActiveView("discover")}
                   />
                   <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-3 sm:gap-4 snap-x pb-2 hide-scrollbar sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                    {catalog.slice(0, 10).map((track) => (
+                    {filteredCatalog.slice(0, 10).map((track) => (
                       <MusicCard
-                        key={`jump-back-${track.id}`}
+                        key={`trending-${track.id}`}
                         track={track}
                         isCurrent={currentTrack.id === track.id}
                         isPlaying={isPlaying && currentTrack.id === track.id}
                         isLiked={likedIds.has(String(track.id))}
-                        onPlay={() => void playTrack(track, catalog)}
+                        onPlay={() => void playTrack(track, filteredCatalog)}
                         onLike={() => toggleLike(track)}
                         onAddToQueue={() => addToQueue(track)}
                         className="min-w-[155px] w-[155px] sm:min-w-0 sm:w-auto snap-start shrink-0 sm:shrink"
@@ -3533,21 +3590,94 @@ export default function Home() {
                   </div>
                 </section>
 
-                {/* Section 2: "Top Charts & Trending" with Numerical Rank Badges */}
+                {/* Section 2: "Top Music Charts" Wide 16:9 Banner Cards (JioSaavn Screenshot 3) */}
                 <section className="mt-8 sm:mt-10">
                   <SectionHeader
-                    eyebrow="Right Now"
-                    title="Top Charts & Trending"
-                    subtitle="The most streamed tracks across Musivo this week"
-                    action="Full Charts"
+                    eyebrow="Charts & Countdowns"
+                    title="Top Music Charts"
+                    subtitle="The most streamed chart-toppers and weekly countdowns across genres"
+                    action="All Charts"
                     onAction={() => setActiveView("discover")}
                   />
                   <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-3 sm:gap-4 snap-x pb-2 hide-scrollbar sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                    {catalog.slice(0, 10).map((track, idx) => (
+                    <ChartBannerCard
+                      title="Top 50 - Musivo Global"
+                      subtitle="Updated daily · Worldwide most streamed"
+                      badge="TOP 50"
+                      image={catalog[0]?.art}
+                      gradient="from-[#3a2211] via-[#22160d] to-[#140d08]"
+                      isCurrent={Boolean(catalog[0] && currentTrack.id === catalog[0].id)}
+                      isPlaying={isPlaying && Boolean(catalog[0] && currentTrack.id === catalog[0].id)}
+                      onClick={() => catalog[0] && void playTrack(catalog[0], catalog)}
+                      onPlay={() => catalog[0] && void playTrack(catalog[0], catalog)}
+                      className="min-w-[240px] w-[240px] sm:min-w-0 sm:w-auto snap-start shrink-0 sm:shrink"
+                    />
+                    <ChartBannerCard
+                      title="Trending Today"
+                      subtitle="Viral breakout hits & indie discoveries"
+                      badge="TRENDING"
+                      image={catalog[1]?.art}
+                      gradient="from-[#2e1919] via-[#1e1310] to-[#120d09]"
+                      isCurrent={Boolean(catalog[1] && currentTrack.id === catalog[1].id)}
+                      isPlaying={isPlaying && Boolean(catalog[1] && currentTrack.id === catalog[1].id)}
+                      onClick={() => catalog[1] && void playTrack(catalog[1], catalog)}
+                      onPlay={() => catalog[1] && void playTrack(catalog[1], catalog)}
+                      className="min-w-[240px] w-[240px] sm:min-w-0 sm:w-auto snap-start shrink-0 sm:shrink"
+                    />
+                    <ChartBannerCard
+                      title="Musivo Superhits"
+                      subtitle="Certified chart-toppers & crowd favorites"
+                      badge="SUPERHITS"
+                      image={catalog[2]?.art}
+                      gradient="from-[#1c271e] via-[#151c14] to-[#0e140d]"
+                      isCurrent={Boolean(catalog[2] && currentTrack.id === catalog[2].id)}
+                      isPlaying={isPlaying && Boolean(catalog[2] && currentTrack.id === catalog[2].id)}
+                      onClick={() => catalog[2] && void playTrack(catalog[2], catalog)}
+                      onPlay={() => catalog[2] && void playTrack(catalog[2], catalog)}
+                      className="min-w-[240px] w-[240px] sm:min-w-0 sm:w-auto snap-start shrink-0 sm:shrink"
+                    />
+                    <ChartBannerCard
+                      title="Late Night Lo-Fi"
+                      subtitle="Smooth ambient & relaxing chill sessions"
+                      badge="LO-FI"
+                      image={catalog[3]?.art}
+                      gradient="from-[#1e1e32] via-[#151522] to-[#0d0d16]"
+                      isCurrent={Boolean(catalog[3] && currentTrack.id === catalog[3].id)}
+                      isPlaying={isPlaying && Boolean(catalog[3] && currentTrack.id === catalog[3].id)}
+                      onClick={() => catalog[3] && void playTrack(catalog[3], catalog)}
+                      onPlay={() => catalog[3] && void playTrack(catalog[3], catalog)}
+                      className="min-w-[240px] w-[240px] sm:min-w-0 sm:w-auto snap-start shrink-0 sm:shrink"
+                    />
+                    <ChartBannerCard
+                      title="India Top 20"
+                      subtitle="Top Bollywood and regional chartbusters"
+                      badge="TOP 20"
+                      image={catalog[4]?.art}
+                      gradient="from-[#302114] via-[#1f1710] to-[#120d09]"
+                      isCurrent={Boolean(catalog[4] && currentTrack.id === catalog[4].id)}
+                      isPlaying={isPlaying && Boolean(catalog[4] && currentTrack.id === catalog[4].id)}
+                      onClick={() => catalog[4] && void playTrack(catalog[4], catalog)}
+                      onPlay={() => catalog[4] && void playTrack(catalog[4], catalog)}
+                      className="min-w-[240px] w-[240px] sm:min-w-0 sm:w-auto snap-start shrink-0 sm:shrink"
+                    />
+                  </div>
+                </section>
+
+                {/* Section 3: "New Songs" (JioSaavn Screenshot 2) */}
+                <section className="mt-8 sm:mt-10">
+                  <SectionHeader
+                    eyebrow="Fresh Releases"
+                    title="New Songs"
+                    subtitle="Newly added singles, master recordings, and recent drops"
+                    action="All releases"
+                    onAction={() => setActiveView("releases")}
+                  />
+                  <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-3 sm:gap-4 snap-x pb-2 hide-scrollbar sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                    {catalog.slice(2, 12).map((track) => (
                       <MusicCard
-                        key={`top-charts-${track.id}`}
+                        key={`new-song-${track.id}`}
                         track={track}
-                        rank={idx + 1}
+                        badge="NEW"
                         isCurrent={currentTrack.id === track.id}
                         isPlaying={isPlaying && currentTrack.id === track.id}
                         isLiked={likedIds.has(String(track.id))}
@@ -3657,29 +3787,53 @@ export default function Home() {
                   </div>
                 </section>
 
-                {/* Section 6: Fresh Releases & New Tracks */}
+                {/* Section 6: "Top Playlists" (JioSaavn Screenshot 4) */}
                 <section className="mt-8 sm:mt-10">
                   <SectionHeader
-                    eyebrow="Fresh Releases"
-                    title="New Master Recordings"
-                    subtitle="Newly added tracks and albums ready to stream"
-                    action="All releases"
-                    onAction={() => setActiveView("releases")}
+                    eyebrow="Top Playlists"
+                    title="Top Playlists"
+                    subtitle="Handcrafted playlists curated for every vibe, mood, and moment"
+                    action="All playlists"
+                    onAction={() => setActiveView("playlists")}
                   />
                   <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-3 sm:gap-4 snap-x pb-2 hide-scrollbar sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                    {catalog.slice(4, 14).map((track) => (
-                      <MusicCard
-                        key={`fresh-${track.id}`}
-                        track={track}
-                        badge="NEW"
-                        isCurrent={currentTrack.id === track.id}
-                        isPlaying={isPlaying && currentTrack.id === track.id}
-                        isLiked={likedIds.has(String(track.id))}
-                        onPlay={() => void playTrack(track, catalog)}
-                        onLike={() => toggleLike(track)}
-                        onAddToQueue={() => addToQueue(track)}
-                        className="min-w-[155px] w-[155px] sm:min-w-0 sm:w-auto snap-start shrink-0 sm:shrink"
-                      />
+                    {mixes.map((mix, idx) => (
+                      <div
+                        key={`home-playlist-${mix.title}`}
+                        onClick={() => {
+                          const target = catalog[idx % Math.max(catalog.length, 1)] ?? fallbackTracks[0];
+                          void playTrack(target, catalog);
+                          toast.success(`${mix.title} is now playing`);
+                        }}
+                        className="group relative flex flex-col p-3 rounded-2xl bg-[#16110a] hover:bg-[#20180f] border border-white/[0.06] hover:border-[#f5ba42]/30 transition-all duration-300 cursor-pointer shadow-md hover:shadow-xl hover:-translate-y-1 min-w-[160px] w-[160px] sm:min-w-0 sm:w-auto snap-start shrink-0 sm:shrink"
+                      >
+                        <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-2.5 bg-[#24170c] shadow-md">
+                          <img
+                            src={mix.art}
+                            alt={mix.title}
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                          <button
+                            type="button"
+                            aria-label={`Play ${mix.title}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const target = catalog[idx % Math.max(catalog.length, 1)] ?? fallbackTracks[0];
+                              void playTrack(target, catalog);
+                              toast.success(`${mix.title} is now playing`);
+                            }}
+                            className="absolute bottom-2 right-2 h-10 w-10 rounded-full bg-[#f5ba42] text-[#140f07] shadow-2xl flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:scale-110 active:scale-95 z-10"
+                          >
+                            <Play className="h-4 w-4 fill-current ml-0.5" />
+                          </button>
+                        </div>
+                        <p className="font-semibold text-xs sm:text-sm text-[#faf5ee] truncate group-hover:text-[#f5ba42] transition-colors">
+                          {mix.title}
+                        </p>
+                        <p className="text-[11px] sm:text-xs text-[#9a8976] truncate mt-0.5">
+                          {mix.detail}
+                        </p>
+                      </div>
                     ))}
                   </div>
                 </section>
@@ -3987,6 +4141,25 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* JioSaavn-style Floating Right Edge Queue Tab */}
+      <button
+        type="button"
+        onClick={() => setIsQueueOpen((prev) => !prev)}
+        className={`hidden xl:flex fixed right-0 top-1/2 -translate-y-1/2 z-30 items-center gap-2 py-3.5 px-2 rounded-l-xl border-l border-t border-b border-white/[0.12] bg-[#1a140d]/90 hover:bg-[#251b11] backdrop-blur-md shadow-2xl text-[#d6c8b6] hover:text-[#f5ba42] transition-all group ${
+          isQueueOpen ? "bg-[#251b11] text-[#f5ba42] border-[#f5ba42]/40 ring-1 ring-[#f5ba42]/30" : ""
+        }`}
+        style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
+        title="Toggle Playback Queue"
+      >
+        <ListMusic className="h-4 w-4 -rotate-90 text-[#f5ba42] group-hover:scale-110 transition-transform" />
+        <span className="font-semibold text-xs tracking-wider">Queue</span>
+        {queue.length > 0 && (
+          <span className="h-4 w-4 rounded-full bg-[#f5ba42] text-[#140f07] text-[10px] font-bold flex items-center justify-center -rotate-90 mt-1">
+            {queue.length}
+          </span>
+        )}
+      </button>
 
       {/* Playback Queue Drawer */}
       <QueueDrawer
