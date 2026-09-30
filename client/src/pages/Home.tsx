@@ -65,6 +65,7 @@ import { ArtistCard } from "@/components/ArtistCard";
 import { QuickAccessCard } from "@/components/QuickAccessCard";
 import { ChartBannerCard } from "@/components/ChartBannerCard";
 import { SubNavRibbon } from "@/components/SubNavRibbon";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
@@ -88,14 +89,14 @@ const art = {
 };
 
 const fallbackTracks: Track[] = [
-  { id: "fallback-1", title: "Midnight City", artist: "M83", album: "Hurry Up, We're Dreaming", duration: "4:03", art: art.neon, audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", accent: "#f5ba42", badge: "MADE FOR YOU", durationMs: 243000, source: "fallback" },
+  { id: "fallback-1", title: "Midnight City", artist: "M83", album: "Hurry Up, We're Dreaming", duration: "4:03", art: art.neon, audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", accent: "#ffffff", badge: "MADE FOR YOU", durationMs: 243000, source: "fallback" },
   { id: "fallback-2", title: "Still Feel.", artist: "half·alive", album: "Now, Not Yet", duration: "2:47", art: art.purple, audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", accent: "#b497ff", badge: "TRENDING", durationMs: 167000, source: "fallback" },
   { id: "fallback-3", title: "Sunset Lover", artist: "Petit Biscuit", album: "Presence", duration: "3:58", art: art.sunset, audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", accent: "#ffb247", badge: "NEW", durationMs: 238000, source: "fallback" },
   { id: "fallback-4", title: "A Moment Apart", artist: "ODESZA", album: "A Moment Apart", duration: "3:54", art: art.blue, audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", accent: "#63c5ff", durationMs: 234000, source: "fallback" },
   { id: "fallback-5", title: "The Less I Know The Better", artist: "Tame Impala", album: "Currents", duration: "3:36", art: art.red, audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", accent: "#ff725d", durationMs: 216000, source: "fallback" },
   { id: "fallback-6", title: "Intro", artist: "The xx", album: "xx", duration: "2:07", art: art.night, audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", accent: "#8ca3ff", durationMs: 127000, source: "fallback" },
   { id: "fallback-7", title: "Good Days", artist: "SZA", album: "Good Days", duration: "4:39", art: art.cream, audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", accent: "#ecdbad", durationMs: 279000, source: "fallback" },
-  { id: "fallback-8", title: "Love Tonight", artist: "Shouse", album: "Open", duration: "4:01", art: art.purple, audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", accent: "#ffd064", durationMs: 241000, source: "fallback" },
+  { id: "fallback-8", title: "Love Tonight", artist: "Shouse", album: "Open", duration: "4:01", art: art.purple, audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", accent: "#e0e0e0", durationMs: 241000, source: "fallback" },
 ];
 
 const mixes = [
@@ -205,7 +206,7 @@ function toUiTrack(item: {
     duration: item.durationMs ? formatTime(item.durationMs / 1000) : "Preview",
     art: item.art || art.neon,
     audio: item.audio || "",
-    accent: item.accent ?? "#f5ba42",
+    accent: item.accent ?? "#ffffff",
     storeUrl: item.storeUrl ?? undefined,
     durationMs: item.durationMs ?? null,
     source: item.source,
@@ -257,7 +258,7 @@ function TrackRow({
         <div className="flex min-w-0 items-center gap-2">
           <p
             className={`truncate text-[13px] font-semibold ${
-              active ? "text-[#f5ba42]" : "text-[#faf5ee]"
+              active ? "text-black dark:text-white font-bold" : "text-[#111111] dark:text-[#faf5ee]"
             }`}
           >
             {track.title}
@@ -282,7 +283,7 @@ function TrackRow({
             title="Add to playback queue"
             aria-label={`Add ${track.title} to queue`}
             onClick={() => onAddToQueue(track)}
-            className="opacity-0 transition-opacity hover:text-[#f5ba42] group-hover:opacity-100 p-1"
+            className="opacity-0 transition-opacity hover:text-black dark:hover:text-white group-hover:opacity-100 p-1"
           >
             <ListPlus className="h-4 w-4" />
           </button>
@@ -291,15 +292,15 @@ function TrackRow({
           aria-label={`${liked ? "Remove" : "Like"} ${track.title}`}
           onClick={() => onLike(track)}
           className={`${
-            liked ? "text-[#f5ba42]" : "opacity-0 group-hover:opacity-100"
-          } transition-opacity hover:text-[#f5ba42] p-1`}
+            liked ? "text-black dark:text-white font-bold" : "opacity-0 group-hover:opacity-100"
+          } transition-opacity hover:text-black dark:hover:text-white p-1`}
         >
           <Heart className="h-4 w-4" fill={liked ? "currentColor" : "none"} />
         </button>
         <button
           aria-label={`Add ${track.title} to a playlist`}
           onClick={() => onSave(track)}
-          className="opacity-0 transition-opacity hover:text-[#f5ba42] group-hover:opacity-100 p-1"
+          className="opacity-0 transition-opacity hover:text-black dark:text-white group-hover:opacity-100 p-1"
         >
           <Plus className="h-4 w-4" />
         </button>
@@ -338,14 +339,14 @@ function SectionHeading({
             {eyebrow}
           </p>
         )}
-        <h2 className="font-display text-xl font-semibold tracking-[-0.03em] text-[#faf5ee] md:text-2xl">
+        <h2 className="font-display text-xl font-semibold tracking-[-0.03em] text-[#111111] dark:text-[#faf5ee] md:text-2xl">
           {title}
         </h2>
       </div>
       {action && (
         <button
           onClick={onAction}
-          className="flex shrink-0 items-center gap-1 text-xs font-semibold text-[#ab9b88] transition-colors hover:text-[#f5ba42]"
+          className="flex shrink-0 items-center gap-1 text-xs font-semibold text-[#666666] dark:text-[#ab9b88] transition-colors hover:text-black dark:hover:text-white"
         >
           {action} <ArrowRight className="h-3.5 w-3.5" />
         </button>
@@ -462,7 +463,7 @@ function SpotifyPlaylistDetail({
     <section>
       <button
         onClick={onBack}
-        className="mb-6 flex items-center gap-2 text-sm font-semibold text-[#b2a28f] hover:text-[#f5ba42]"
+        className="mb-6 flex items-center gap-2 text-sm font-semibold text-[#666666] dark:text-[#b2a28f] hover:text-black dark:hover:text-white"
       >
         <ArrowRight className="h-4 w-4 rotate-180" />
         Back to Spotify sync
@@ -588,15 +589,15 @@ function QueueDrawer({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/65 backdrop-blur-md transition-all duration-300">
-      <div className="relative flex h-full w-full max-w-md flex-col glass-panel border-l border-white/15 bg-[#121413]/95 shadow-2xl">
+      <div className="relative flex h-full w-full max-w-md flex-col glass-panel border-l border-black/10 dark:border-white/15 bg-white dark:bg-[#121413]/95 shadow-2xl text-[#111111] dark:text-white">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <Layers className="h-5 w-5 text-[#f5ba42]" />
-            <h3 className="font-display text-base font-bold text-white tracking-wide">
+            <Layers className="h-5 w-5 text-black dark:text-white" />
+            <h3 className="font-display text-base font-bold text-[#111111] dark:text-white tracking-wide">
               Playback Queue
             </h3>
-            <span className="glass-pill px-2 py-0.5 text-[11px] font-mono font-semibold text-[#f5ba42]">
+            <span className="rounded-full bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 px-2 py-0.5 text-[11px] font-mono font-semibold text-black dark:text-white">
               {queue.length} {queue.length === 1 ? "track" : "tracks"}
             </span>
           </div>
@@ -607,7 +608,7 @@ function QueueDrawer({
               title={`Repeat mode: ${repeatMode}`}
               className={`rounded-full p-2 transition ${
                 repeatMode !== "off"
-                  ? "bg-[#f5ba42]/20 text-[#f5ba42]"
+                  ? "bg-black/10 dark:bg-white/20 text-black dark:text-white font-bold"
                   : "text-[#9da59c] hover:bg-white/10 hover:text-white"
               }`}
             >
@@ -617,7 +618,7 @@ function QueueDrawer({
               type="button"
               onClick={onShuffleQueue}
               title="Shuffle upcoming queue"
-              className="rounded-full p-2 text-[#9da59c] hover:bg-white/10 hover:text-[#f5ba42] transition"
+              className="rounded-full p-2 text-[#9da59c] hover:bg-white/10 hover:text-black dark:hover:text-white transition"
             >
               <Shuffle className="h-4 w-4" />
             </button>
@@ -646,7 +647,7 @@ function QueueDrawer({
             <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#8e978d]">
               Now Playing
             </p>
-            <div className="gloss-card flex items-center gap-3.5 rounded-2xl p-3.5 border border-[#f5ba42]/25 shadow-lg">
+            <div className="gloss-card flex items-center gap-3.5 rounded-2xl p-3.5 border border-black/15 dark:border-white/20 bg-black/[0.03] dark:bg-white/[0.04] shadow-md">
               <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-black/40">
                 <img
                   src={currentTrack.art}
@@ -664,7 +665,7 @@ function QueueDrawer({
                 )}
               </div>
               <div className="min-w-0 flex-1 space-y-0.5">
-                <p className="truncate text-sm font-bold text-[#f5ba42]">
+                <p className="truncate text-sm font-bold text-black dark:text-white">
                   {currentTrack.title}
                 </p>
                 <p className="truncate text-xs text-[#c2b2a0]">
@@ -673,7 +674,7 @@ function QueueDrawer({
                 <div className="flex items-center gap-2 pt-0.5 text-[11px] text-[#8e7f6e]">
                   <span>{currentTrack.duration}</span>
                   <span>·</span>
-                  <span className="font-mono text-[10px] uppercase text-[#f7c844]">
+                  <span className="font-mono text-[10px] uppercase text-[#666666] dark:text-[#a0a0a0]">
                     {currentTrack.source === "Spotify" ? "Spotify Stream" : "Full Length Audio"}
                   </span>
                 </div>
@@ -883,7 +884,7 @@ function AiMixStudio({
               <span className="font-mono text-xs uppercase tracking-[0.16em] text-[#d5b9ff] font-semibold">
                 AI Taste Intelligence Engine
               </span>
-              <span className="glass-pill px-2 py-0.5 text-[10px] font-mono text-[#f5ba42]">
+              <span className="glass-pill px-2 py-0.5 text-[10px] font-mono text-black dark:text-white">
                 Live Profile
               </span>
             </div>
@@ -918,7 +919,7 @@ function AiMixStudio({
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 space-y-1">
             <p className="font-mono text-[10px] uppercase tracking-wider text-[#8b8496]">Liked Tracks</p>
-            <p className="font-display text-xl font-bold text-[#f5ba42]">
+            <p className="font-display text-xl font-bold text-black dark:text-white">
               {tasteProfile?.likedTracksCount ?? 0} <span className="text-xs font-normal text-[#9b93a6]">tracks</span>
             </p>
           </div>
@@ -949,7 +950,7 @@ function AiMixStudio({
                   className="glass-pill flex items-center gap-2 px-3 py-1 text-xs rounded-full"
                 >
                   <span className="text-[#eee7f7] font-medium">{aff.name}</span>
-                  <span className="font-mono font-bold text-[11px] text-[#f5ba42]">
+                  <span className="font-mono font-bold text-[11px] text-black dark:text-white">
                     {aff.weight}%
                   </span>
                 </div>
@@ -981,7 +982,7 @@ function AiMixStudio({
                 onClick={() => onSelectSeedPlaylist(null)}
                 className={`rounded-xl border px-3 py-1.5 text-xs transition ${
                   !selectedSeedPlaylistId
-                    ? "border-[#f5ba42] bg-[#f5ba42]/15 text-[#f5ba42] font-semibold"
+                    ? "border-black/30 dark:border-white/30 bg-black dark:bg-white text-white dark:text-black/15 text-black dark:text-white font-semibold"
                     : "border-white/10 bg-white/[0.04] text-[#b4a9c2] hover:bg-white/[0.08]"
                 }`}
               >
@@ -1134,7 +1135,7 @@ function AiMixStudio({
                     <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#d5b9ff]">
                       Curated AI Playlist
                     </span>
-                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-semibold text-[#f5ba42]">
+                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-semibold text-black dark:text-white">
                       Full Length Audio
                     </span>
                   </div>
@@ -1155,7 +1156,7 @@ function AiMixStudio({
                 <button
                   type="button"
                   onClick={onPlayMix}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-full bg-[#f5ba42] hover:bg-[#ffd064] px-5 py-2.5 text-xs font-bold text-[#141812] shadow-md transition hover:scale-[1.02]"
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-full bg-black dark:bg-white text-white dark:text-black hover:bg-[#ffd064] px-5 py-2.5 text-xs font-bold text-[#141812] shadow-md transition hover:scale-[1.02]"
                 >
                   <Play className="h-4 w-4 fill-current" />
                   Play Entire Mix
@@ -1197,7 +1198,7 @@ function AiMixStudio({
                     type="button"
                     onClick={onExportToSpotify}
                     disabled={exportingSpotify}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-full bg-[#f5ba42] hover:bg-[#ffd064] px-4 py-2.5 text-xs font-bold text-black transition"
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-full bg-black dark:bg-white text-white dark:text-black hover:bg-[#ffd064] px-4 py-2.5 text-xs font-bold text-black transition"
                     title="Export playlist to your Spotify account"
                   >
                     <Link2 className="h-3.5 w-3.5" />
@@ -1222,7 +1223,7 @@ function AiMixStudio({
                   key={rec.id || idx}
                   className={`group gloss-card flex items-center justify-between gap-3 rounded-2xl border px-3.5 py-2.5 transition-colors ${
                     isCurrentPlaying
-                      ? "border-[#f5ba42]/50 bg-[#2d1f12]/90 shadow-lg"
+                      ? "border-black/30 dark:border-white/30/50 bg-[#2d1f12]/90 shadow-lg"
                       : "border-white/[0.08] bg-[#151419]/70 hover:border-white/[0.18] hover:bg-[#1d1b22]"
                   }`}
                 >
@@ -1251,7 +1252,7 @@ function AiMixStudio({
                       </div>
                     </button>
                     <div className="min-w-0 flex-1 space-y-0.5">
-                      <p className={`truncate text-sm font-semibold ${isCurrentPlaying ? "text-[#f5ba42]" : "text-[#f2eef8]"}`}>
+                      <p className={`truncate text-sm font-semibold ${isCurrentPlaying ? "text-black dark:text-white" : "text-[#f2eef8]"}`}>
                         {rec.title}
                       </p>
                       <div className="flex items-center gap-2 text-xs text-[#9d92a9]">
@@ -1271,7 +1272,7 @@ function AiMixStudio({
                         type="button"
                         title="Add to queue"
                         onClick={() => onAddToQueue(track)}
-                        className="rounded-full p-1.5 text-[#8e859a] hover:bg-white/10 hover:text-[#f5ba42] transition"
+                        className="rounded-full p-1.5 text-[#8e859a] hover:bg-white/10 hover:text-black dark:text-white transition"
                       >
                         <ListPlus className="h-4 w-4" />
                       </button>
@@ -1282,7 +1283,7 @@ function AiMixStudio({
                       onClick={() => onLike(track)}
                       className={`p-1.5 rounded-full transition ${
                         likedIds.has(String(track.id))
-                          ? "text-[#f5ba42]"
+                          ? "text-black dark:text-white"
                           : "text-[#6f677b] hover:text-white"
                       }`}
                     >
@@ -1294,7 +1295,7 @@ function AiMixStudio({
                     <button
                       type="button"
                       onClick={() => onPlayTrack(track)}
-                      className="grid h-8 w-8 place-items-center rounded-full bg-white/[0.06] text-[#e0d8eb] hover:bg-[#f5ba42] hover:text-black transition"
+                      className="grid h-8 w-8 place-items-center rounded-full bg-white/[0.06] text-[#e0d8eb] hover:bg-black dark:bg-white text-white dark:text-black hover:text-black transition"
                     >
                       <Play className="h-3.5 w-3.5 fill-current ml-0.5" />
                     </button>
@@ -1368,8 +1369,8 @@ function SpotifyPanel({
     <section>
       <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
         {user?.hasGoogle ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#f5ba42]/25 bg-[#f5ba42]/10 px-3 py-1 font-medium text-[#f5ba42]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#f5ba42]" />
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-black/30 dark:border-white/30/25 bg-black dark:bg-white text-white dark:text-black/10 px-3 py-1 font-medium text-black dark:text-white">
+            <span className="h-1.5 w-1.5 rounded-full bg-black dark:bg-white text-white dark:text-black" />
             Google connected {user.email ? `(${user.email})` : ""}
           </span>
         ) : (
@@ -1378,8 +1379,8 @@ function SpotifyPanel({
           </span>
         )}
         {connected ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#f5ba42]/25 bg-[#f5ba42]/10 px-3 py-1 font-medium text-[#f5ba42]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#f5ba42]" />
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-black/30 dark:border-white/30/25 bg-black dark:bg-white text-white dark:text-black/10 px-3 py-1 font-medium text-black dark:text-white">
+            <span className="h-1.5 w-1.5 rounded-full bg-black dark:bg-white text-white dark:text-black" />
             Spotify connected {displayName ? `(${displayName})` : ""}
           </span>
         ) : (
@@ -1406,7 +1407,7 @@ function SpotifyPanel({
             <button
               onClick={onSync}
               disabled={syncing}
-              className="flex items-center gap-2 rounded-full bg-[#f5ba42] px-4 py-2.5 text-sm font-bold text-[#140f07] disabled:opacity-50"
+              className="flex items-center gap-2 rounded-full bg-black dark:bg-white text-white dark:text-black px-4 py-2.5 text-sm font-bold text-[#140f07] disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
               {syncing ? (syncStepText || "Syncing playlists…") : "Sync now"}
@@ -1423,7 +1424,7 @@ function SpotifyPanel({
               <button
                 onClick={onConnect}
                 disabled={connecting}
-                className="rounded-full border border-[#f5ba42]/30 px-4 py-2.5 text-sm font-semibold text-[#f5ba42] hover:bg-[#f5ba42]/10 disabled:opacity-60 transition"
+                className="rounded-full border border-black/30 dark:border-white/30/30 px-4 py-2.5 text-sm font-semibold text-black dark:text-white hover:bg-black dark:bg-white text-white dark:text-black/10 disabled:opacity-60 transition"
               >
                 {connecting ? "Connecting…" : "Reconnect for playback"}
               </button>
@@ -1433,7 +1434,7 @@ function SpotifyPanel({
           <button
             onClick={onConnect}
             disabled={connecting}
-            className="flex items-center gap-2 rounded-full bg-[#f5ba42] px-4 py-2.5 text-sm font-bold text-[#140f07] hover:bg-[#ffd064] disabled:opacity-60 transition"
+            className="flex items-center gap-2 rounded-full bg-black dark:bg-white text-white dark:text-black px-4 py-2.5 text-sm font-bold text-[#140f07] hover:bg-[#ffd064] disabled:opacity-60 transition"
           >
             {connecting ? (
               <>
@@ -1453,7 +1454,7 @@ function SpotifyPanel({
 
       {!connected ? (
         <div className="rounded-3xl border border-white/[0.08] bg-[#17110a] p-8">
-          <Link2 className="h-8 w-8 text-[#f5ba42]" />
+          <Link2 className="h-8 w-8 text-black dark:text-white" />
           <h2 className="mt-5 font-display text-2xl font-semibold tracking-[-0.04em]">
             Your listening space, connected.
           </h2>
@@ -1463,7 +1464,7 @@ function SpotifyPanel({
           <button
             onClick={onConnect}
             disabled={connecting}
-            className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#f5ba42] px-5 py-3 text-sm font-bold text-[#140f07] hover:bg-[#ffd064] disabled:opacity-60 transition"
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-black dark:bg-white text-white dark:text-black px-5 py-3 text-sm font-bold text-[#140f07] hover:bg-[#ffd064] disabled:opacity-60 transition"
           >
             {connecting ? (
               <>
@@ -1477,16 +1478,16 @@ function SpotifyPanel({
         </div>
       ) : (
         <>
-          <div className="mb-8 flex flex-wrap items-center gap-3 rounded-2xl border border-[#f5ba42]/20 bg-[#26190e] px-4 py-3 transition-all duration-500">
+          <div className="mb-8 flex flex-wrap items-center gap-3 rounded-2xl border border-black/30 dark:border-white/30/20 bg-[#26190e] px-4 py-3 transition-all duration-500">
             <div className="relative shrink-0">
-              <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-full bg-[#f5ba42] text-[#140f07] ring-2 ring-[#f5ba42]/30">
+              <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-full bg-black dark:bg-white text-white dark:text-black text-[#140f07] ring-2 ring-[#f5ba42]/30">
                 {profileImageUrl ? (
                   <img src={profileImageUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
                   <Link2 className="h-4 w-4" />
                 )}
               </div>
-              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#26190e] bg-[#f5ba42]" />
+              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#26190e] bg-black dark:bg-white text-white dark:text-black" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-[#faf5ee]">
@@ -1500,7 +1501,7 @@ function SpotifyPanel({
                   : "Reconnect Spotify to enable in-app playback."}
               </p>
             </div>
-            <span className="rounded-full border border-[#f5ba42]/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[#ffd064]">
+            <span className="rounded-full border border-black/30 dark:border-white/30/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-[#ffd064]">
               Account connected
             </span>
           </div>
@@ -1520,7 +1521,7 @@ function SpotifyPanel({
             </div>
             <div className="rounded-2xl border border-white/[0.08] bg-[#17110a] p-4">
               <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#968572]">Playback SDK</p>
-              <p className="mt-1 text-sm font-semibold text-[#f5ba42]">
+              <p className="mt-1 text-sm font-semibold text-black dark:text-white">
                 {streamingEnabled ? "Active in Musivo" : "Ready"}
               </p>
             </div>
@@ -1559,7 +1560,7 @@ function SpotifyPanel({
             </div>
 
             <div className="rounded-2xl border border-white/[0.08] bg-[#17110a] p-4">
-              <div className="mb-3 flex items-center gap-2 text-[#f5ba42]">
+              <div className="mb-3 flex items-center gap-2 text-black dark:text-white">
                 <ListMusic className="h-4 w-4" />
                 <span className="font-mono text-[10px] uppercase tracking-[0.15em]">Your Spotify account</span>
               </div>
@@ -1571,7 +1572,7 @@ function SpotifyPanel({
                 type="button"
                 onClick={onCreatePlaylist}
                 disabled={creatingPlaylist}
-                className="mt-4 rounded-full border border-[#f5ba42]/35 px-4 py-2 text-xs font-bold text-[#f5ba42] hover:bg-[#f5ba42]/10 disabled:opacity-50"
+                className="mt-4 rounded-full border border-black/30 dark:border-white/30/35 px-4 py-2 text-xs font-bold text-black dark:text-white hover:bg-black dark:bg-white text-white dark:text-black/10 disabled:opacity-50"
               >
                 Create Spotify playlist
               </button>
@@ -1594,7 +1595,7 @@ function SpotifyPanel({
                     <button
                       type="button"
                       onClick={onPlayMix}
-                      className="flex items-center gap-1.5 rounded-full bg-[#f5ba42] hover:bg-[#ffd064] px-3 py-1 text-xs font-bold text-black shadow transition"
+                      className="flex items-center gap-1.5 rounded-full bg-black dark:bg-white text-white dark:text-black hover:bg-[#ffd064] px-3 py-1 text-xs font-bold text-black shadow transition"
                     >
                       <Play className="h-3 w-3 fill-current" />
                       Play Mix
@@ -1628,7 +1629,7 @@ function SpotifyPanel({
                         </div>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-semibold text-[#f0eaf7] group-hover:text-[#f5ba42] transition-colors">
+                        <p className="truncate text-xs font-semibold text-[#f0eaf7] group-hover:text-black dark:text-white transition-colors">
                           {recommendation.title}
                         </p>
                         <p className="truncate text-[11px] text-[#a99abb]">
@@ -1740,7 +1741,7 @@ function SpotifyPanel({
                         <span className="hidden font-mono text-[10px] text-[#7b6c5b] sm:block">
                           {new Date(track.playedAt).toLocaleDateString()}
                         </span>
-                        <History className="h-4 w-4 text-[#968572] transition-colors group-hover:text-[#f5ba42]" />
+                        <History className="h-4 w-4 text-[#968572] transition-colors group-hover:text-black dark:text-white" />
                       </button>
                     ))}
                   </div>
@@ -1791,11 +1792,11 @@ function SpotifyConnectSection({
   onOpen: () => void;
 }) {
   return (
-    <section className="mt-10 overflow-hidden rounded-3xl border border-[#f5ba42]/15 bg-gradient-to-br from-[#24170c] via-[#1a120b] to-[#140e08] p-5 md:p-7">
+    <section className="mt-10 overflow-hidden rounded-3xl border border-black/30 dark:border-white/30/15 bg-gradient-to-br from-[#24170c] via-[#1a120b] to-[#140e08] p-5 md:p-7">
       <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
         {user?.hasGoogle ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#f5ba42]/25 bg-[#f5ba42]/10 px-3 py-1 font-medium text-[#f5ba42]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#f5ba42]" />
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-black/30 dark:border-white/30/25 bg-black dark:bg-white text-white dark:text-black/10 px-3 py-1 font-medium text-black dark:text-white">
+            <span className="h-1.5 w-1.5 rounded-full bg-black dark:bg-white text-white dark:text-black" />
             Google connected {user.email ? `(${user.email})` : ""}
           </span>
         ) : (
@@ -1804,8 +1805,8 @@ function SpotifyConnectSection({
           </span>
         )}
         {connected ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#f5ba42]/25 bg-[#f5ba42]/10 px-3 py-1 font-medium text-[#f5ba42]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#f5ba42]" />
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-black/30 dark:border-white/30/25 bg-black dark:bg-white text-white dark:text-black/10 px-3 py-1 font-medium text-black dark:text-white">
+            <span className="h-1.5 w-1.5 rounded-full bg-black dark:bg-white text-white dark:text-black" />
             Spotify connected {displayName ? `(${displayName})` : ""}
           </span>
         ) : (
@@ -1817,7 +1818,7 @@ function SpotifyConnectSection({
 
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-start gap-4">
-          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#f5ba42] text-[#140f07] shadow-[0_0_28px_rgba(245,186,66,0.16)]">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-black dark:bg-white text-white dark:text-black text-[#140f07] shadow-[0_0_28px_rgba(245,186,66,0.16)]">
             <Link2 className="h-5 w-5" />
           </div>
           <div>
@@ -1842,14 +1843,14 @@ function SpotifyConnectSection({
               <button
                 onClick={onSync}
                 disabled={syncing}
-                className="flex items-center gap-2 rounded-full bg-[#f5ba42] px-4 py-2.5 text-sm font-bold text-[#140f07] disabled:opacity-60"
+                className="flex items-center gap-2 rounded-full bg-black dark:bg-white text-white dark:text-black px-4 py-2.5 text-sm font-bold text-[#140f07] disabled:opacity-60"
               >
                 <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
                 {syncing ? (syncStepText || "Syncing account…") : "Sync account"}
               </button>
               <button
                 onClick={onOpen}
-                className="rounded-full border border-white/[0.14] px-4 py-2.5 text-sm font-semibold text-[#faf5ee] hover:border-[#f5ba42]/50"
+                className="rounded-full border border-white/[0.14] px-4 py-2.5 text-sm font-semibold text-[#faf5ee] hover:border-black/30 dark:border-white/30/50"
               >
                 Open synced library
               </button>
@@ -1858,7 +1859,7 @@ function SpotifyConnectSection({
             <button
               onClick={onConnect}
               disabled={connecting}
-              className="inline-flex items-center gap-2 rounded-full bg-[#f5ba42] px-5 py-2.5 text-sm font-bold text-[#140f07] hover:bg-[#ffd064] disabled:opacity-60 transition"
+              className="inline-flex items-center gap-2 rounded-full bg-black dark:bg-white text-white dark:text-black px-5 py-2.5 text-sm font-bold text-[#140f07] hover:bg-[#ffd064] disabled:opacity-60 transition"
             >
               {connecting ? (
                 <>
@@ -1904,7 +1905,7 @@ function SpotifyConnectSection({
             <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#968572]">
               SDK Player
             </p>
-            <p className="mt-1 text-sm font-semibold text-[#f5ba42]">
+            <p className="mt-1 text-sm font-semibold text-black dark:text-white">
               Active in Musivo
             </p>
           </div>
@@ -1940,11 +1941,11 @@ function PlaybackDiagnostics({
   const stateLabel = connectionState.replace("_", " ");
   const stateIcon =
     connectionState === "ready" ? (
-      <CheckCircle2 className="h-4 w-4 text-[#f5ba42]" />
+      <CheckCircle2 className="h-4 w-4 text-black dark:text-white" />
     ) : connectionState === "error" ? (
       <AlertCircle className="h-4 w-4 text-[#ef8e83]" />
     ) : (
-      <Loader2 className="h-4 w-4 animate-spin text-[#f5ba42]" />
+      <Loader2 className="h-4 w-4 animate-spin text-black dark:text-white" />
     );
 
   return (
@@ -1963,13 +1964,13 @@ function PlaybackDiagnostics({
       <div className="space-y-2 text-xs">
         <div className="flex items-center justify-between">
           <span className="text-[#a0917e]">Spotify account</span>
-          <span className={connected ? "text-[#f5ba42]" : "text-[#ef8e83]"}>
+          <span className={connected ? "text-black dark:text-white" : "text-[#ef8e83]"}>
             {connected ? "Connected" : "Not connected"}
           </span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-[#a0917e]">SDK script</span>
-          <span className={sdkLoaded ? "text-[#f5ba42]" : "text-[#bcaea0]"}>
+          <span className={sdkLoaded ? "text-black dark:text-white" : "text-[#bcaea0]"}>
             {sdkLoaded ? "Loaded" : "Waiting"}
           </span>
         </div>
@@ -1988,9 +1989,9 @@ function PlaybackDiagnostics({
           <span
             className={
               isPremium === false
-                ? "text-[#f5ba42]"
+                ? "text-black dark:text-white"
                 : isPremium
-                ? "text-[#f5ba42]"
+                ? "text-black dark:text-white"
                 : "text-[#bcaea0]"
             }
           >
@@ -2003,7 +2004,7 @@ function PlaybackDiagnostics({
         </div>
         <div className="flex items-center justify-between">
           <span className="text-[#a0917e]">Playback engine</span>
-          <span className="font-medium text-[#f5ba42]">
+          <span className="font-medium text-black dark:text-white">
             {playbackMode === "spotify"
               ? "Spotify Web Playback SDK"
               : playbackMode === "full"
@@ -2640,12 +2641,12 @@ export default function Home() {
   const isSpotifyCatalog = statusQuery.data?.provider === "spotify";
 
   return (
-    <main className="noise min-h-[100dvh] bg-[#0d0f0d] text-[#f5f4ec] overflow-x-hidden">
+    <main className="noise min-h-[100dvh] bg-[#f5f5f5] dark:bg-[#080808] text-[#111111] dark:text-[#f5f4ec] overflow-x-hidden">
       <div className="mx-auto flex min-h-[100dvh] max-w-[1600px] w-full">
         {/* Left Sidebar (JioSaavn Screenshot 1 Inspired) */}
-        <aside className="hidden w-[220px] shrink-0 flex-col border-r border-white/[0.07] bg-[#0c0f12]/85 backdrop-blur-xl px-4 py-5 lg:flex">
+        <aside className="hidden w-[220px] shrink-0 flex-col border-r border-[#e0e0e0] dark:border-white/[0.07] bg-[#fafafa] dark:bg-[#050505] px-4 py-5 lg:flex">
           <div className="flex items-center gap-2.5 px-2">
-            <div className="relative grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#f5ba42]/30 bg-[#16100a] shadow-[0_0_16px_rgba(245,186,66,0.25)]">
+            <div className="relative grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-black/10 dark:border-white/15 bg-black/5 dark:bg-white/10 shadow-sm">
               <img
                 src="/musivo-logo-transparent.png"
                 alt="Musivo Logo"
@@ -2654,9 +2655,9 @@ export default function Home() {
             </div>
             <div>
               <span className="block font-display text-[20px] font-bold leading-none tracking-[-0.05em] text-[#faf5ee]">
-                musivo<span className="text-[#f5ba42]">.</span>
+                musivo<span className="text-[#666666] dark:text-white">.</span>
               </span>
-              <span className="mt-0.5 block font-mono text-[9px] uppercase tracking-[0.2em] text-[#8c7b68]">
+              <span className="mt-0.5 block font-mono text-[9px] uppercase tracking-[0.2em] text-[#777777] dark:text-[#888888]">
                 Music, Reimagined
               </span>
             </div>
@@ -2664,7 +2665,7 @@ export default function Home() {
 
           {/* BROWSE Section (JioSaavn Screenshot 1 style: clean text links) */}
           <div className="mt-8">
-            <p className="mb-2 px-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#786958]">
+            <p className="mb-2 px-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#777777] dark:text-[#888888]">
               Browse
             </p>
             <nav className="space-y-0.5">
@@ -2683,7 +2684,7 @@ export default function Home() {
                     onClick={() => handleNav(id)}
                     className={`flex w-full items-center px-2.5 py-1.5 rounded-lg text-left text-xs sm:text-[13px] font-medium transition-colors ${
                       isActive
-                        ? "text-[#f5ba42] font-semibold bg-white/[0.06]"
+                        ? "text-black dark:text-white font-semibold bg-white/[0.06]"
                         : "text-[#a0907e] hover:text-[#faf5ee] hover:bg-white/[0.03]"
                     }`}
                   >
@@ -2696,7 +2697,7 @@ export default function Home() {
 
           {/* LIBRARY Section (JioSaavn Screenshot 1 style: icon + text links) */}
           <div className="mt-6">
-            <p className="mb-2 px-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#786958]">
+            <p className="mb-2 px-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#777777] dark:text-[#888888]">
               Library
             </p>
             <nav className="space-y-0.5">
@@ -2714,12 +2715,12 @@ export default function Home() {
                     onClick={() => handleNav(id)}
                     className={`flex w-full items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs sm:text-[13px] font-medium transition-colors ${
                       isActive
-                        ? "text-[#f5ba42] font-semibold bg-white/[0.06]"
+                        ? "text-black dark:text-white font-semibold bg-white/[0.06]"
                         : "text-[#a0907e] hover:text-[#faf5ee] hover:bg-white/[0.03]"
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0 truncate">
-                      <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-[#f5ba42]" : "text-[#786958]"}`} />
+                      <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-black dark:text-white" : "text-[#777777] dark:text-[#888888]"}`} />
                       <span className="truncate">{label}</span>
                     </div>
                     {id === "liked" && likedTracks.length > 0 && (
@@ -2735,7 +2736,7 @@ export default function Home() {
             {/* + New Playlist Button (Rounded pill with border matching JioSaavn Screenshot 1) */}
             <button
               onClick={() => openPlaylistDialog()}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-[#f5ba42]/40 hover:border-[#f5ba42] bg-[#f5ba42]/[0.06] hover:bg-[#f5ba42]/15 py-2 px-3.5 text-xs font-semibold text-[#f5ba42] transition-all shadow-sm"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white bg-black/5 dark:bg-white/[0.06] hover:bg-black/10 dark:hover:bg-white/15 py-2 px-3.5 text-xs font-semibold text-black dark:text-white transition-all shadow-sm"
             >
               <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
               <span>New Playlist</span>
@@ -2761,17 +2762,17 @@ export default function Home() {
           {canInstallPwa && (
             <button
               onClick={installPwa}
-              className="mt-auto mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-[#f5ba42]/30 bg-[#f5ba42]/10 py-2.5 text-xs font-bold text-[#f5ba42] transition hover:bg-[#f5ba42] hover:text-[#140f07] shadow-[0_2px_12px_rgba(245,186,66,0.2)]"
+              className="mt-auto mb-3 flex w-full items-center justify-center gap-2 rounded-xl border border-black/20 dark:border-white/20 bg-black/5 dark:bg-white/10 py-2.5 text-xs font-bold text-black dark:text-white transition hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black shadow-sm"
             >
               <Download className="h-3.5 w-3.5" /> Install Musivo App
             </button>
           )}
 
           {/* Engine Status Card */}
-          <div className={`${canInstallPwa ? "" : "mt-auto"} rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#18130c] to-[#120e09] p-3.5 shadow-lg`}>
+          <div className={`${canInstallPwa ? "" : "mt-auto"} rounded-2xl border border-black/10 dark:border-white/[0.08] bg-black/[0.02] dark:bg-gradient-to-b dark:from-[#141414] dark:to-[#0a0a0a] p-3.5 shadow-md`}>
             <div className="mb-2 flex items-center justify-between">
               <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.18em] text-[#968572]">
-                <span className={`h-2 w-2 rounded-full ${isSpotifyConnected ? "bg-emerald-400 animate-pulse" : "bg-[#f5ba42]"}`} />
+                <span className={`h-2 w-2 rounded-full ${isSpotifyConnected ? "bg-emerald-400 animate-pulse" : "bg-black/40 dark:bg-white/40"}`} />
                 Engine
               </span>
               <span className="text-[10px] font-mono text-[#8a7966]">
@@ -2791,12 +2792,12 @@ export default function Home() {
 
         {/* Main Content Area */}
         <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-white/[0.07] bg-[#0a0d12]/85 px-4 py-3 sm:px-6 sm:py-3.5 backdrop-blur-2xl md:px-8 lg:px-10">
+          <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-[#e0e0e0] dark:border-white/[0.07] bg-[#f5f5f5]/85 dark:bg-[#080808]/85 px-4 py-3 sm:px-6 sm:py-3.5 backdrop-blur-2xl md:px-8 lg:px-10">
             <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3.5">
               <button
                 onClick={() => setIsMobileNavOpen(true)}
                 aria-label="Open navigation menu"
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-[#c2b2a0] hover:bg-white/[0.08] hover:text-white transition lg:hidden"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-black/10 dark:border-white/[0.08] bg-black/[0.03] dark:bg-white/[0.03] text-[#555555] dark:text-[#c2b2a0] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] hover:text-black dark:hover:text-white transition lg:hidden"
               >
                 <Menu className="h-5 w-5" />
               </button>
@@ -2815,7 +2816,7 @@ export default function Home() {
                   onClick={() => handleNav("home")}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
                     activeView === "home" || activeView === "discover" || activeView === "releases"
-                      ? "bg-white/[0.08] text-[#f5ba42]"
+                      ? "bg-white/[0.08] text-black dark:text-white"
                       : "text-[#9a8976] hover:text-[#faf5ee] hover:bg-white/[0.04]"
                   }`}
                 >
@@ -2826,7 +2827,7 @@ export default function Home() {
                   onClick={() => handleNav("podcasts")}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
                     activeView === "podcasts"
-                      ? "bg-white/[0.08] text-[#f5ba42]"
+                      ? "bg-white/[0.08] text-black dark:text-white"
                       : "text-[#9a8976] hover:text-[#faf5ee] hover:bg-white/[0.04]"
                   }`}
                 >
@@ -2837,23 +2838,23 @@ export default function Home() {
                   onClick={() => handleNav("aimix")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition ${
                     activeView === "aimix"
-                      ? "bg-[#f5ba42]/20 text-[#f5ba42] border border-[#f5ba42]/30"
-                      : "text-[#9a8976] hover:text-[#f5ba42] hover:bg-white/[0.04]"
+                      ? "bg-black dark:bg-white text-white dark:text-black/20 text-black dark:text-white border border-black/30 dark:border-white/30/30"
+                      : "text-[#9a8976] hover:text-black dark:text-white hover:bg-white/[0.04]"
                   }`}
                 >
-                  <Sparkles className="h-3 w-3 text-[#f5ba42]" />
+                  <Sparkles className="h-3 w-3 text-black dark:text-white" />
                   <span>AI Mix</span>
                 </button>
               </div>
 
               {/* JioSaavn-style Rounded-Full Universal Search Pill */}
               <div className="relative w-full max-w-[460px] group">
-                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8c7b68] group-focus-within:text-[#f5ba42] transition-colors" />
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#888888] group-focus-within:text-black dark:group-focus-within:text-white transition-colors" />
                 <input
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Search songs, artists, albums, or podcasts..."
-                  className="h-10 w-full rounded-full border border-white/[0.09] bg-white/[0.04] pl-10 pr-9 text-xs sm:text-sm text-[#f5f4ec] placeholder:text-[#786958] outline-none transition-all duration-200 focus:border-[#f5ba42]/60 focus:bg-black/30 focus:shadow-[0_0_20px_rgba(245,186,66,0.12)]"
+                  className="h-10 w-full rounded-full border border-black/10 dark:border-white/[0.09] bg-white dark:bg-[#121212] pl-10 pr-9 text-xs sm:text-sm text-[#111111] dark:text-[#f5f4ec] placeholder:text-[#888888] outline-none transition-all duration-200 focus:border-black/40 dark:focus:border-white/30 focus:shadow-sm"
                 />
                 {showSearch ? (
                   <button
@@ -2889,9 +2890,9 @@ export default function Home() {
                   <button
                     onClick={() => void logout()}
                     disabled={authLoading}
-                    className="flex items-center gap-2 rounded-full border border-white/[0.1] bg-white/[0.04] py-1 pl-1 pr-3 text-xs sm:text-sm font-semibold text-[#faf5ee] transition-all hover:border-[#f5ba42]/40 hover:bg-white/[0.07]"
+                    className="flex items-center gap-2 rounded-full border border-black/10 dark:border-white/[0.1] bg-black/[0.04] dark:bg-white/[0.04] py-1 pl-1 pr-3 text-xs sm:text-sm font-semibold text-[#111111] dark:text-[#faf5ee] transition-all hover:border-black/20 dark:hover:border-white/20 hover:bg-black/[0.07] dark:hover:bg-white/[0.07]"
                   >
-                    <span className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-tr from-[#f5ba42] to-[#ffd064] text-xs font-bold text-[#140f07] shadow-sm">
+                    <span className="grid h-7 w-7 place-items-center rounded-full bg-black dark:bg-white text-xs font-bold text-white dark:text-black shadow-sm">
                       {(user?.name || "M").slice(0, 1).toUpperCase()}
                     </span>
                     <span className="hidden sm:inline">Log out</span>
@@ -2901,7 +2902,7 @@ export default function Home() {
               ) : (
                 <button
                   onClick={() => startLogin()}
-                  className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#f5ba42] to-[#ffd064] px-4 py-2 text-xs sm:text-sm font-bold text-[#140f07] shadow-lg shadow-[#f5ba42]/20 transition-all hover:opacity-95 hover:scale-[1.02]"
+                  className="flex items-center gap-2 rounded-full bg-black dark:bg-white px-4 py-2 text-xs sm:text-sm font-bold text-white dark:text-black shadow-md transition-all hover:opacity-90 hover:scale-[1.02]"
                 >
                   <span>Log in</span>
                   <ChevronDown className="h-3.5 w-3.5" />
@@ -2912,11 +2913,11 @@ export default function Home() {
 
           <div className="px-3.5 py-4 sm:px-6 sm:py-6 md:px-8 lg:px-12 lg:py-8 pb-[calc(var(--bottom-nav-height,3.5rem)+6.5rem)] lg:pb-32">
             {autoplayBlocked && (
-              <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-[#f5ba42]/30 bg-[#22160d] p-4 text-xs text-[#f5ba42]">
+              <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-black/30 dark:border-white/30/30 bg-[#22160d] p-4 text-xs text-black dark:text-white">
                 <span>Browser audio autoplay was restricted. Press play to start playback in this browser.</span>
                 <button
                   onClick={() => void togglePlay()}
-                  className="rounded-full bg-[#f5ba42] px-4 py-1.5 font-bold text-[#140f07]"
+                  className="rounded-full bg-black dark:bg-white text-white dark:text-black px-4 py-1.5 font-bold text-[#140f07]"
                 >
                   Play now
                 </button>
@@ -3085,7 +3086,7 @@ export default function Home() {
                   </div>
                 ) : (
                   <div className="rounded-2xl border border-dashed border-white/[0.12] px-6 py-16 text-center">
-                    <Heart className="mx-auto mb-4 h-7 w-7 text-[#f5ba42]" />
+                    <Heart className="mx-auto mb-4 h-7 w-7 text-black dark:text-white" />
                     <p className="font-display text-lg font-semibold">Your Liked Songs are waiting</p>
                     <p className="mt-1 text-sm text-[#9c8c79]">
                       Tap the heart beside any track to keep it synced to your account.
@@ -3118,7 +3119,7 @@ export default function Home() {
                           onClick={() => toast.info(`${playlist.name} is ready for track additions.`)}
                           className="flex min-h-[132px] flex-col justify-between rounded-2xl border border-white/[0.08] bg-[#17110a] p-5 text-left transition-colors hover:border-[#c88719] hover:bg-[#231a10]"
                         >
-                          <ListMusic className="h-5 w-5 text-[#f5ba42]" />
+                          <ListMusic className="h-5 w-5 text-black dark:text-white" />
                           <span>
                             <p className="font-display text-lg font-semibold">{playlist.name}</p>
                             <p className="mt-1 text-xs text-[#948472]">Synced to your account</p>
@@ -3128,14 +3129,14 @@ export default function Home() {
                     </div>
                   ) : (
                     <div className="rounded-2xl border border-dashed border-white/[0.12] px-6 py-12 text-center">
-                      <ListMusic className="mx-auto mb-4 h-7 w-7 text-[#f5ba42]" />
+                      <ListMusic className="mx-auto mb-4 h-7 w-7 text-black dark:text-white" />
                       <p className="font-display text-lg font-semibold">Build your first playlist</p>
                       <p className="mt-1 text-sm text-[#9c8c79]">
                         Save catalog tracks into a collection that follows you.
                       </p>
                       <button
                         onClick={() => openPlaylistDialog()}
-                        className="mt-5 rounded-full bg-[#f5ba42] px-4 py-2 text-sm font-bold text-[#140f07]"
+                        className="mt-5 rounded-full bg-black dark:bg-white text-white dark:text-black px-4 py-2 text-sm font-bold text-[#140f07]"
                       >
                         Create playlist
                       </button>
@@ -3178,12 +3179,12 @@ export default function Home() {
                               void playTrack(target, catalog);
                               toast.success(`${mix.title} is now playing`);
                             }}
-                            className="absolute bottom-2.5 right-2.5 h-10 w-10 rounded-full bg-[#f5ba42] text-[#140f07] shadow-xl flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:scale-110 active:scale-95 z-10"
+                            className="absolute bottom-2.5 right-2.5 h-10 w-10 rounded-full bg-black dark:bg-white text-white dark:text-black text-[#140f07] shadow-xl flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:scale-110 active:scale-95 z-10"
                           >
                             <Play className="h-4 w-4 fill-current ml-0.5" />
                           </button>
                         </div>
-                        <p className="font-semibold text-xs sm:text-[13px] text-[#faf5ee] truncate group-hover:text-[#f5ba42] transition-colors leading-snug">
+                        <p className="font-semibold text-xs sm:text-[13px] text-[#faf5ee] truncate group-hover:text-black dark:text-white transition-colors leading-snug">
                           {mix.title}
                         </p>
                         <p className="text-[11px] text-[#8c7b68] truncate mt-0.5">
@@ -3315,7 +3316,7 @@ export default function Home() {
                       >
                         <span className="text-2xl sm:text-3xl mb-3 block">{mood.emoji}</span>
                         <div>
-                          <p className="font-semibold text-xs sm:text-sm text-[#faf5ee] group-hover:text-[#f5ba42] transition-colors">
+                          <p className="font-semibold text-xs sm:text-sm text-[#faf5ee] group-hover:text-black dark:text-white transition-colors">
                             {mood.name}
                           </p>
                           <p className="text-[10px] text-[#9a8976] line-clamp-2 mt-1">
@@ -3362,8 +3363,8 @@ export default function Home() {
 
                 {/* Featured Release Hero Banner */}
                 {featuredTrack && (
-                  <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-[#f5ba42]/25 bg-gradient-to-br from-[#2a1d10] via-[#1c140c] to-[#120d08] p-5 sm:p-8 shadow-2xl">
-                    <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#f5ba42]/15 blur-3xl pointer-events-none" />
+                  <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-black/30 dark:border-white/30/25 bg-gradient-to-br from-[#2a1d10] via-[#1c140c] to-[#120d08] p-5 sm:p-8 shadow-2xl">
+                    <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-black dark:bg-white text-white dark:text-black/15 blur-3xl pointer-events-none" />
                     <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-7">
                       <img
                         src={featuredTrack.art}
@@ -3371,8 +3372,8 @@ export default function Home() {
                         className="h-28 w-28 sm:h-36 sm:w-36 rounded-2xl object-cover shadow-2xl shrink-0 border border-white/10"
                       />
                       <div className="min-w-0 flex-1 space-y-2">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f5ba42]/20 border border-[#f5ba42]/30 px-2.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-[#f5ba42]">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#f5ba42] animate-ping" />
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-black dark:bg-white text-white dark:text-black/20 border border-black/30 dark:border-white/30/30 px-2.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-black dark:text-white">
+                          <span className="h-1.5 w-1.5 rounded-full bg-black dark:bg-white text-white dark:text-black animate-ping" />
                           Featured Release
                         </span>
                         <h2 className="font-display text-xl sm:text-3xl font-bold text-[#faf5ee] truncate">
@@ -3385,7 +3386,7 @@ export default function Home() {
                           <button
                             type="button"
                             onClick={() => void playTrack(featuredTrack, catalog)}
-                            className="inline-flex items-center gap-2 rounded-full bg-[#f5ba42] hover:bg-[#ffd064] px-5 py-2 text-xs font-bold text-[#140f07] shadow-lg transition hover:scale-105 active:scale-95"
+                            className="inline-flex items-center gap-2 rounded-full bg-black dark:bg-white text-white dark:text-black hover:bg-[#ffd064] px-5 py-2 text-xs font-bold text-[#140f07] shadow-lg transition hover:scale-105 active:scale-95"
                           >
                             <Play className="h-4 w-4 fill-current" />
                             Play now
@@ -3481,20 +3482,20 @@ export default function Home() {
                 </div>
 
                 {/* Editorial Hero Banner with rotating vinyl record */}
-                <section className="relative overflow-hidden rounded-2xl sm:rounded-[26px] border border-[#f5ba42]/20 bg-[#24170c] shadow-[0_16px_60px_rgba(0,0,0,0.4)] mb-8 sm:mb-10">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(245,186,66,0.32),transparent_32%),linear-gradient(105deg,#24170c_0%,#352010_45%,#150e08_100%)]" />
-                  <div className="absolute -right-20 -top-32 h-[420px] w-[420px] rounded-full border border-[#f5ba42]/25 bg-[#f5ba42]/15 blur-3xl pointer-events-none" />
+                <section className="relative overflow-hidden rounded-2xl sm:rounded-[26px] border border-black/10 dark:border-white/10 bg-[#e8e8e8] dark:bg-[#141414] shadow-xl mb-8 sm:mb-10">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(0,0,0,0.04),transparent_40%),linear-gradient(105deg,#f0f0f0_0%,#e4e4e4_45%,#d8d8d8_100%)] dark:bg-[radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.08),transparent_40%),linear-gradient(105deg,#1c1c1c_0%,#141414_45%,#0d0d0d_100%)]" />
+                  <div className="absolute -right-20 -top-32 h-[420px] w-[420px] rounded-full border border-black/5 dark:border-white/10 bg-black/5 dark:bg-white/5 blur-3xl pointer-events-none" />
                   
                   {/* Right-side Vinyl Sleeve Display */}
                   <div className="absolute bottom-0 right-0 top-0 hidden w-[44%] items-center justify-center overflow-hidden pr-8 md:flex pointer-events-none">
                     <div className="relative group">
-                      <div className="absolute -inset-4 rounded-3xl bg-gradient-to-tr from-[#f5ba42]/30 to-[#ffd064]/15 blur-2xl opacity-70" />
+                      <div className="absolute -inset-4 rounded-3xl bg-gradient-to-tr from-black/10 to-black/5 dark:from-white/10 dark:to-white/5 blur-2xl opacity-70" />
                       
                       {/* Rotating Vinyl Record Disc */}
                       <div className="absolute -right-10 top-3 h-48 w-48 rounded-full bg-[#100c07] border border-white/10 shadow-2xl flex items-center justify-center rotate-45 transition-transform duration-700">
                         <div className="h-36 w-36 rounded-full border border-white/5 flex items-center justify-center">
                           <div className="h-24 w-24 rounded-full border border-white/10 flex items-center justify-center bg-[#1c140d]">
-                            <div className="h-10 w-10 rounded-full bg-[#f5ba42] flex items-center justify-center text-[#140f07]">
+                            <div className="h-10 w-10 rounded-full bg-black dark:bg-white flex items-center justify-center text-white dark:text-black">
                               <Disc3 className="h-6 w-6 animate-[spin_8s_linear_infinite]" />
                             </div>
                           </div>
@@ -3523,7 +3524,7 @@ export default function Home() {
 
                   <div className="relative max-w-[650px] px-4 py-5 sm:px-8 sm:py-8 md:px-9 md:py-10 lg:px-11 lg:py-12">
                     <div className="mb-3 sm:mb-6 flex items-center gap-2.5 sm:gap-3">
-                      <span className="rounded-full bg-gradient-to-r from-[#f5ba42] to-[#ffd064] px-2.5 py-1 font-mono text-[9px] font-bold tracking-[0.16em] text-[#140f07] shadow-sm">
+                      <span className="rounded-full bg-black dark:bg-white px-2.5 py-1 font-mono text-[9px] font-bold tracking-[0.16em] text-white dark:text-black shadow-sm">
                         {isSpotifyConnected ? "SPOTIFY CONNECTED" : "FEATURED RECORD"}
                       </span>
                       <span className="font-mono text-[9px] sm:text-[10px] tracking-[0.16em] text-[#d8c9a8]">
@@ -3531,7 +3532,7 @@ export default function Home() {
                       </span>
                     </div>
                     <h2 className="font-display max-w-[570px] text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.05] tracking-[-0.05em] text-[#faf5ee]">
-                      Stream your favorite music with Musivo<span className="text-[#f5ba42]">.</span>
+                      Stream your favorite music with Musivo<span className="text-[#666666] dark:text-white">.</span>
                     </h2>
                     <p className="mt-2.5 sm:mt-5 max-w-[440px] text-xs sm:text-sm leading-5 sm:leading-6 text-[#d6c8b6] md:text-[15px]">
                       Discover a world of sound with Musivo, where every genre, creator, and mood is at your fingertips, ready to be explored.
@@ -3539,13 +3540,13 @@ export default function Home() {
                     <div className="mt-4 sm:mt-8 flex flex-wrap items-center gap-2.5 sm:gap-3">
                       <button
                         onClick={() => void playTrack(featuredTrack, catalog)}
-                        className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#ffd064] via-[#f5ba42] to-[#e09b26] px-4 py-2 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold text-[#140f07] shadow-[0_8px_28px_rgba(245,186,66,0.35)] hover:opacity-95 hover:scale-[1.02] transition"
+                        className="flex items-center gap-2 rounded-full bg-black dark:bg-white px-4 py-2 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold text-white dark:text-black shadow-md hover:opacity-90 hover:scale-[1.02] transition"
                       >
                         <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current" /> Start listening
                       </button>
                       <button
                         onClick={() => setActiveView("discover")}
-                        className="rounded-full border border-white/20 px-3.5 py-2 sm:px-5 sm:py-3 text-xs sm:text-sm font-semibold text-[#faf5ee] hover:bg-white/10 transition"
+                        className="rounded-full border border-black/20 dark:border-white/20 px-3.5 py-2 sm:px-5 sm:py-3 text-xs sm:text-sm font-semibold text-[#111111] dark:text-[#faf5ee] hover:bg-black/5 dark:hover:bg-white/10 transition"
                       >
                         Explore the mix
                       </button>
@@ -3711,11 +3712,11 @@ export default function Home() {
                 </section>
 
                 {/* Section 3: AI Mix Studio Showcase Banner */}
-                <div className="mt-8 sm:mt-10 overflow-hidden rounded-2xl sm:rounded-3xl border border-[#f5ba42]/20 bg-gradient-to-br from-[#291e14] via-[#1f160e] to-[#140e08] p-5 sm:p-8 shadow-xl relative">
-                  <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-[#f5ba42]/10 blur-3xl pointer-events-none" />
+                <div className="mt-8 sm:mt-10 overflow-hidden rounded-2xl sm:rounded-3xl border border-black/30 dark:border-white/30/20 bg-gradient-to-br from-[#291e14] via-[#1f160e] to-[#140e08] p-5 sm:p-8 shadow-xl relative">
+                  <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-black dark:bg-white text-white dark:text-black/10 blur-3xl pointer-events-none" />
                   <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-5">
                     <div className="space-y-1.5 max-w-xl">
-                      <div className="flex items-center gap-2 text-[#f5ba42]">
+                      <div className="flex items-center gap-2 text-black dark:text-white">
                         <Sparkles className="h-4 w-4 animate-pulse" />
                         <span className="font-mono text-[10px] uppercase tracking-[0.18em] font-bold">
                           AI Mix Studio
@@ -3799,7 +3800,7 @@ export default function Home() {
                           </p>
                           <p className="mt-1 text-xs leading-5 text-white/55">{mix.detail}</p>
                         </div>
-                        <span className="absolute bottom-3.5 left-4 sm:bottom-4 sm:last:left-5 grid h-8 w-8 place-items-center rounded-full bg-white/10 text-[#f5ba42] opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100">
+                        <span className="absolute bottom-3.5 left-4 sm:bottom-4 sm:last:left-5 grid h-8 w-8 place-items-center rounded-full bg-white/10 text-black dark:text-white opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100">
                           <Play className="h-3.5 w-3.5 fill-current" />
                         </span>
                       </button>
@@ -3842,12 +3843,12 @@ export default function Home() {
                               void playTrack(target, catalog);
                               toast.success(`${mix.title} is now playing`);
                             }}
-                            className="absolute bottom-2.5 right-2.5 h-10 w-10 rounded-full bg-[#f5ba42] text-[#140f07] shadow-xl flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:scale-110 active:scale-95 z-10"
+                            className="absolute bottom-2.5 right-2.5 h-10 w-10 rounded-full bg-black dark:bg-white text-white dark:text-black text-[#140f07] shadow-xl flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:scale-110 active:scale-95 z-10"
                           >
                             <Play className="h-4 w-4 fill-current ml-0.5" />
                           </button>
                         </div>
-                        <p className="font-semibold text-xs sm:text-[13px] text-[#faf5ee] truncate group-hover:text-[#f5ba42] transition-colors leading-snug">
+                        <p className="font-semibold text-xs sm:text-[13px] text-[#faf5ee] truncate group-hover:text-black dark:text-white transition-colors leading-snug">
                           {mix.title}
                         </p>
                         <p className="text-[11px] text-[#8c7b68] truncate mt-0.5">
@@ -3864,11 +3865,11 @@ export default function Home() {
       </div>
 
       {/* Persistent Bottom Musivo Player */}
-      <div className="fixed inset-x-0 bottom-[var(--bottom-nav-height,3.5rem)] lg:bottom-0 z-40 lg:z-50 border-t border-white/[0.09] bg-[#100c08]/95 shadow-[0_-16px_50px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition-all">
+      <div className="fixed inset-x-0 bottom-[var(--bottom-nav-height,3.5rem)] lg:bottom-0 z-40 lg:z-50 border-t border-[#e0e0e0] dark:border-white/[0.09] bg-white/95 dark:bg-[#0d0d0d]/95 shadow-[0_-16px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_-16px_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl transition-all text-[#111111] dark:text-white">
         {/* JioSaavn-style Announcement / Feature Ribbon */}
-        <div className="hidden sm:flex items-center justify-between border-b border-white/[0.06] bg-gradient-to-r from-[#171109] via-[#21170d] to-[#171109] px-4 py-1.5 text-[11px] text-[#c0b09d]">
+        <div className="hidden sm:flex items-center justify-between border-b border-black/5 dark:border-white/[0.06] bg-[#f0f0f0] dark:bg-[#141414] px-4 py-1.5 text-[11px] text-[#666666] dark:text-[#c0b09d]">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#f5ba42]/20 border border-[#f5ba42]/30 px-2 py-0.5 font-mono text-[9px] font-bold text-[#f5ba42] uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1 rounded-full bg-black/10 dark:bg-white/10 border border-black/15 dark:border-white/20 px-2 py-0.5 font-mono text-[9px] font-bold text-black dark:text-white uppercase tracking-wider">
               <Sparkles className="h-2.5 w-2.5" />
               Musivo Studio
             </span>
@@ -3880,7 +3881,7 @@ export default function Home() {
               if (!isSpotifyConnected) setActiveView("spotify");
               else setActiveView("aimix");
             }}
-            className="flex items-center gap-1 text-[#f5ba42] hover:underline font-medium text-[11px]"
+            className="flex items-center gap-1 text-black dark:text-white hover:underline font-semibold text-[11px]"
           >
             <span>{isSpotifyConnected ? "Open AI Mix Studio" : "Connect Spotify for seamless synced playback"}</span>
             <ArrowRight className="h-3 w-3" />
@@ -3890,7 +3891,7 @@ export default function Home() {
         {/* Mobile Top Progress Line Indicator (Spotify Mobile Style) */}
         <div className="absolute top-0 inset-x-0 h-[2.5px] bg-white/[0.08] sm:hidden overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-[#ffd064] via-[#f5ba42] to-[#e09b26] transition-all duration-300"
+            className="h-full bg-black dark:bg-white transition-all duration-300"
             style={{ width: `${duration > 0 ? (progress / duration) * 100 : 0}%` }}
           />
         </div>
@@ -3920,7 +3921,7 @@ export default function Home() {
                 className="h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-lg object-cover shadow-md group-hover/track:scale-105 transition-transform"
               />
               <div className="min-w-0">
-                <p className="truncate text-xs sm:text-[13px] font-semibold text-[#faf5ee] group-hover/track:text-[#f5ba42] transition-colors">
+                <p className="truncate text-xs sm:text-[13px] font-semibold text-[#111111] dark:text-[#faf5ee] group-hover/track:text-black dark:group-hover/track:text-white transition-colors">
                   {currentTrack.title}
                 </p>
                 <p className="truncate text-[11px] sm:text-xs text-[#a2927f]">{currentTrack.artist}</p>
@@ -3941,7 +3942,7 @@ export default function Home() {
                 }}
                 className={`ml-1 hidden sm:grid h-9 w-9 place-items-center rounded-full hover:bg-white/[0.08] transition ${
                   likedIds.has(String(currentTrack.id))
-                    ? "text-[#f5ba42]"
+                    ? "text-black dark:text-white"
                     : "text-[#887967] hover:text-white"
                 }`}
               >
@@ -3958,7 +3959,7 @@ export default function Home() {
                 <button
                   aria-label="Shuffle queue"
                   onClick={shuffleQueue}
-                  className="hidden sm:grid h-9 w-9 place-items-center rounded-full text-[#948472] hover:bg-white/[0.08] hover:text-[#f5ba42] transition active:scale-95 shrink-0"
+                  className="hidden sm:grid h-9 w-9 place-items-center rounded-full text-[#948472] hover:bg-white/[0.08] hover:text-black dark:text-white transition active:scale-95 shrink-0"
                   title="Shuffle queue"
                 >
                   <Shuffle className="h-4 w-4" />
@@ -3973,7 +3974,7 @@ export default function Home() {
                 <button
                   aria-label={isPlaying ? "Pause" : "Play"}
                   onClick={() => void togglePlay()}
-                  className="grid h-9 w-9 sm:h-11 sm:w-11 place-items-center rounded-full bg-[#faf5ee] text-[#131811] hover:bg-[#f5ba42] hover:scale-105 active:scale-95 transition-all shadow-md shrink-0"
+                  className="grid h-9 w-9 sm:h-11 sm:w-11 place-items-center rounded-full bg-black dark:bg-white text-white dark:text-black hover:scale-105 active:scale-95 transition-all shadow-md shrink-0"
                 >
                   {isPlaying ? (
                     <Pause className="h-4 w-4 sm:h-5 sm:w-5 fill-current" />
@@ -3991,12 +3992,12 @@ export default function Home() {
 
                 {/* Spotify Full-Length Indicator or Sign-in Action */}
                 {playbackMode === "spotify" ? (
-                  <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-[#f5ba42]/15 px-2 py-0.5 text-[9px] font-semibold text-[#f5ba42]">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#f5ba42] animate-pulse" />
+                  <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-black/10 dark:bg-white/15 px-2 py-0.5 text-[9px] font-semibold text-black dark:text-white">
+                    <span className="h-1.5 w-1.5 rounded-full bg-black dark:bg-white text-white dark:text-black animate-pulse" />
                     Spotify Full Stream
                   </span>
                 ) : (
-                  <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-[#f5ba42]/15 px-2 py-0.5 text-[9px] font-semibold text-[#f5ba42]">
+                  <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-black dark:bg-white text-white dark:text-black/15 px-2 py-0.5 text-[9px] font-semibold text-black dark:text-white">
                     Full Length Audio
                   </span>
                 )}
@@ -4006,8 +4007,8 @@ export default function Home() {
                   onClick={toggleRepeatMode}
                   className={`hidden sm:inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 transition active:scale-95 ${
                     repeatMode !== "off"
-                      ? "text-[#f5ba42] drop-shadow-[0_0_8px_rgba(245,186,66,0.4)] bg-[#f5ba42]/10"
-                      : "text-[#948472] hover:bg-white/[0.08] hover:text-[#f5ba42]"
+                      ? "text-black dark:text-white drop-shadow-[0_0_8px_rgba(245,186,66,0.4)] bg-black dark:bg-white text-white dark:text-black/10"
+                      : "text-[#948472] hover:bg-white/[0.08] hover:text-black dark:text-white"
                   }`}
                   title={`Repeat: ${repeatMode.toUpperCase()}`}
                 >
@@ -4027,8 +4028,8 @@ export default function Home() {
                   onClick={() => setIsPlayerSleepModalOpen(true)}
                   className={`sm:hidden grid h-9 w-9 place-items-center rounded-full transition shrink-0 ${
                     sleepTimer
-                      ? "text-[#f5ba42] bg-[#f5ba42]/10"
-                      : "text-[#8e7f6e] hover:bg-white/[0.08] hover:text-[#f5ba42]"
+                      ? "text-black dark:text-white bg-black dark:bg-white text-white dark:text-black/10"
+                      : "text-[#8e7f6e] hover:bg-white/[0.08] hover:text-black dark:text-white"
                   }`}
                   title="Sleep Timer"
                 >
@@ -4037,7 +4038,7 @@ export default function Home() {
                 <button
                   aria-label="Toggle playback queue"
                   onClick={() => setIsQueueOpen((prev) => !prev)}
-                  className="sm:hidden grid h-9 w-9 place-items-center rounded-full text-[#8e7f6e] hover:bg-white/[0.08] hover:text-[#f5ba42] transition shrink-0"
+                  className="sm:hidden grid h-9 w-9 place-items-center rounded-full text-[#666666] dark:text-[#8e7f6e] hover:bg-black/5 dark:hover:bg-white/[0.08] hover:text-black dark:hover:text-white transition shrink-0"
                   title="Queue"
                 >
                   <ListMusic className="h-4 w-4" />
@@ -4045,7 +4046,7 @@ export default function Home() {
                 <button
                   aria-label="Playback diagnostics"
                   onClick={() => setShowPlaybackDiagnostics((visible) => !visible)}
-                  className="md:hidden grid h-9 w-9 place-items-center rounded-full text-[#8e7f6e] hover:bg-white/[0.08] hover:text-[#f5ba42] transition shrink-0"
+                  className="md:hidden grid h-9 w-9 place-items-center rounded-full text-[#666666] dark:text-[#8e7f6e] hover:bg-black/5 dark:hover:bg-white/[0.08] hover:text-black dark:hover:text-white transition shrink-0"
                 >
                   <Headphones className="h-4 w-4" />
                 </button>
@@ -4063,7 +4064,7 @@ export default function Home() {
                   max={duration || (currentTrack.durationMs ? Math.round(currentTrack.durationMs / 1000) : 100)}
                   value={progress}
                   onChange={(event) => void seek(Number(event.target.value))}
-                  className="h-1 w-full cursor-pointer accent-[#f5ba42]"
+                  className="h-1 w-full cursor-pointer accent-black dark:accent-white"
                 />
                 <span className="w-8 font-mono text-[9px] text-[#7d6e5d]">
                   {duration ? formatTime(duration) : currentTrack.duration}
@@ -4079,7 +4080,7 @@ export default function Home() {
                 onClick={() => setIsPlayerSleepModalOpen(true)}
                 className={`relative rounded-xl p-2 transition ${
                   sleepTimer
-                    ? "bg-[#f5ba42]/20 text-[#f5ba42]"
+                    ? "bg-black dark:bg-white text-white dark:text-black/20 text-black dark:text-white"
                     : "text-[#8e7f6e] hover:bg-white/[0.06] hover:text-[#faf5ee]"
                 }`}
                 title={
@@ -4090,7 +4091,7 @@ export default function Home() {
               >
                 <Moon className="h-4 w-4" />
                 {sleepTimer && (
-                  <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#f5ba42] animate-pulse" />
+                  <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-black dark:bg-white text-white dark:text-black animate-pulse" />
                 )}
               </button>
 
@@ -4110,14 +4111,14 @@ export default function Home() {
                 onClick={() => setIsQueueOpen((prev) => !prev)}
                 className={`relative rounded-xl p-2 transition ${
                   isQueueOpen
-                    ? "bg-[#f5ba42]/20 text-[#f5ba42]"
+                    ? "bg-black dark:bg-white text-white dark:text-black/20 text-black dark:text-white"
                     : "text-[#8e7f6e] hover:bg-white/[0.06] hover:text-[#faf5ee]"
                 }`}
                 title="Playback Queue"
               >
                 <ListMusic className="h-4 w-4" />
                 {queue.length > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#f5ba42] px-1 font-mono text-[9px] font-bold text-[#100c08]">
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-black dark:bg-white px-1 font-mono text-[9px] font-bold text-white dark:text-black">
                     {queue.length}
                   </span>
                 )}
@@ -4129,7 +4130,7 @@ export default function Home() {
                 onClick={() => setShowPlaybackDiagnostics((visible) => !visible)}
                 className={`rounded-xl p-2 transition ${
                   showPlaybackDiagnostics
-                    ? "bg-[#f5ba42]/20 text-[#f5ba42]"
+                    ? "bg-black dark:bg-white text-white dark:text-black/20 text-black dark:text-white"
                     : "text-[#8e7f6e] hover:bg-white/[0.06] hover:text-[#faf5ee]"
                 }`}
                 title="Audio Diagnostics"
@@ -4166,7 +4167,7 @@ export default function Home() {
                   max="100"
                   value={volume}
                   onChange={(event) => void setVolume(Number(event.target.value))}
-                  className="w-20 cursor-pointer accent-[#f5ba42]"
+                  className="w-20 cursor-pointer accent-black dark:accent-white"
                 />
               </div>
 
@@ -4188,16 +4189,16 @@ export default function Home() {
       <button
         type="button"
         onClick={() => setIsQueueOpen((prev) => !prev)}
-        className={`hidden xl:flex fixed right-0 top-1/2 -translate-y-1/2 z-30 items-center gap-2 py-3.5 px-2 rounded-l-xl border-l border-t border-b border-white/[0.12] bg-[#1a140d]/90 hover:bg-[#251b11] backdrop-blur-md shadow-2xl text-[#d6c8b6] hover:text-[#f5ba42] transition-all group ${
-          isQueueOpen ? "bg-[#251b11] text-[#f5ba42] border-[#f5ba42]/40 ring-1 ring-[#f5ba42]/30" : ""
+        className={`hidden xl:flex fixed right-0 top-1/2 -translate-y-1/2 z-30 items-center gap-2 py-3.5 px-2 rounded-l-xl border-l border-t border-b border-white/[0.12] bg-[#1a140d]/90 hover:bg-[#251b11] backdrop-blur-md shadow-2xl text-[#d6c8b6] hover:text-black dark:text-white transition-all group ${
+          isQueueOpen ? "bg-[#251b11] text-black dark:text-white border-black/30 dark:border-white/30/40 ring-1 ring-[#f5ba42]/30" : ""
         }`}
         style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
         title="Toggle Playback Queue"
       >
-        <ListMusic className="h-4 w-4 -rotate-90 text-[#f5ba42] group-hover:scale-110 transition-transform" />
+        <ListMusic className="h-4 w-4 -rotate-90 text-black dark:text-white group-hover:scale-110 transition-transform" />
         <span className="font-semibold text-xs tracking-wider">Queue</span>
         {queue.length > 0 && (
-          <span className="h-4 w-4 rounded-full bg-[#f5ba42] text-[#140f07] text-[10px] font-bold flex items-center justify-center -rotate-90 mt-1">
+          <span className="h-4 w-4 rounded-full bg-black dark:bg-white text-white dark:text-black text-[10px] font-bold flex items-center justify-center -rotate-90 mt-1">
             {queue.length}
           </span>
         )}
@@ -4223,7 +4224,7 @@ export default function Home() {
       {/* Playlist Dialog */}
       {showPlaylistDialog && (
         <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 px-5 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl border border-white/[0.1] bg-[#1a130c] p-5 shadow-2xl">
+          <div className="w-full max-w-md rounded-3xl border border-black/10 dark:border-white/[0.1] bg-white dark:bg-[#141414] p-5 shadow-2xl text-[#111111] dark:text-white">
             <div className="mb-5 flex items-start justify-between">
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#a2927f]">
@@ -4261,7 +4262,7 @@ export default function Home() {
                     className="flex w-full items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-3 text-left text-sm text-[#faf5ee] hover:border-[#c88719] hover:bg-white/[0.06]"
                   >
                     <span className="flex items-center gap-2">
-                      <ListMusic className="h-4 w-4 text-[#f5ba42]" />
+                      <ListMusic className="h-4 w-4 text-black dark:text-white" />
                       {playlist.name}
                     </span>
                     <Plus className="h-4 w-4 text-[#988877]" />
@@ -4290,7 +4291,7 @@ export default function Home() {
                 <button
                   disabled={!newPlaylistName.trim() || createPlaylistMutation.isPending}
                   onClick={createPlaylist}
-                  className="rounded-xl bg-[#f5ba42] px-4 text-sm font-bold text-[#140f07] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-xl bg-black dark:bg-white px-4 text-sm font-bold text-white dark:text-black disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Create
                 </button>
@@ -4299,7 +4300,7 @@ export default function Home() {
             {!isAuthenticated && (
               <button
                 onClick={() => startLogin()}
-                className="mt-4 w-full rounded-xl border border-white/[0.1] px-4 py-3 text-sm font-semibold text-[#f5ba42] hover:bg-white/[0.05]"
+                className="mt-4 w-full rounded-xl border border-black/15 dark:border-white/[0.1] px-4 py-3 text-sm font-semibold text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/[0.05]"
               >
                 Sign in to save playlists
               </button>
@@ -4311,7 +4312,7 @@ export default function Home() {
       {/* Spotify Playlist Dialog */}
       {showSpotifyPlaylistDialog && (
         <div className="fixed inset-0 z-[60] grid place-items-center bg-black/60 px-5 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl border border-[#f5ba42]/15 bg-[#1a130c] p-5 shadow-2xl">
+          <div className="w-full max-w-md rounded-3xl border border-black/10 dark:border-white/[0.1] bg-white dark:bg-[#141414] p-5 shadow-2xl text-[#111111] dark:text-white">
             <div className="mb-5 flex items-start justify-between">
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#caa972]">
@@ -4347,7 +4348,7 @@ export default function Home() {
                 type="checkbox"
                 checked={includeLikedInSpotifyPlaylist}
                 onChange={(event) => setIncludeLikedInSpotifyPlaylist(event.target.checked)}
-                className="h-4 w-4 accent-[#f5ba42]"
+                className="h-4 w-4 accent-black dark:accent-white"
               />
               <span>
                 Add my{" "}
@@ -4361,7 +4362,7 @@ export default function Home() {
             <button
               disabled={!newSpotifyPlaylistName.trim() || spotifyCreatePlaylistMutation.isPending}
               onClick={createSpotifyPlaylist}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#f5ba42] px-4 py-3 text-sm font-bold text-[#140f07] disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-black dark:bg-white px-4 py-3 text-sm font-bold text-white dark:text-black disabled:cursor-not-allowed disabled:opacity-50"
             >
               {spotifyCreatePlaylistMutation.isPending ? (
                 <>

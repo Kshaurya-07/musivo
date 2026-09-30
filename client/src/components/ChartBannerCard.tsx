@@ -19,7 +19,7 @@ export function ChartBannerCard({
   subtitle,
   badge = "TOP 50",
   image,
-  gradient = "from-[#352010] via-[#22160d] to-[#120d08]",
+  gradient = "from-[#242424] via-[#1a1a1a] to-[#111111]",
   isCurrent = false,
   isPlaying = false,
   onClick,
@@ -34,9 +34,11 @@ export function ChartBannerCard({
       className={`group relative flex flex-col cursor-pointer transition-transform duration-300 hover:-translate-y-1 ${className}`}
     >
       {/* 16:9 Rectangular Banner Artwork Container */}
-      <div className={`relative aspect-[16/9] w-full rounded-xl overflow-hidden bg-gradient-to-br ${gradient} shadow-[0_4px_16px_rgba(0,0,0,0.4)] group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.6)] transition-all duration-300 ${
-        isCurrent ? "ring-2 ring-[#f5ba42]/60" : ""
-      }`}>
+      <div
+        className={`relative aspect-[16/9] w-full rounded-xl overflow-hidden bg-gradient-to-br ${gradient} border border-[#e0e0e0] dark:border-[#242424] shadow-[0_4px_14px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)] transition-all duration-300 ${
+          isCurrent ? "ring-2 ring-black dark:ring-white" : ""
+        }`}
+      >
         {image ? (
           <img
             src={image}
@@ -46,16 +48,16 @@ export function ChartBannerCard({
           />
         ) : (
           <div className="h-full w-full flex items-center justify-center opacity-40">
-            <Disc3 className="h-16 w-16 text-[#f5ba42] animate-[spin_12s_linear_infinite]" />
+            <Disc3 className="h-16 w-16 text-[#888888] dark:text-[#cccccc] animate-[spin_12s_linear_infinite]" />
           </div>
         )}
 
         {/* Ambient Dark Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none" />
 
-        {/* Center Circular Chart Badge (JioSaavn Top Music Charts style) */}
+        {/* Center Circular Chart Badge (Monochrome Graphite / Black / White) */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="relative flex flex-col items-center justify-center h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-gradient-to-br from-[#ffd064] via-[#f5ba42] to-[#c88719] text-[#140f07] shadow-[0_8px_24px_rgba(245,186,66,0.35)] ring-4 ring-black/50 group-hover:scale-110 transition-transform duration-300">
+          <div className="relative flex flex-col items-center justify-center h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-[#000000] dark:bg-[#ffffff] text-[#ffffff] dark:text-[#000000] shadow-[0_8px_24px_rgba(0,0,0,0.4)] ring-4 ring-black/40 dark:ring-white/20 group-hover:scale-110 transition-transform duration-300">
             <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 mb-0.5 stroke-[2.5]" />
             <span className="font-display font-black text-[9px] sm:text-[10px] uppercase tracking-tighter leading-none">
               {badge}
@@ -72,9 +74,9 @@ export function ChartBannerCard({
               e.stopPropagation();
               onPlay(e);
             }}
-            className={`absolute bottom-2.5 right-2.5 h-10 w-10 rounded-full bg-[#f5ba42] hover:bg-[#ffd064] text-[#140f07] shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 z-10 ${
+            className={`absolute bottom-2.5 right-2.5 h-10 w-10 rounded-full bg-[#000000] dark:bg-[#ffffff] hover:bg-[#222222] dark:hover:bg-[#eaeaea] text-[#ffffff] dark:text-[#000000] shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 z-10 ${
               isCurrentlyPlaying
-                ? "opacity-100 scale-100 ring-4 ring-[#f5ba42]/30"
+                ? "opacity-100 scale-100 ring-4 ring-black/25 dark:ring-white/25"
                 : "opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0"
             }`}
           >
@@ -88,16 +90,18 @@ export function ChartBannerCard({
       </div>
 
       {/* Metadata */}
-      <div className="mt-2 space-y-0.5 px-0.5">
+      <div className="mt-2 space-y-0.5 px-0.5 text-left">
         <p
           className={`font-semibold text-xs sm:text-[13px] leading-tight truncate transition-colors ${
-            isCurrent ? "text-[#f5ba42]" : "text-[#faf5ee] group-hover:text-[#f5ba42]"
+            isCurrent
+              ? "text-[#111111] dark:text-[#ffffff] underline underline-offset-2"
+              : "text-[#111111] dark:text-[#ffffff] group-hover:text-black dark:group-hover:text-white"
           }`}
           title={title}
         >
           {title}
         </p>
-        <p className="text-[11px] sm:text-xs text-[#8c7b68] truncate group-hover:text-[#bcaea0]">
+        <p className="text-[11px] sm:text-xs text-[#777777] dark:text-[#999999] truncate">
           {subtitle || "Musivo Charts"}
         </p>
       </div>

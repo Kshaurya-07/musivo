@@ -3,7 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { ThemeProvider } from "./contexts/ThemeContext";
+import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
 import { PlaybackProvider } from "./contexts/PlaybackContext";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -19,13 +19,18 @@ function Router() {
   );
 }
 
+function ThemedToaster() {
+  const { theme } = useTheme();
+  return <Toaster theme={theme} />;
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="dark">
+      <ThemeProvider defaultTheme="dark" switchable={true}>
         <TooltipProvider>
           <PlaybackProvider>
-            <Toaster theme="dark" />
+            <ThemedToaster />
             <Router />
           </PlaybackProvider>
         </TooltipProvider>

@@ -59,21 +59,21 @@ export function DeviceSelectorModal({ isOpen, onClose }: DeviceSelectorModalProp
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl bg-[#141416] border border-white/10 p-6 shadow-2xl space-y-5"
+        className="w-full max-w-md rounded-2xl bg-white dark:bg-[#141416] border border-black/10 dark:border-white/10 p-6 shadow-2xl space-y-5 text-[#111111] dark:text-white"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <div className="w-10 h-10 rounded-xl bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 flex items-center justify-center text-black dark:text-white">
               <Radio className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white tracking-tight">Connect a device</h3>
-              <p className="text-xs text-white/50">Listen anywhere via Spotify Connect</p>
+              <h3 className="text-lg font-bold text-[#111111] dark:text-white tracking-tight">Connect a device</h3>
+              <p className="text-xs text-[#666666] dark:text-white/50">Listen anywhere via Spotify Connect</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -81,7 +81,7 @@ export function DeviceSelectorModal({ isOpen, onClose }: DeviceSelectorModalProp
               <button
                 onClick={() => void devicesQuery.refetch()}
                 disabled={devicesQuery.isFetching}
-                className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-full transition-colors disabled:opacity-40"
+                className="p-2 text-[#777777] dark:text-white/40 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors disabled:opacity-40"
                 title="Refresh devices"
               >
                 <RefreshCw
@@ -91,7 +91,7 @@ export function DeviceSelectorModal({ isOpen, onClose }: DeviceSelectorModalProp
             )}
             <button
               onClick={onClose}
-              className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-full transition-colors"
+              className="p-2 text-[#777777] dark:text-white/40 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors"
             >
               <X className="w-5 h-5" />
             </button>

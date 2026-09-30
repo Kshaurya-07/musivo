@@ -23,7 +23,7 @@ export function BottomNavBar({
   return (
     <nav
       aria-label="Mobile Navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.08] bg-[#0d0a07]/95 px-3 pt-1.5 backdrop-blur-2xl lg:hidden safe-area-pb"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e0e0e0] dark:border-[#242424] bg-[#ffffff]/95 dark:bg-[#0d0d0d]/95 px-3 pt-1.5 backdrop-blur-2xl lg:hidden safe-area-pb"
       style={{ minHeight: "var(--bottom-nav-height)" }}
     >
       <div className="mx-auto flex max-w-md items-center justify-around">
@@ -35,31 +35,31 @@ export function BottomNavBar({
               onClick={() => onSelectView(id)}
               className={`group relative flex flex-1 flex-col items-center justify-center min-h-[44px] py-1 transition-all ${
                 isActive
-                  ? "text-[#f5ba42]"
-                  : "text-[#8c7b68] hover:text-[#d6c8b6]"
+                  ? "text-[#111111] dark:text-[#ffffff]"
+                  : "text-[#777777] dark:text-[#888888] hover:text-[#111111] dark:hover:text-[#ffffff]"
               }`}
             >
               <div className="relative">
                 <Icon
                   className={`h-5 w-5 transition-transform duration-200 ${
-                    isActive ? "scale-110 drop-shadow-[0_0_10px_rgba(245,186,66,0.4)]" : "group-hover:scale-105"
+                    isActive ? "scale-110" : "group-hover:scale-105"
                   }`}
                 />
                 {badge && (
-                  <span className="absolute -right-2 -top-1 grid h-3.5 min-w-[14px] place-items-center rounded-full bg-[#f5ba42] px-1 text-[9px] font-bold text-[#140f07]">
+                  <span className="absolute -right-2 -top-1 grid h-3.5 min-w-[14px] place-items-center rounded-full bg-[#000000] dark:bg-[#ffffff] px-1 text-[9px] font-bold text-[#ffffff] dark:text-[#000000]">
                     {badge}
                   </span>
                 )}
               </div>
               <span
                 className={`mt-1 text-[10px] font-medium tracking-tight transition-colors ${
-                  isActive ? "font-semibold text-[#faf5ee]" : ""
+                  isActive ? "font-semibold text-[#111111] dark:text-[#ffffff]" : ""
                 }`}
               >
                 {label}
               </span>
               {isActive && (
-                <span className="absolute -bottom-1 h-0.5 w-4 rounded-full bg-[#f5ba42] shadow-[0_0_8px_rgba(245,186,66,0.6)]" />
+                <span className="absolute -bottom-1 h-0.5 w-4 rounded-full bg-[#000000] dark:bg-[#ffffff]" />
               )}
             </button>
           );

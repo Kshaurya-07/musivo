@@ -23,7 +23,7 @@ export function MusivoLogo({
   };
 
   const imgClass = `${sizeMap[size] || ""} ${
-    glow ? "drop-shadow-[0_0_20px_rgba(245,186,66,0.3)]" : ""
+    glow ? "drop-shadow-[0_0_14px_rgba(0,0,0,0.15)] dark:drop-shadow-[0_0_16px_rgba(255,255,255,0.2)]" : ""
   } object-contain transition-transform duration-300 hover:scale-105 ${className}`;
 
   if (!showTagline) {
@@ -43,10 +43,10 @@ export function MusivoLogo({
         alt={alt}
         className={imgClass}
       />
-      <span className="mt-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.25em] text-[#faf5ee]">
+      <span className="mt-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.25em] text-[#111111] dark:text-[#ffffff]">
         Music, Reimagined
       </span>
-      <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#8c7b68]">
+      <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#777777] dark:text-[#888888]">
         Since 2026
       </span>
     </div>
@@ -65,19 +65,19 @@ export function MusivoBrandBadge({
 }) {
   return (
     <div className={`flex items-center gap-3 ${className}`}>
-      <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#f5ba42]/30 bg-[#16100a] shadow-[0_0_20px_rgba(245,186,66,0.2)]">
+      <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#e0e0e0] dark:border-[#292929] bg-[#ffffff] dark:bg-[#151515] shadow-sm">
         <img
           src="/musivo-logo-transparent.png"
           alt="Musivo"
-          className="h-8 w-8 object-contain"
+          className="h-7 w-7 object-contain"
         />
       </div>
       <div>
-        <span className="block font-display text-[22px] font-bold leading-none tracking-[-0.05em] text-[#faf5ee]">
-          musivo<span className="text-[#f5ba42]">.</span>
+        <span className="block font-display text-[22px] font-bold leading-none tracking-[-0.05em] text-[#111111] dark:text-[#ffffff]">
+          musivo<span className="text-[#888888] dark:text-[#ffffff]">.</span>
         </span>
         {showTagline && (
-          <span className="mt-1 block font-mono text-[9px] uppercase tracking-[0.2em] text-[#8c7b68]">
+          <span className="mt-1 block font-mono text-[9px] uppercase tracking-[0.2em] text-[#777777] dark:text-[#888888]">
             Music, Reimagined
           </span>
         )}
