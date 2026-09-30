@@ -1,5 +1,5 @@
-import React from "react";
-import { Sparkles, Dices, ChevronRight } from "lucide-react";
+import React, { useRef } from "react";
+import { Sparkles, ChevronRight } from "lucide-react";
 
 interface SubNavRibbonProps {
   activeTab: string;
@@ -16,6 +16,7 @@ export const SUB_NAV_TABS = [
   { id: "discover", label: "Charts" },
   { id: "playlists", label: "Top Playlists" },
   { id: "podcasts", label: "Podcasts" },
+  { id: "search", label: "Top Artists" },
   { id: "aimix", label: "AI Mix" },
 ];
 
@@ -39,9 +40,17 @@ export function SubNavRibbon({
   onSurpriseMe,
   className = "",
 }: SubNavRibbonProps) {
+  const filterScrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollFiltersRight = () => {
+    if (filterScrollRef.current) {
+      filterScrollRef.current.scrollBy({ left: 160, behavior: "smooth" });
+    }
+  };
+
   return (
     <div className={`space-y-3.5 mb-7 sm:mb-9 ${className}`}>
-      {/* Top Tab Strip with Surprise Me Button */}
+      {/* Top Tab Strip with Surprise Me Button (Matches JioSaavn Screenshots 2-5) */}
       <div className="flex items-center justify-between gap-3 border-b border-white/[0.08] pb-1 overflow-x-auto hide-scrollbar">
         <nav className="flex items-center gap-6 sm:gap-8 min-w-max">
           {SUB_NAV_TABS.map((tab) => {
@@ -71,34 +80,48 @@ export function SubNavRibbon({
           <button
             type="button"
             onClick={onSurpriseMe}
-            className="flex items-center gap-1.5 shrink-0 rounded-full bg-gradient-to-r from-[#f5ba42] to-[#ffd064] hover:opacity-95 px-3.5 py-1.5 text-xs font-bold text-[#140f07] shadow-md shadow-[#f5ba42]/20 hover:scale-105 active:scale-95 transition-all"
+            className="flex items-center gap-1.5 shrink-0 rounded-full bg-gradient-to-r from-[#f5ba42] to-[#ffd064] hover:opacity-95 px-4 py-1.5 text-xs font-bold text-[#140f07] shadow-md shadow-[#f5ba42]/20 hover:scale-105 active:scale-95 transition-all"
             title="Play a surprise track from catalog"
           >
             <Sparkles className="h-3.5 w-3.5" />
-            <span className="hidden xs:inline">Surprise Me</span>
+            <span>Surprise Me</span>
           </button>
         )}
       </div>
 
-      {/* Secondary Horizontal Pill Scroller (Genre/Vibe Filters) */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar">
-        {GENRE_FILTERS.map((filter) => {
-          const isSelected = activeFilter === filter.id;
-          return (
-            <button
-              key={filter.id}
-              type="button"
-              onClick={() => onSelectFilter(filter.id)}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold shrink-0 transition-all duration-200 ${
-                isSelected
-                  ? "bg-[#f5ba42] text-[#140f07] shadow-md shadow-[#f5ba42]/20"
-                  : "bg-white/[0.05] text-[#bdafa0] hover:bg-white/[0.1] hover:text-white"
-              }`}
-            >
-              {filter.label}
-            </button>
-          );
-        })}
+      {/* Secondary Horizontal Pill Scroller (Genre/Vibe Filters) with right chevron */}
+      <div className="relative flex items-center">
+        <div
+          ref={filterScrollRef}
+          className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar flex-1"
+        >
+          {GENRE_FILTERS.map((filter) => {
+            const isSelected = activeFilter === filter.id;
+            return (
+              <button
+                key={filter.id}
+                type="button"
+                onClick={() => onSelectFilter(filter.id)}
+                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold shrink-0 transition-all duration-200 ${
+                  isSelected
+                    ? "bg-[#f5ba42] text-[#140f07] shadow-md shadow-[#f5ba42]/20"
+                    : "bg-white/[0.05] text-[#bdafa0] hover:bg-white/[0.1] hover:text-white"
+                }`}
+              >
+                {filter.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          onClick={scrollFiltersRight}
+          className="hidden sm:flex items-center justify-center h-7 w-7 rounded-full bg-white/[0.06] hover:bg-white/[0.12] text-[#bdafa0] hover:text-white transition ml-1.5 shrink-0"
+          title="Scroll more filters"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );

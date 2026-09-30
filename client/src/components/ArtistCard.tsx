@@ -20,10 +20,10 @@ export function ArtistCard({
   return (
     <div
       onClick={onClick}
-      className={`group relative flex flex-col items-center text-center p-3 rounded-2xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.04] hover:border-[#f5ba42]/30 transition-all duration-300 cursor-pointer shadow-md hover:shadow-xl hover:translate-y-[-2px] ${className}`}
+      className={`group relative flex flex-col items-center text-center cursor-pointer transition-transform duration-300 hover:-translate-y-1 ${className}`}
     >
       {/* Circular Avatar Container with Ring Glow */}
-      <div className="relative aspect-square w-24 sm:w-28 md:w-32 rounded-full overflow-hidden mb-3 bg-[#24170c] ring-2 ring-white/10 group-hover:ring-[#f5ba42] transition-all duration-300 shadow-xl">
+      <div className="relative aspect-square w-24 sm:w-28 md:w-32 rounded-full overflow-hidden mb-2 bg-[#24170c] ring-2 ring-white/10 group-hover:ring-[#f5ba42] transition-all duration-300 shadow-lg group-hover:shadow-[0_8px_24px_rgba(245,186,66,0.3)]">
         {image ? (
           <img
             src={image}
@@ -38,7 +38,7 @@ export function ArtistCard({
         )}
 
         {/* Play Overlay on Hover */}
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
           <div className="h-10 w-10 rounded-full bg-[#f5ba42] text-[#140f07] flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
             <Play className="h-4 w-4 fill-current ml-0.5" />
           </div>
@@ -46,10 +46,10 @@ export function ArtistCard({
       </div>
 
       {/* Artist Name & Tag */}
-      <p className="font-semibold text-xs sm:text-sm text-[#faf5ee] group-hover:text-[#f5ba42] transition-colors truncate w-full px-1">
+      <p className="font-semibold text-xs sm:text-[13px] leading-tight text-[#faf5ee] group-hover:text-[#f5ba42] transition-colors truncate w-full px-1">
         {name}
       </p>
-      <p className="font-mono text-[10px] text-[#9a8976] uppercase tracking-wider mt-0.5">
+      <p className="text-[11px] text-[#8c7b68] truncate mt-0.5">
         {category}
       </p>
     </div>

@@ -41,6 +41,7 @@ import {
   Sparkles,
   Trash2,
   Unlink,
+  Users,
   Volume2,
   VolumeX,
   X,
@@ -98,9 +99,13 @@ const fallbackTracks: Track[] = [
 ];
 
 const mixes = [
-  { title: "late night drive", detail: "A little faster, a little further", art: art.neon, gradient: "from-[#2a1a0f] to-[#131c12]" },
-  { title: "focus / flow", detail: "No lyrics. No distractions.", art: art.blue, gradient: "from-[#1f1610] to-[#111719]" },
-  { title: "soft launch", detail: "New sounds worth sharing", art: art.cream, gradient: "from-[#4a371c] to-[#181612]" },
+  { title: "Late Night Drive", detail: "A little faster, a little further", art: art.neon, gradient: "from-[#2a1a0f] to-[#131c12]" },
+  { title: "Focus / Flow", detail: "No lyrics. No distractions.", art: art.blue, gradient: "from-[#1f1610] to-[#111719]" },
+  { title: "Soft Launch", detail: "New sounds worth sharing", art: art.cream, gradient: "from-[#4a371c] to-[#181612]" },
+  { title: "Golden Sunset", detail: "Warm acoustic melodies & sunset rhythms", art: art.sunset, gradient: "from-[#382210] to-[#1a140d]" },
+  { title: "Electric Night", detail: "Driving basslines & nocturnal club rhythms", art: art.night, gradient: "from-[#1a1a2e] to-[#0e0e1a]" },
+  { title: "Retro Euphoria", detail: "Timeless synths & nostalgic grooves", art: art.purple, gradient: "from-[#2e163b] to-[#150b1a]" },
+  { title: "Crimson Velvet", detail: "Deep soul, passionate keys & velvety vocals", art: art.red, gradient: "from-[#3a1518] to-[#180a0c]" },
 ];
 
 const navItems: NavItem[] = [
@@ -2637,45 +2642,51 @@ export default function Home() {
   return (
     <main className="noise min-h-[100dvh] bg-[#0d0f0d] text-[#f5f4ec] overflow-x-hidden">
       <div className="mx-auto flex min-h-[100dvh] max-w-[1600px] w-full">
-        {/* Left Sidebar */}
-        <aside className="hidden w-[250px] shrink-0 flex-col border-r border-white/[0.07] bg-[#0c0f12]/80 backdrop-blur-xl px-4 py-6 lg:flex">
-          <div className="flex items-center gap-3 px-2">
-            <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#f5ba42]/30 bg-[#16100a] shadow-[0_0_20px_rgba(245,186,66,0.25)]">
+        {/* Left Sidebar (JioSaavn Screenshot 1 Inspired) */}
+        <aside className="hidden w-[220px] shrink-0 flex-col border-r border-white/[0.07] bg-[#0c0f12]/85 backdrop-blur-xl px-4 py-5 lg:flex">
+          <div className="flex items-center gap-2.5 px-2">
+            <div className="relative grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#f5ba42]/30 bg-[#16100a] shadow-[0_0_16px_rgba(245,186,66,0.25)]">
               <img
                 src="/musivo-logo-transparent.png"
                 alt="Musivo Logo"
-                className="h-7 w-7 object-contain"
+                className="h-6 w-6 object-contain"
               />
             </div>
             <div>
-              <span className="block font-display text-[22px] font-bold leading-none tracking-[-0.05em] text-[#faf5ee]">
+              <span className="block font-display text-[20px] font-bold leading-none tracking-[-0.05em] text-[#faf5ee]">
                 musivo<span className="text-[#f5ba42]">.</span>
               </span>
-              <span className="mt-1 block font-mono text-[9px] uppercase tracking-[0.2em] text-[#8c7b68]">
+              <span className="mt-0.5 block font-mono text-[9px] uppercase tracking-[0.2em] text-[#8c7b68]">
                 Music, Reimagined
               </span>
             </div>
           </div>
 
-          {/* Browse / Discover Section */}
-          <div className="mt-9">
-            <p className="mb-2.5 px-3 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#786958]">
-              Browse & Discover
+          {/* BROWSE Section (JioSaavn Screenshot 1 style: clean text links) */}
+          <div className="mt-8">
+            <p className="mb-2 px-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#786958]">
+              Browse
             </p>
-            <nav className="space-y-1">
-              {navItems.map(({ id, label, icon: Icon }) => {
+            <nav className="space-y-0.5">
+              {[
+                { id: "releases", label: "New Releases" },
+                { id: "discover", label: "Top Charts" },
+                { id: "playlists", label: "Top Playlists" },
+                { id: "podcasts", label: "Podcasts" },
+                { id: "search", label: "Top Artists" },
+                { id: "aimix", label: "AI Mix & Radio" },
+              ].map(({ id, label }) => {
                 const isActive = activeView === id;
                 return (
                   <button
                     key={id}
                     onClick={() => handleNav(id)}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs sm:text-sm font-medium transition-all duration-200 ${
+                    className={`flex w-full items-center px-2.5 py-1.5 rounded-lg text-left text-xs sm:text-[13px] font-medium transition-colors ${
                       isActive
-                        ? "bg-gradient-to-r from-[#f5ba42] to-[#ffd064] font-semibold text-[#140f07] shadow-lg shadow-[#f5ba42]/20"
-                        : "text-[#b2a28f] hover:bg-white/[0.05] hover:text-[#faf5ee]"
+                        ? "text-[#f5ba42] font-semibold bg-white/[0.06]"
+                        : "text-[#a0907e] hover:text-[#faf5ee] hover:bg-white/[0.03]"
                     }`}
                   >
-                    <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-[#140f07]" : "text-[#8c7b68]"}`} />
                     <span className="truncate">{label}</span>
                   </button>
                 );
@@ -2683,26 +2694,32 @@ export default function Home() {
             </nav>
           </div>
 
-          {/* Library Section */}
-          <div className="mt-7">
-            <p className="mb-2.5 px-3 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#786958]">
-              My Music & Library
+          {/* LIBRARY Section (JioSaavn Screenshot 1 style: icon + text links) */}
+          <div className="mt-6">
+            <p className="mb-2 px-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-[#786958]">
+              Library
             </p>
-            <nav className="space-y-1">
-              {libraryItems.map(({ id, label, icon: Icon }) => {
-                const isActive = activeView === id;
+            <nav className="space-y-0.5">
+              {[
+                { id: "stats", label: "History", icon: History },
+                { id: "liked", label: "Liked Songs", icon: Heart },
+                { id: "albums", label: "Albums", icon: Album },
+                { id: "podcasts", label: "Podcasts", icon: Podcast },
+                { id: "search", label: "Artists", icon: Users },
+              ].map(({ id, label, icon: Icon }) => {
+                const isActive = activeView === id && (id !== "search" || activeView === "search");
                 return (
                   <button
-                    key={id}
+                    key={`${id}-${label}`}
                     onClick={() => handleNav(id)}
-                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs sm:text-sm font-medium transition-all duration-200 ${
+                    className={`flex w-full items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs sm:text-[13px] font-medium transition-colors ${
                       isActive
-                        ? "bg-white/[0.09] text-[#f5ba42] font-semibold border border-white/[0.08]"
-                        : "text-[#b2a28f] hover:bg-white/[0.05] hover:text-[#faf5ee]"
+                        ? "text-[#f5ba42] font-semibold bg-white/[0.06]"
+                        : "text-[#a0907e] hover:text-[#faf5ee] hover:bg-white/[0.03]"
                     }`}
                   >
-                    <div className="flex items-center gap-3 min-w-0 truncate">
-                      <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-[#f5ba42]" : "text-[#8c7b68]"}`} />
+                    <div className="flex items-center gap-2.5 min-w-0 truncate">
+                      <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-[#f5ba42]" : "text-[#786958]"}`} />
                       <span className="truncate">{label}</span>
                     </div>
                     {id === "liked" && likedTracks.length > 0 && (
@@ -2714,13 +2731,16 @@ export default function Home() {
                 );
               })}
             </nav>
+
+            {/* + New Playlist Button (Rounded pill with border matching JioSaavn Screenshot 1) */}
             <button
               onClick={() => openPlaylistDialog()}
-              className="mt-2.5 flex w-full items-center gap-2.5 rounded-xl border border-dashed border-white/[0.1] px-3 py-2 text-left text-xs font-semibold text-[#f5ba42] transition-colors hover:bg-white/[0.04] hover:border-[#f5ba42]/40"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border border-[#f5ba42]/40 hover:border-[#f5ba42] bg-[#f5ba42]/[0.06] hover:bg-[#f5ba42]/15 py-2 px-3.5 text-xs font-semibold text-[#f5ba42] transition-all shadow-sm"
             >
-              <Plus className="h-4 w-4" />
-              New Playlist
+              <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
+              <span>New Playlist</span>
             </button>
+
             {isAuthenticated && (playlistsQuery.data ?? []).length > 0 && (
               <div className="mt-3.5 border-t border-white/[0.06] pt-2.5 space-y-0.5">
                 {(playlistsQuery.data ?? []).slice(0, 4).map((playlist) => (
@@ -3132,7 +3152,7 @@ export default function Home() {
                     action="Explore All"
                     onAction={() => setActiveView("discover")}
                   />
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3.5 sm:gap-4">
                     {mixes.map((mix, idx) => (
                       <div
                         key={`playlist-shelf-${mix.title}`}
@@ -3141,9 +3161,9 @@ export default function Home() {
                           void playTrack(target, catalog);
                           toast.success(`${mix.title} is now playing`);
                         }}
-                        className="group relative flex flex-col p-3 rounded-2xl bg-[#16110a] hover:bg-[#20180f] border border-white/[0.06] hover:border-[#f5ba42]/30 transition-all duration-300 cursor-pointer shadow-md hover:shadow-xl hover:-translate-y-1"
+                        className="group relative flex flex-col cursor-pointer text-left"
                       >
-                        <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-2.5 bg-[#24170c] shadow-md">
+                        <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-2 bg-[#1a130c] shadow-md transition-transform duration-300 group-hover:scale-[1.02]">
                           <img
                             src={mix.art}
                             alt={mix.title}
@@ -3158,15 +3178,15 @@ export default function Home() {
                               void playTrack(target, catalog);
                               toast.success(`${mix.title} is now playing`);
                             }}
-                            className="absolute bottom-2 right-2 h-10 w-10 rounded-full bg-[#f5ba42] text-[#140f07] shadow-2xl flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:scale-110 active:scale-95 z-10"
+                            className="absolute bottom-2.5 right-2.5 h-10 w-10 rounded-full bg-[#f5ba42] text-[#140f07] shadow-xl flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:scale-110 active:scale-95 z-10"
                           >
                             <Play className="h-4 w-4 fill-current ml-0.5" />
                           </button>
                         </div>
-                        <p className="font-semibold text-xs sm:text-sm text-[#faf5ee] truncate group-hover:text-[#f5ba42] transition-colors">
+                        <p className="font-semibold text-xs sm:text-[13px] text-[#faf5ee] truncate group-hover:text-[#f5ba42] transition-colors leading-snug">
                           {mix.title}
                         </p>
-                        <p className="text-[11px] sm:text-xs text-[#9a8976] truncate mt-0.5">
+                        <p className="text-[11px] text-[#8c7b68] truncate mt-0.5">
                           {mix.detail}
                         </p>
                       </div>
@@ -3257,8 +3277,8 @@ export default function Home() {
                     title="Chart Toppers"
                     subtitle="Ranked in real-time by total streams"
                   />
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-                    {catalog.slice(0, 12).map((track, idx) => (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4">
+                    {catalog.slice(0, 14).map((track, idx) => (
                       <MusicCard
                         key={`chart-top-${track.id}`}
                         track={track}
@@ -3314,7 +3334,7 @@ export default function Home() {
                     title={`All Tracks & Catalog (${catalog.length})`}
                     subtitle="Every master recording available in your current audio library"
                   />
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4">
                     {catalog.map((track) => (
                       <MusicCard
                         key={`discover-track-${track.id}`}
@@ -3391,7 +3411,7 @@ export default function Home() {
                     title="Latest Singles & Drops"
                     subtitle="Newly released singles, master recordings, and recent album cuts"
                   />
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4">
                     {catalog.map((track) => (
                       <MusicCard
                         key={`release-track-${track.id}`}
@@ -3573,8 +3593,8 @@ export default function Home() {
                     action="See all"
                     onAction={() => setActiveView("discover")}
                   />
-                  <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-3 sm:gap-4 snap-x pb-2 hide-scrollbar sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                    {filteredCatalog.slice(0, 10).map((track) => (
+                  <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-3 sm:gap-4 snap-x pb-2 hide-scrollbar sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
+                    {filteredCatalog.slice(0, 14).map((track) => (
                       <MusicCard
                         key={`trending-${track.id}`}
                         track={track}
@@ -3584,7 +3604,7 @@ export default function Home() {
                         onPlay={() => void playTrack(track, filteredCatalog)}
                         onLike={() => toggleLike(track)}
                         onAddToQueue={() => addToQueue(track)}
-                        className="min-w-[155px] w-[155px] sm:min-w-0 sm:w-auto snap-start shrink-0 sm:shrink"
+                        className="min-w-[145px] w-[145px] sm:min-w-0 sm:w-auto snap-start shrink-0 sm:shrink"
                       />
                     ))}
                   </div>
@@ -3672,8 +3692,8 @@ export default function Home() {
                     action="All releases"
                     onAction={() => setActiveView("releases")}
                   />
-                  <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-3 sm:gap-4 snap-x pb-2 hide-scrollbar sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                    {catalog.slice(2, 12).map((track) => (
+                  <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-3 sm:gap-4 snap-x pb-2 hide-scrollbar sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
+                    {catalog.slice(2, 16).map((track) => (
                       <MusicCard
                         key={`new-song-${track.id}`}
                         track={track}
@@ -3684,7 +3704,7 @@ export default function Home() {
                         onPlay={() => void playTrack(track, catalog)}
                         onLike={() => toggleLike(track)}
                         onAddToQueue={() => addToQueue(track)}
-                        className="min-w-[155px] w-[155px] sm:min-w-0 sm:w-auto snap-start shrink-0 sm:shrink"
+                        className="min-w-[145px] w-[145px] sm:min-w-0 sm:w-auto snap-start shrink-0 sm:shrink"
                       />
                     ))}
                   </div>
@@ -3730,7 +3750,7 @@ export default function Home() {
                       onAction={() => setActiveView("search")}
                     />
                     <div className="flex overflow-x-auto gap-4 pb-3 hide-scrollbar snap-x">
-                      {popularArtists.slice(0, 10).map((artist) => (
+                      {popularArtists.slice(0, 14).map((artist) => (
                         <ArtistCard
                           key={artist.name}
                           name={artist.name}
@@ -3796,7 +3816,7 @@ export default function Home() {
                     action="All playlists"
                     onAction={() => setActiveView("playlists")}
                   />
-                  <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-3 sm:gap-4 snap-x pb-2 hide-scrollbar sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                  <div className="flex sm:grid overflow-x-auto sm:overflow-visible gap-3 sm:gap-4 snap-x pb-2 hide-scrollbar sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
                     {mixes.map((mix, idx) => (
                       <div
                         key={`home-playlist-${mix.title}`}
@@ -3805,9 +3825,9 @@ export default function Home() {
                           void playTrack(target, catalog);
                           toast.success(`${mix.title} is now playing`);
                         }}
-                        className="group relative flex flex-col p-3 rounded-2xl bg-[#16110a] hover:bg-[#20180f] border border-white/[0.06] hover:border-[#f5ba42]/30 transition-all duration-300 cursor-pointer shadow-md hover:shadow-xl hover:-translate-y-1 min-w-[160px] w-[160px] sm:min-w-0 sm:w-auto snap-start shrink-0 sm:shrink"
+                        className="group relative flex flex-col cursor-pointer min-w-[145px] w-[145px] sm:min-w-0 sm:w-auto snap-start shrink-0 sm:shrink text-left"
                       >
-                        <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-2.5 bg-[#24170c] shadow-md">
+                        <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-2 bg-[#1a130c] shadow-md transition-transform duration-300 group-hover:scale-[1.02]">
                           <img
                             src={mix.art}
                             alt={mix.title}
@@ -3822,15 +3842,15 @@ export default function Home() {
                               void playTrack(target, catalog);
                               toast.success(`${mix.title} is now playing`);
                             }}
-                            className="absolute bottom-2 right-2 h-10 w-10 rounded-full bg-[#f5ba42] text-[#140f07] shadow-2xl flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:scale-110 active:scale-95 z-10"
+                            className="absolute bottom-2.5 right-2.5 h-10 w-10 rounded-full bg-[#f5ba42] text-[#140f07] shadow-xl flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 hover:scale-110 active:scale-95 z-10"
                           >
                             <Play className="h-4 w-4 fill-current ml-0.5" />
                           </button>
                         </div>
-                        <p className="font-semibold text-xs sm:text-sm text-[#faf5ee] truncate group-hover:text-[#f5ba42] transition-colors">
+                        <p className="font-semibold text-xs sm:text-[13px] text-[#faf5ee] truncate group-hover:text-[#f5ba42] transition-colors leading-snug">
                           {mix.title}
                         </p>
-                        <p className="text-[11px] sm:text-xs text-[#9a8976] truncate mt-0.5">
+                        <p className="text-[11px] text-[#8c7b68] truncate mt-0.5">
                           {mix.detail}
                         </p>
                       </div>
@@ -3845,6 +3865,28 @@ export default function Home() {
 
       {/* Persistent Bottom Musivo Player */}
       <div className="fixed inset-x-0 bottom-[var(--bottom-nav-height,3.5rem)] lg:bottom-0 z-40 lg:z-50 border-t border-white/[0.09] bg-[#100c08]/95 shadow-[0_-16px_50px_rgba(0,0,0,0.35)] backdrop-blur-2xl transition-all">
+        {/* JioSaavn-style Announcement / Feature Ribbon */}
+        <div className="hidden sm:flex items-center justify-between border-b border-white/[0.06] bg-gradient-to-r from-[#171109] via-[#21170d] to-[#171109] px-4 py-1.5 text-[11px] text-[#c0b09d]">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#f5ba42]/20 border border-[#f5ba42]/30 px-2 py-0.5 font-mono text-[9px] font-bold text-[#f5ba42] uppercase tracking-wider">
+              <Sparkles className="h-2.5 w-2.5" />
+              Musivo Studio
+            </span>
+            <span>Lossless audio streaming enabled · Neural AI Mix Studio active</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (!isSpotifyConnected) setActiveView("spotify");
+              else setActiveView("aimix");
+            }}
+            className="flex items-center gap-1 text-[#f5ba42] hover:underline font-medium text-[11px]"
+          >
+            <span>{isSpotifyConnected ? "Open AI Mix Studio" : "Connect Spotify for seamless synced playback"}</span>
+            <ArrowRight className="h-3 w-3" />
+          </button>
+        </div>
+
         {/* Mobile Top Progress Line Indicator (Spotify Mobile Style) */}
         <div className="absolute top-0 inset-x-0 h-[2.5px] bg-white/[0.08] sm:hidden overflow-hidden">
           <div
