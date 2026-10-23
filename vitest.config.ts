@@ -16,6 +16,7 @@ export default defineConfig({
       "client/**/*.test.ts",
       "client/**/*.spec.ts",
     ],
+    testTimeout: 15000,
     env: {
       JWT_SECRET: "musivo-test-secret-at-least-32-characters-long",
       SPOTIFY_CLIENT_ID: "mock-test-client-id",

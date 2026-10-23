@@ -6,251 +6,245 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-cyan.svg)](https://react.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38bdf8.svg)](https://tailwindcss.com/)
+[![Vite](https://img.shields.io/badge/Vite-7-646CFF.svg)](https://vite.dev/)
 
-**Musivo** is a modern, high-performance music streaming and discovery web application. It combines deep Spotify and Google OAuth integrations, real-time in-browser audio streaming, synchronized personal libraries, and smart algorithmic music discovery wrapped in an immersive dark neon interface.
+**Musivo** is a production-grade, high-density music streaming and discovery platform inspired by the visual organization, responsive content density, and seamless usability of **JioSaavn**, styled with a **Premium Monochrome & Graphite Color System** supporting both **Day Mode** and **Night Mode**.
+
+Musivo integrates the official **Spotify Web Playback SDK**, **Apple iTunes Search API**, dual **Google & Spotify OAuth 2.0**, **AI Mix Studio**, **Podcasts with Video Embeds**, **Real-Time Listening Telemetry**, **Sleep Timer**, **Spotify Connect Device Management**, and **PWA** capabilities.
 
 ---
 
 ## 📌 Table of Contents
 
-1. [App Overview & Functions](#-app-overview--functions)
-2. [Authentication Architecture](#-authentication-architecture)
-3. [Languages Used](#-languages-used)
-4. [Tech Stack & Things Used to Build](#-tech-stack--things-used-to-build)
-5. [All APIs Used](#-all-apis-used)
-6. [All Apps, Services & Platforms Used](#-all-apps-services--platforms-used)
-7. [Getting Started & Setup](#-getting-started--setup)
-8. [Testing & Quality Assurance](#-testing--quality-assurance)
-9. [License](#-license)
+1. [Key Features & Highlights](#-key-features--highlights)
+2. [UI/UX Architecture: JioSaavn-Inspired Density](#-uiux-architecture-jiosaavn-inspired-density)
+3. [Design System: Premium Monochrome + Graphite](#-design-system-premium-monochrome--graphite)
+4. [Audio Playback & Streaming Engine](#-audio-playback--streaming-engine)
+5. [Authentication & Security Architecture](#-authentication--security-architecture)
+6. [Tech Stack & Architecture](#-tech-stack--architecture)
+7. [External APIs & Services](#-external-apis--services)
+8. [Getting Started & Local Setup](#-getting-started--local-setup)
+9. [Verification & Testing Suite](#-verification--testing-suite)
+10. [NPM Scripts Reference](#-npm-scripts-reference)
+11. [License](#-license)
 
 ---
 
-## 🎧 App Overview & Functions
+## ✨ Key Features & Highlights
 
-- **Full In-Browser Spotify Streaming**: Integrated with the **Spotify Web Playback SDK** for audio playback, track controls (play, pause, next, previous, seek, volume), and seamless device handoff.
-- **Bi-Directional Spotify Library Sync**:
-  - Syncs personal Spotify playlists, collaborative playlists, and saved albums.
-  - Fetches and displays Spotify **Liked Songs** and **Recently Played** listening history.
-  - Allows direct creation of private Spotify playlists with synced tracks right from the app.
-- **Smart Music Discovery & AI Mix**:
-  - Algorithmic recommendation engine generating custom mixes based on user listening history.
-  - Built-in AI mix builder that analyzes track vibes and listening patterns (with automatic fallback to Spotify's recommendation algorithms when an AI API key is not configured).
-- **Instant Audio Previews**:
-  - Integration with the **Apple iTunes Search API** for rapid search queries and instant 30-second audio previews without requiring Spotify authentication.
-- **Persistent Bottom Audio Player & Diagnostics**:
-  - Unified playback engine supporting both Spotify Web Playback SDK streams and HTML5 audio previews.
-  - Real-time animated audio equalizer that reacts to playback state.
-  - **Playback Diagnostics Popover** displaying active player state, Spotify SDK script status, connected device ID, and error logs for transparent troubleshooting.
-- **Personal Library & Playlist Management**:
-  - Create, edit, and organize custom user playlists.
-  - Like, bookmark, and curate tracks with local and synced storage.
+- **JioSaavn-Inspired High-Density Layout**: 7-column responsive shelves (`2xl:grid-cols-7`), Sub-Nav Ribbon, 16:9 Landscape Chart Banners, circular artist avatars, and quick-access cards.
+- **Day & Night Monochrome Theme**: Switch effortlessly between a crisp light mode (porcelain white, soft silver, obsidian accents) and a cinematic dark mode (deep obsidian, dark graphite, silver typography) via the sticky header `ThemeToggle`. All content artwork retains 100% natural, vivid colors.
+- **Spotify Web Playback SDK Streaming**: In-browser lossless playback for Spotify Premium accounts with track seeking, volume control, and shuffle/repeat modes.
+- **Instant Audio Previews**: Integrated with Apple iTunes Search API for instantaneous 30-second audio previews when logged out or exploring unauthenticated tracks.
+- **AI Mix Studio**: Neural vibe curation engine that creates custom playlists based on moods, tempo, and taste profiles, with automatic fallback to Spotify algorithmic recommendations.
+- **Podcasts & Video Shows**: Dedicated podcast player with embedded video player support, episode browser, and transcript summaries.
+- **Listening Telemetry & Analytics**: Real-time stats engine tracking total listening time, 7-day activity cadence, music vs. podcast split, top artists, and top songs (threshold ≥30s).
+- **Edge Floating Queue & Slide-Out Drawer**: Always-accessible floating queue tab with a slide-out drawer for reordering, adding, or clearing upcoming tracks.
+- **Spotify Connect Device Management**: Live device selector popover to transfer playback between web browser, desktop apps, smartphones, smart TVs, and speakers.
+- **Playback Diagnostics Panel**: Popover showing live Spotify SDK script status, connected device ID, playback engine state, and active errors.
+- **Configurable Sleep Timer**: Set playback to gently stop after 15, 30, 45, 60 minutes or at the end of the currently playing track.
+- **Bi-Directional Spotify Library Sync**: Sync liked songs, personal playlists, and recently played tracks, or create new private Spotify playlists directly from the app.
+- **Progressive Web App (PWA)**: Installable on Windows, macOS, Android, and iOS with service worker caching for fast offline app shell launches.
 
 ---
 
-## 🔐 Authentication Architecture
+## 📐 UI/UX Architecture: JioSaavn-Inspired Density
 
-Musivo features a robust, multi-provider authentication and session security system:
+Musivo takes direct inspiration from JioSaavn's information architecture and content density:
 
-### 1. Google OAuth 2.0
-- Uses **Google Identity Services (OpenID Connect / OAuth 2.0)**.
-- Securely exchanges authorization codes for ID tokens and user profile information (email, name, avatar).
-- Automatically links Google accounts to user profiles.
+| Component | Description |
+| :--- | :--- |
+| **Sub-Nav Category Ribbon** | Sticky secondary navigation bar allowing one-click filtering across `All`, `Trending`, `Top Charts`, `New Releases`, `Discover`, `AI Mix`, `Library`, and `Podcasts`. |
+| **7-Column Music Shelves** | Ultra-dense grid scaling smoothly from 2 columns on mobile up to 7 columns on 2K/4K displays (`grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7`). |
+| **16:9 Landscape Chart Banners** | Wide rectangular cards for top charts, trending lists, and editorial mixes with hover-to-reveal quick play triggers. |
+| **Quick Access Action Cards** | Compact horizontal cards for rapid resumption of recent playlists, liked songs, and daily mixes with instant play action buttons. |
+| **Circular Artist Avatars** | Round portrait avatars with smooth hover scale and active ring states, linking directly to artist discography modals. |
+| **Edge Floating Queue Tab** | Right-hand pinned badge displaying the current queue count, opening a comprehensive slide-out queue manager. |
+| **JioSaavn-Style Bottom Dock** | Persistent audio dock featuring album art, title/artist metadata, timeline scrubber with seek tooltips, volume slider, diagnostics toggle, sleep timer, device switcher, and queue drawer toggle. |
 
-### 2. Spotify OAuth 2.0
-- Built using the **Authorization Code Flow** with cryptographic state nonces to prevent CSRF attacks.
-- Authorizes rich permissions including:
-  - `streaming` (for the Web Playback SDK)
+---
+
+## 🎨 Design System: Premium Monochrome + Graphite
+
+The entire UI is built on a neutral monochrome palette:
+
+```
+Obsidian (#050505 / #080808) ──► Charcoal (#111111 / #151515) ──► Graphite (#1F1F1F / #242424)
+Dark Grey (#2E2E2E / #363636) ──► Silver (#9A9A9A / #C2C2C2) ──► Porcelain (#F5F5F7 / #FAFAFA)
+```
+
+### Day Mode vs. Night Mode
+- **Day Mode**: Clean porcelain backgrounds (`#FAFAFA` / `#F3F3F5`), light silver borders (`border-black/10`), obsidian typography (`#111111`), and high-contrast dark buttons (`bg-black text-white`).
+- **Night Mode**: Deep obsidian canvas (`#080808`), graphite cards (`#141416`), translucent glass borders (`border-white/10`), and pure white typography (`#FFFFFF`).
+- **Artwork Integrity**: Album art, artist portraits, and video thumbnails are **never** filtered, greyscaled, or desaturated.
+
+---
+
+## 🔊 Audio Playback & Streaming Engine
+
+Musivo employs a hybrid audio engine that guarantees seamless playback in any scenario:
+
+```
+                ┌──────────────────────────────────┐
+                │          Playback Engine         │
+                └────────────────┬─────────────────┘
+                                 │
+         ┌───────────────────────┴───────────────────────┐
+         ▼                                               ▼
+┌───────────────────────────────┐       ┌───────────────────────────────┐
+│   Spotify Web Playback SDK    │       │     HTML5 Audio Fallback      │
+│  (Lossless / Full Playback)   │       │  (Apple iTunes 30s Previews)  │
+│  - Requires Spotify Premium   │       │  - Zero Authentication Needed │
+│  - Full Track Streaming       │       │  - Instant Track Sampling     │
+│  - Spotify Connect Device Sync│       │  - Works for All Visitors     │
+└───────────────────────────────┘       └───────────────────────────────┘
+```
+
+- **Audio Equalizer Visualizer**: Four animated frequency bars that bounce dynamically when music is playing and rest when paused.
+- **Playback Diagnostics**: Built-in modal displaying active player state, Web SDK readiness, connected device IDs, and real-time logs.
+- **Token Cooldown & Resiliency**: Built-in credential validation and exponential cooldowns prevent test flakiness and API rate limits.
+
+---
+
+## 🔐 Authentication & Security Architecture
+
+### 1. Google OAuth 2.0 (OpenID Connect)
+- Secure authentication via Google Identity Services.
+- Fetches verified email, full name, and avatar, creating or linking a Musivo account.
+
+### 2. Spotify OAuth 2.0 (Authorization Code + PKCE)
+- Authorizes comprehensive permissions:
+  - `streaming` (Web Playback SDK)
   - `user-read-playback-state` & `user-modify-playback-state`
   - `user-read-currently-playing`
   - `user-library-read`
-  - `playlist-read-private` & `playlist-read-collaborative`
-  - `playlist-modify-private`
+  - `playlist-read-private` & `playlist-modify-private`
   - `user-read-recently-played`
   - `user-read-private` & `user-read-email`
-- Supports both standalone Spotify login and linking a Spotify account to an existing Google session.
+- Supports standalone Spotify login or linking Spotify to an existing Google session.
 
-### 3. Session & Credential Security
-- **Encrypted Token Storage**: Spotify access and refresh tokens are stored in the database using **AES-256-GCM symmetric encryption**.
-- **Automated Silent Refresh**: Background token refresh ensures expired access tokens are rotated seamlessly without interrupting the user.
-- **Cookie Security**: User sessions are persisted using HTTP-only, `SameSite=Lax`, signed JSON Web Tokens (`jose`) across both local and production domains.
-
----
-
-## 💻 Languages Used
-
-| Language | Usage Area |
-| :--- | :--- |
-| **TypeScript** (v5.9) | Primary language used across 100% of the frontend, backend, shared schemas, and test suites for type safety. |
-| **JavaScript** (ESM) | Runtime execution, bundler configs (`vite.config.ts`), and browser SDK integrations. |
-| **SQL** | Relational database schema definitions, migrations, and queries managed via Drizzle ORM. |
-| **HTML5 & CSS3** | Component layouts, accessibility attributes, and responsive UI styles powered by modern Tailwind CSS. |
+### 3. Session Security & Encryption
+- **AES-256-GCM Token Encryption**: Spotify refresh and access tokens are encrypted before database persistence.
+- **Automated Silent Refresh**: Background token rotation ensures uninterrupted streaming sessions.
+- **Signed JSON Web Tokens**: Sessions persisted using HTTP-only, `SameSite=Lax`, cryptographically signed JWT cookies (`jose`).
 
 ---
 
-## 🛠 Tech Stack & Things Used to Build
+## 🛠 Tech Stack & Architecture
 
 ### Frontend
-- **React 19** (`react`, `react-dom`): Modern reactive user interface components.
-- **Vite 7** (`vite`): High-speed frontend build tool and hot module replacement (HMR) development server.
-- **Tailwind CSS 4** (`tailwindcss`, `@tailwindcss/vite`): Utility-first CSS framework for dark neon streaming aesthetics.
-- **Radix UI Primitives**: Accessible headless UI components:
-  - `@radix-ui/react-dialog`, `@radix-ui/react-dropdown-menu`, `@radix-ui/react-popover`
-  - `@radix-ui/react-slider` (volume and scrub controls)
-  - `@radix-ui/react-tabs`, `@radix-ui/react-tooltip`, `@radix-ui/react-switch`
-  - `@radix-ui/react-accordion`, `@radix-ui/react-scroll-area`
-- **Framer Motion 12** (`framer-motion`): Fluid layout animations, page transitions, and player equalizer dynamics.
-- **TanStack Query v5** (`@tanstack/react-query`): Robust asynchronous state caching, refetching, and synchronization.
-- **tRPC Client** (`@trpc/client`, `@trpc/react-query`): End-to-end type-safe client calling server procedures without manual API contracts.
-- **Wouter 3** (`wouter`): Minimalist client-side routing.
-- **Lucide React** (`lucide-react`): Consistent streaming and media control icons.
-- **Sonner** (`sonner`): Toast notification system.
+- **React 19** (`react`, `react-dom`): Latest React architecture with concurrent rendering and hooks.
+- **Vite 7** (`vite`): Blazing-fast development server and production bundler.
+- **Tailwind CSS v4** (`tailwindcss`, `@tailwindcss/vite`): Modern utility-first CSS engine.
+- **Radix UI Primitives**: Accessible headless components for dialogs, dropdowns, popovers, sliders, switches, and tabs.
+- **Lucide React** (`lucide-react`): Consistent, lightweight icons.
+- **Framer Motion** (`framer-motion`): Smooth layout transitions and floating queue animations.
+- **TanStack Query v5** (`@tanstack/react-query`): Smart asynchronous caching, background synchronization, and optimistic UI updates.
+- **tRPC Client** (`@trpc/client`, `@trpc/react-query`): End-to-end type safety from server procedures to frontend hooks.
+- **Wouter** (`wouter`): Lightweight routing (~1.5KB).
+- **Sonner** (`sonner`): Clean, accessible toast notifications.
 
 ### Backend
-- **Node.js** (v20+): Scalable JavaScript runtime.
-- **Express 4** (`express`): REST and HTTP middleware server framework.
-- **tRPC Server** (`@trpc/server`): Strongly typed RPC routers defining procedures for auth, search, playlists, and Spotify operations.
-- **Drizzle ORM** (`drizzle-orm`, `drizzle-kit`, `mysql2`): Type-safe ORM for relational queries, schema declarations, and migrations.
-- **In-Memory Resilient Fallback**: Embedded in-memory database store that guarantees zero crashes if external database connections are unreachable.
-- **JOSE** (`jose`): Cryptographic signing and verification for state nonces and session tokens.
-- **esbuild** (`esbuild`): High-speed production server bundling into `dist/index.js`.
-
-### Build & Tooling
-- **pnpm** (v10): Fast, disk space-efficient package manager.
-- **TypeScript Compiler** (`tsc`): Static type verification.
-- **Vitest** (`vitest`): Unit and integration test runner.
-- **Prettier** (`prettier`): Code formatting standards.
+- **Node.js** (v20+): Fast, modern JavaScript runtime.
+- **Express 4** (`express`): REST, OAuth redirect endpoints, and middleware pipeline.
+- **tRPC Server** (`@trpc/server`): Type-safe RPC router for auth, search, playlists, analytics, and Spotify operations.
+- **Drizzle ORM** (`drizzle-orm`, `drizzle-kit`, `mysql2`): Type-safe database queries, schema migrations, and relational mapping.
+- **In-Memory Fallback Storage**: Embedded resilient store ensuring 100% functionality even when external databases are offline.
+- **JOSE** (`jose`): Lightweight JWT signing, verification, and AES encryption.
+- **esbuild** (`esbuild`): High-speed server bundling into `dist/index.js`.
 
 ---
 
-## 🌐 All APIs Used
+## 🌐 External APIs & Services
 
-1. **Spotify Web API**:
-   - `GET /v1/search`: Searches tracks, artists, and albums.
-   - `GET /v1/me`: Retrieves authenticated user profile and subscription status.
-   - `GET /v1/me/playlists`: Paginates user's personal and followed playlists.
-   - `GET /v1/me/player/recently-played`: Pulls recent listening history for library sync.
-   - `GET /v1/me/tracks`: Reads user's saved / liked tracks.
-   - `GET /v1/recommendations`: Generates algorithmic discovery mixes.
-   - `POST /v1/users/{user_id}/playlists`: Creates new Spotify playlists directly from Musivo.
-2. **Spotify Web Playback SDK**:
-   - `https://sdk.scdn.co/spotify-player.js`: In-browser playback engine enabling direct music streaming for Spotify Premium users.
-3. **Google Identity Services & OAuth 2.0 API**:
-   - `https://accounts.google.com/o/oauth2/v2/auth`: Handles user consent and authentication.
-   - `https://oauth2.googleapis.com/token`: Exchanges code for access and ID tokens.
-   - `https://www.googleapis.com/oauth2/v3/userinfo`: Verifies user identities and retrieves email/profile pictures.
-4. **Apple iTunes Search API**:
-   - `https://itunes.apple.com/search`: Supplies instant search results and 30-second AAC audio previews without requiring user credentials.
-5. **OpenAI API / LLM Service** *(Optional)*:
-   - Used for natural language parsing and intelligent playlist generation. Includes automatic fallback to Spotify algorithmic generation when unconfigured.
-6. **Render Health Check API**:
-   - `/api/health`: Provides continuous live health monitoring and deployment status verification.
+1. **Spotify Web API**: Catalog search, user profiles, playlists, liked tracks, recently played history, and recommendations.
+2. **Spotify Web Playback SDK**: In-browser hardware-accelerated playback for Spotify Premium subscribers.
+3. **Google Identity Services**: OAuth 2.0 OpenID Connect authentication.
+4. **Apple iTunes Search API**: High-speed search query fallback and 30-second AAC audio previews.
+5. **OpenAI API / LLM Service** *(Optional)*: Neural vibe parsing for AI Mix Studio (falls back to Spotify's recommendation algorithms when omitted).
+6. **YouTube IFrame API**: Embedded video playback for podcast episodes with visual broadcasts.
 
 ---
 
-## 📱 All Apps, Services & Platforms Used
-
-- **Spotify Developer Dashboard**:
-  - Used to register the Musivo application, generate client credentials (`SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET`), and configure authorized callback URLs (`http://localhost:5000/api/spotify/callback` and `https://musivo-xgm4.onrender.com/api/spotify/callback`).
-- **Google Cloud Console**:
-  - Used to configure Google OAuth 2.0 credentials (`VITE_GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`), set up OAuth consent screens, and authorize redirect URIs.
-- **Render (`render.com`)**:
-  - Production cloud hosting platform managing automated builds, web service execution, and SSL/TLS certificates.
-- **GitHub & GitHub Actions**:
-  - Cloud source code repository and automated CI/CD pipeline running TypeScript type checking, test suites, and production build checks on every push.
-
----
-
-## 🚀 Getting Started & Setup
+## 🚀 Getting Started & Local Setup
 
 ### 1. Prerequisites
-- **Node.js**: v20 or higher
-- **pnpm**: v9 or v10
+- **Node.js**: `v20.x` or higher
+- **npm** or **pnpm**: `v9.x` or `v10.x`
 
-### 2. Clone and Install
+### 2. Clone Repository
 ```bash
-# Clone the repository
 git clone https://github.com/Kshaurya-07/musivo.git
 cd musivo
-
-# Install dependencies
-pnpm install
+npm install
 ```
 
-### 3. Environment Variables
-Create a `.env` file in the root directory and populate your credentials:
+### 3. Configure Environment Variables
+Create a `.env` file in the project root:
 
 ```env
 # Server Configuration
 PORT=5000
 NODE_ENV=development
 
-# Spotify Developer Credentials
+# Spotify Developer Application (https://developer.spotify.com/dashboard)
 SPOTIFY_CLIENT_ID=your_spotify_client_id
 SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
 
-# Google OAuth Credentials
+# Google Cloud OAuth 2.0 (https://console.cloud.google.com/)
 VITE_GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 
-# Session Security (32-character random string)
-COOKIE_SECRET=your_super_secret_session_encryption_key
+# Session Security (At least 32 random characters)
+COOKIE_SECRET=super_secret_cookie_encryption_key_at_least_32_chars
 
-# Database (Optional - defaults to in-memory fallback if omitted)
+# Database (Optional - falls back to embedded in-memory database if omitted)
 DATABASE_URL=mysql://user:password@localhost:3306/musivo
 
-# OpenAI (Optional - defaults to algorithmic Spotify recommendations if omitted)
+# OpenAI API Key (Optional - falls back to Spotify algorithmic mix if omitted)
 OPENAI_API_KEY=your_openai_api_key
 ```
 
 ### 4. Run Development Server
 ```bash
-pnpm run dev
+npm run dev
 ```
 Open [http://localhost:5000](http://localhost:5000) in your browser.
 
 ---
 
-## 🧪 Testing & Quality Assurance
+## 🧪 Verification & Testing Suite
 
-Musivo includes a full automated test suite verifying OAuth routes, session linking, Spotify synchronization, and music search:
+Musivo includes automated test suites covering OAuth flows, token management, session linking, and music search:
 
 ```bash
-# Run TypeScript type check
-pnpm run check
+# 1. Static TypeScript verification
+npx tsc --noEmit
 
-# Run Vitest test suite
-pnpm test
+# 2. Run Vitest test suite
+npx vitest run
 
-# Build production assets
-pnpm run build
+# 3. Build production bundle (client + server)
+npm run build
 ```
+
+---
+
+## 📜 NPM Scripts Reference
+
+| Command | Action |
+| :--- | :--- |
+| `npm run dev` | Starts Vite client and Express server concurrently with HMR. |
+| `npm run build` | Compiles frontend assets with Vite and bundles server with esbuild into `dist/`. |
+| `npm start` | Launches the production bundled server from `dist/index.js`. |
+| `npm test` | Executes the Vitest test suite. |
+| `npm run check` | Runs TypeScript compiler checks without emitting files. |
+| `npm run db:push` | Pushes Drizzle schema migrations to the configured database. |
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License**.
-
-```text
-MIT License
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for full details.
 
 Copyright (c) 2026 Shaurya
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```

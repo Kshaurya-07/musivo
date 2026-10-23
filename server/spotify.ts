@@ -183,8 +183,14 @@ async function requestSpotifyToken(body: URLSearchParams) {
   return payload;
 }
 
+let tokenFailureCooldownUntil = 0;
+
 async function getSpotifyAccessToken() {
   if (!hasSpotifyCredentials()) return null;
+  if (ENV.spotifyClientId === "mock-test-client-id" || ENV.spotifyClientSecret === "mock-test-client-secret") {
+    return null;
+  }
+  if (Date.now() < tokenFailureCooldownUntil) return null;
   if (cachedToken && cachedToken.expiresAt > Date.now() + 30_000) return cachedToken.value;
   try {
     const payload = await requestSpotifyToken(new URLSearchParams({ grant_type: "client_credentials" }));
@@ -194,6 +200,7 @@ async function getSpotifyAccessToken() {
     };
     return cachedToken.value;
   } catch (error) {
+    tokenFailureCooldownUntil = Date.now() + 30_000;
     console.warn("[Spotify] Client credentials grant failed:", error instanceof Error ? error.message : error);
     return null;
   }

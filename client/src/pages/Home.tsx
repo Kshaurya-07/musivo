@@ -2772,17 +2772,17 @@ export default function Home() {
           <div className={`${canInstallPwa ? "" : "mt-auto"} rounded-2xl border border-black/10 dark:border-white/[0.08] bg-black/[0.02] dark:bg-gradient-to-b dark:from-[#141414] dark:to-[#0a0a0a] p-3.5 shadow-md`}>
             <div className="mb-2 flex items-center justify-between">
               <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.18em] text-[#968572]">
-                <span className={`h-2 w-2 rounded-full ${isSpotifyConnected ? "bg-emerald-400 animate-pulse" : "bg-black/40 dark:bg-white/40"}`} />
+                <span className={`h-2 w-2 rounded-full ${isSpotifyConnected ? "bg-black dark:bg-white animate-pulse" : "bg-black/40 dark:bg-white/40"}`} />
                 Engine
               </span>
               <span className="text-[10px] font-mono text-[#8a7966]">
                 {isSpotifyConnected ? "Live" : "Preview"}
               </span>
             </div>
-            <p className="text-xs font-semibold text-[#faf5ee]">
+            <p className="text-xs font-semibold text-[#111111] dark:text-white">
               {isSpotifyConnected ? "Spotify Web Playback" : "Musivo Preview Mode"}
             </p>
-            <p className="mt-1 text-[11px] leading-4 text-[#9c8c79]">
+            <p className="mt-1 text-[11px] leading-4 text-[#666666] dark:text-white/50">
               {isSpotifyConnected
                 ? "Full in-app playback with Spotify Connect."
                 : "Connect Spotify to play full catalog tracks."}

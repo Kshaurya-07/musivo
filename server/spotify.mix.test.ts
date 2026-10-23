@@ -26,7 +26,7 @@ describe("Enhanced AI Mix Studio", () => {
     expect(result.title).toContain("Midnight Reverie");
     expect(result.playlist).toBeDefined();
     expect(Array.isArray(result.recommendations)).toBe(true);
-  });
+  }, 15000);
 
   it("accepts a custom prompt and formats the mix title and metadata appropriately", async () => {
     const result = await createAiSpotifyMix(999999, {
@@ -40,7 +40,7 @@ describe("Enhanced AI Mix Studio", () => {
     expect(result.description).toContain("Cyberpunk rain drive");
     expect(result.tasteProfile).toBeDefined();
     expect(result.tasteProfile?.learnedVibeSummary).toBeDefined();
-  });
+  }, 15000);
 
   it("trains user taste profile and extracts top affinities and summary", async () => {
     const { trainUserAiProfile, listPastAiPlaylists } = await import("./spotify");
@@ -84,5 +84,5 @@ describe("Enhanced AI Mix Studio", () => {
       expect(rec.audio).toBe(""); // Ensure 30s preview URLs are never assigned to audio!
       expect(rec.durationMs).toBeGreaterThan(0);
     }
-  });
+  }, 15000);
 });

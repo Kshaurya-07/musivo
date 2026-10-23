@@ -43,11 +43,11 @@ export function DeviceSelectorModal({ isOpen, onClose }: DeviceSelectorModalProp
 
   const getDeviceIcon = (type: string) => {
     const t = type.toLowerCase();
-    if (t.includes("computer")) return <Laptop className="w-5 h-5 text-emerald-400" />;
+    if (t.includes("computer")) return <Laptop className="w-5 h-5 text-black dark:text-white" />;
     if (t.includes("phone") || t.includes("smartphone"))
-      return <Smartphone className="w-5 h-5 text-emerald-400" />;
-    if (t.includes("tv")) return <Tv className="w-5 h-5 text-emerald-400" />;
-    return <Speaker className="w-5 h-5 text-emerald-400" />;
+      return <Smartphone className="w-5 h-5 text-black dark:text-white" />;
+    if (t.includes("tv")) return <Tv className="w-5 h-5 text-black dark:text-white" />;
+    return <Speaker className="w-5 h-5 text-black dark:text-white" />;
   };
 
   const handleTransfer = async (deviceId: string) => {
@@ -99,29 +99,29 @@ export function DeviceSelectorModal({ isOpen, onClose }: DeviceSelectorModalProp
         </div>
 
         {!isSpotifyConnected ? (
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5 text-center space-y-3">
-            <p className="text-sm text-white/70">
+          <div className="rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] p-5 text-center space-y-3">
+            <p className="text-sm text-[#555555] dark:text-white/70">
               Connect your Spotify account to cast and manage playback across your phones, speakers,
               and laptops.
             </p>
             <button
               onClick={connectSpotify}
-              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold rounded-full text-xs transition-colors inline-flex items-center gap-2"
+              className="px-4 py-2 bg-black hover:bg-[#222222] dark:bg-white dark:hover:bg-[#EAEAEA] text-white dark:text-black font-semibold rounded-full text-xs transition-colors inline-flex items-center gap-2"
             >
               <span>Connect Spotify</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </button>
           </div>
         ) : devicesQuery.isLoading ? (
-          <div className="py-8 flex flex-col items-center justify-center gap-3 text-white/40 text-sm">
-            <RefreshCw className="w-6 h-6 animate-spin text-emerald-400" />
+          <div className="py-8 flex flex-col items-center justify-center gap-3 text-[#777777] dark:text-white/40 text-sm">
+            <RefreshCw className="w-6 h-6 animate-spin text-black dark:text-white" />
             <span>Searching for available devices...</span>
           </div>
         ) : devices.length === 0 ? (
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 text-center space-y-2">
-            <Speaker className="w-8 h-8 text-white/30 mx-auto" />
-            <h4 className="text-sm font-semibold text-white/80">No active devices found</h4>
-            <p className="text-xs text-white/50">
+          <div className="rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] p-6 text-center space-y-2">
+            <Speaker className="w-8 h-8 text-[#999999] dark:text-white/30 mx-auto" />
+            <h4 className="text-sm font-semibold text-[#111111] dark:text-white/80">No active devices found</h4>
+            <p className="text-xs text-[#666666] dark:text-white/50">
               Open Spotify on your phone, tablet, or smart speaker on the same network to listen
               seamlessly.
             </p>
@@ -139,24 +139,24 @@ export function DeviceSelectorModal({ isOpen, onClose }: DeviceSelectorModalProp
                   disabled={transferMutation.isPending || isCurrent}
                   className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all text-left ${
                     isCurrent
-                      ? "bg-emerald-500/15 border-emerald-500/30 text-white"
-                      : "border-white/5 bg-white/[0.02] hover:bg-white/[0.06] text-white/80 hover:text-white"
+                      ? "bg-black/5 dark:bg-white/10 border-black/20 dark:border-white/20 text-[#111111] dark:text-white"
+                      : "border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] hover:bg-black/[0.05] dark:hover:bg-white/[0.06] text-[#333333] dark:text-white/80 hover:text-black dark:hover:text-white"
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="p-2 rounded-lg bg-black/40 border border-white/5 shrink-0">
+                    <div className="p-2 rounded-lg bg-black/5 dark:bg-black/40 border border-black/5 dark:border-white/5 shrink-0">
                       {getDeviceIcon(device.type)}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-sm truncate">{device.name}</span>
                         {isWebSdk && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/10 text-white/70">
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 text-[#333333] dark:text-white/70">
                             Web Player
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-white/50">
+                      <div className="flex items-center gap-2 text-xs text-[#666666] dark:text-white/50">
                         <span>{device.type}</span>
                         {typeof device.volumePercent === "number" && (
                           <span className="flex items-center gap-1">
@@ -168,12 +168,12 @@ export function DeviceSelectorModal({ isOpen, onClose }: DeviceSelectorModalProp
                   </div>
 
                   {isCurrent ? (
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 shrink-0">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-black dark:text-white shrink-0">
                       <CheckCircle2 className="w-4 h-4" />
                       <span>Listening on</span>
                     </div>
                   ) : (
-                    <span className="text-xs text-white/40 group-hover:text-white/80 shrink-0">
+                    <span className="text-xs text-[#777777] dark:text-white/40 group-hover:text-black dark:group-hover:text-white/80 shrink-0">
                       Tap to switch
                     </span>
                   )}

@@ -155,7 +155,7 @@ export function UniversalSearch() {
       {/* Search Input Bar & Autocomplete */}
       <div ref={searchContainerRef} className="relative max-w-2xl">
         <div className="relative flex items-center">
-          <Search className="w-5 h-5 text-white/40 absolute left-4" />
+          <Search className="w-5 h-5 text-[#888888] dark:text-white/40 absolute left-4" />
           <input
             type="text"
             placeholder="Search songs, artists, albums, or podcasts..."
@@ -165,7 +165,7 @@ export function UniversalSearch() {
               setShowSuggestions(true);
             }}
             onFocus={() => setShowSuggestions(true)}
-            className="w-full pl-12 pr-12 py-3.5 rounded-full bg-white/[0.06] border border-white/10 text-white placeholder-white/40 text-sm md:text-base focus:outline-none focus:border-emerald-500/50 focus:bg-white/10 shadow-lg transition-all"
+            className="w-full pl-12 pr-12 py-3.5 rounded-full bg-black/5 dark:bg-white/[0.06] border border-black/10 dark:border-white/10 text-[#111111] dark:text-white placeholder-[#888888] dark:placeholder-white/40 text-sm md:text-base focus:outline-none focus:border-black/50 dark:focus:border-white/50 focus:bg-black/5 dark:focus:bg-white/10 shadow-lg transition-all"
           />
           {inputVal && (
             <button
@@ -285,13 +285,13 @@ export function UniversalSearch() {
 
       {/* Search Content */}
       {searchQuery.isLoading ? (
-        <div className="py-24 flex flex-col items-center justify-center gap-3 text-white/40">
-          <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
+        <div className="py-24 flex flex-col items-center justify-center gap-3 text-[#777777] dark:text-white/40">
+          <Loader2 className="w-8 h-8 animate-spin text-black dark:text-white" />
           <span className="text-sm font-medium">Searching verified Spotify catalog...</span>
         </div>
       ) : debouncedQuery && !topResult && tracks.length === 0 && artists.length === 0 ? (
-        <div className="py-16 text-center text-white/40 space-y-2">
-          <p className="text-base font-semibold text-white/70">No results found for "{debouncedQuery}"</p>
+        <div className="py-16 text-center text-[#777777] dark:text-white/40 space-y-2">
+          <p className="text-base font-semibold text-[#111111] dark:text-white/70">No results found for "{debouncedQuery}"</p>
           <p className="text-xs">Check spelling or try searching a different artist or genre.</p>
         </div>
       ) : (
@@ -302,9 +302,9 @@ export function UniversalSearch() {
               {/* Spotlight Top Result */}
               <div
                 onClick={handleSelectTopResult}
-                className="group p-6 rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] hover:bg-white/[0.08] transition-all cursor-pointer space-y-4 relative shadow-xl"
+                className="group p-6 rounded-3xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all cursor-pointer space-y-4 relative shadow-xl"
               >
-                <span className="text-[11px] font-extrabold uppercase tracking-widest text-emerald-400">
+                <span className="text-[11px] font-extrabold uppercase tracking-widest text-[#777777] dark:text-white/60">
                   Top Result
                 </span>
 
@@ -317,19 +317,19 @@ export function UniversalSearch() {
                           "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80"
                     }
                     alt=""
-                    className={`w-24 h-24 object-cover shadow-2xl border border-white/10 ${
+                    className={`w-24 h-24 object-cover shadow-2xl border border-black/10 dark:border-white/10 ${
                       topResult.type === "artist" ? "rounded-full" : "rounded-2xl"
                     }`}
                   />
                   <div className="min-w-0 flex-1 space-y-1">
-                    <h3 className="text-xl font-extrabold text-white truncate group-hover:text-emerald-400 transition-colors">
+                    <h3 className="text-xl font-extrabold text-[#111111] dark:text-white truncate group-hover:text-black dark:group-hover:text-white transition-colors">
                       {topResult.type === "track" ? topResult.item.title : topResult.item.name}
                     </h3>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-white uppercase">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/10 dark:bg-white/10 text-[#222222] dark:text-white uppercase">
                         {topResult.type}
                       </span>
-                      <p className="text-xs text-white/60 truncate">
+                      <p className="text-xs text-[#666666] dark:text-white/60 truncate">
                         {topResult.type === "track"
                           ? topResult.item.artist
                           : topResult.type === "show"
@@ -343,8 +343,8 @@ export function UniversalSearch() {
                 </div>
 
                 <div className="pt-2 flex items-center justify-between">
-                  <span className="text-xs text-white/40">Tap to explore</span>
-                  <div className="p-3 rounded-full bg-emerald-500 text-black shadow-lg group-hover:scale-110 transition-transform">
+                  <span className="text-xs text-[#777777] dark:text-white/40">Tap to explore</span>
+                  <div className="p-3 rounded-full bg-black dark:bg-white text-white dark:text-black shadow-lg group-hover:scale-110 transition-transform">
                     <Play className="w-4 h-4 fill-current ml-0.5" />
                   </div>
                 </div>
@@ -352,7 +352,7 @@ export function UniversalSearch() {
 
               {/* Side Popular Tracks */}
               <div className="lg:col-span-2 space-y-2">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                <h3 className="text-sm font-bold text-[#111111] dark:text-white uppercase tracking-wider">
                   Featured Songs
                 </h3>
                 <div className="space-y-1">
@@ -364,35 +364,35 @@ export function UniversalSearch() {
                         key={t.id}
                         className={`flex items-center justify-between p-2.5 rounded-xl border transition-all ${
                           isCurrent
-                            ? "bg-emerald-500/10 border-emerald-500/30 text-white"
-                            : "border-transparent hover:border-white/5 hover:bg-white/[0.03] text-white/80"
+                            ? "bg-black/5 dark:bg-white/10 border-black/20 dark:border-white/20 text-[#111111] dark:text-white"
+                            : "border-transparent hover:border-black/5 dark:hover:border-white/5 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] text-[#333333] dark:text-white/80"
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <img
                             src={t.art}
                             alt=""
-                            className="w-10 h-10 rounded-lg object-cover border border-white/5 shrink-0"
+                            className="w-10 h-10 rounded-lg object-cover border border-black/5 dark:border-white/5 shrink-0"
                           />
                           <div className="min-w-0">
                             <p
                               className={`text-sm font-semibold truncate ${
-                                isCurrent ? "text-emerald-400" : "text-white"
+                                isCurrent ? "text-black dark:text-white font-bold" : "text-[#111111] dark:text-white"
                               }`}
                             >
                               {t.title}
                             </p>
-                            <p className="text-xs text-white/50 truncate">{t.artist}</p>
+                            <p className="text-xs text-[#666666] dark:text-white/50 truncate">{t.artist}</p>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs text-white/40 font-mono hidden sm:inline">
+                          <span className="text-xs text-[#888888] dark:text-white/40 font-mono hidden sm:inline">
                             {formatTime((t.durationMs || 180000) / 1000)}
                           </span>
                           <button
                             onClick={() => addToQueue(toPlaybackTrack(t))}
-                            className="p-2 text-white/40 hover:text-white rounded-full"
+                            className="p-2 text-[#777777] dark:text-white/40 hover:text-black dark:hover:text-white rounded-full"
                           >
                             <Plus className="w-4 h-4" />
                           </button>
@@ -400,8 +400,8 @@ export function UniversalSearch() {
                             onClick={() => (isCurrent ? togglePlay() : handlePlaySingle(t))}
                             className={`p-2.5 rounded-full transition-colors ${
                               isCurrentPlaying
-                                ? "bg-emerald-500 text-black"
-                                : "bg-white/10 hover:bg-white/20 text-white"
+                                ? "bg-black dark:bg-white text-white dark:text-black"
+                                : "bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-[#111111] dark:text-white"
                             }`}
                           >
                             {isCurrentPlaying ? (
@@ -422,8 +422,8 @@ export function UniversalSearch() {
           {/* Tracks Section */}
           {(activeTab === "all" || activeTab === "tracks") && tracks.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-                <Music className="w-4 h-4 text-emerald-400" />
+              <h3 className="text-base font-bold text-[#111111] dark:text-white tracking-tight flex items-center gap-2">
+                <Music className="w-4 h-4 text-[#555555] dark:text-white/70" />
                 <span>Songs</span>
               </h3>
               <div className="space-y-1">
@@ -435,40 +435,40 @@ export function UniversalSearch() {
                       key={t.id}
                       className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
                         isCurrent
-                          ? "bg-emerald-500/10 border-emerald-500/30 text-white"
-                          : "border-transparent hover:border-white/5 hover:bg-white/[0.03] text-white/80"
+                          ? "bg-black/5 dark:bg-white/10 border-black/20 dark:border-white/20 text-[#111111] dark:text-white"
+                          : "border-transparent hover:border-black/5 dark:hover:border-white/5 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] text-[#333333] dark:text-white/80"
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <span className="w-6 text-center text-xs font-semibold text-white/40">
+                        <span className="w-6 text-center text-xs font-semibold text-[#888888] dark:text-white/40">
                           {offset + idx + 1}
                         </span>
                         <img
                           src={t.art}
                           alt=""
-                          className="w-11 h-11 rounded-lg object-cover border border-white/5 shrink-0"
+                          className="w-11 h-11 rounded-lg object-cover border border-black/5 dark:border-white/5 shrink-0"
                         />
                         <div className="min-w-0 flex-1">
                           <p
                             className={`text-sm font-semibold truncate ${
-                              isCurrent ? "text-emerald-400" : "text-white"
+                              isCurrent ? "text-black dark:text-white font-bold" : "text-[#111111] dark:text-white"
                             }`}
                           >
                             {t.title}
                           </p>
-                          <p className="text-xs text-white/50 truncate">
+                          <p className="text-xs text-[#666666] dark:text-white/50 truncate">
                             {t.artist} • {t.album}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-xs text-white/40 font-mono hidden sm:inline">
+                        <span className="text-xs text-[#888888] dark:text-white/40 font-mono hidden sm:inline">
                           {formatTime((t.durationMs || 180000) / 1000)}
                         </span>
                         <button
                           onClick={() => addToQueue(toPlaybackTrack(t))}
-                          className="p-2 text-white/40 hover:text-white rounded-full transition-colors"
+                          className="p-2 text-[#777777] dark:text-white/40 hover:text-black dark:hover:text-white rounded-full transition-colors"
                           title="Add to queue"
                         >
                           <Plus className="w-4 h-4" />
@@ -477,8 +477,8 @@ export function UniversalSearch() {
                           onClick={() => (isCurrent ? togglePlay() : handlePlaySingle(t))}
                           className={`p-2.5 rounded-full transition-colors ${
                             isCurrentPlaying
-                              ? "bg-emerald-500 text-black"
-                              : "bg-white/10 hover:bg-white/20 text-white"
+                              ? "bg-black dark:bg-white text-white dark:text-black"
+                              : "bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-[#111111] dark:text-white"
                           }`}
                         >
                           {isCurrentPlaying ? (
@@ -498,8 +498,8 @@ export function UniversalSearch() {
           {/* Artists Section */}
           {(activeTab === "all" || activeTab === "artists") && artists.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-                <Users className="w-4 h-4 text-emerald-400" />
+              <h3 className="text-base font-bold text-[#111111] dark:text-white tracking-tight flex items-center gap-2">
+                <Users className="w-4 h-4 text-[#555555] dark:text-white/70" />
                 <span>Artists</span>
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -507,9 +507,9 @@ export function UniversalSearch() {
                   <div
                     key={artist.id}
                     onClick={() => setSelectedArtistId(artist.id)}
-                    className="group p-4 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/10 transition-all cursor-pointer text-center space-y-3"
+                    className="group p-4 rounded-2xl border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] hover:bg-black/[0.05] dark:hover:bg-white/[0.06] hover:border-black/10 dark:hover:border-white/10 transition-all cursor-pointer text-center space-y-3"
                   >
-                    <div className="w-24 h-24 sm:w-28 sm:h-28 mx-auto rounded-full overflow-hidden border border-white/10 shadow-lg">
+                    <div className="w-24 h-24 sm:w-28 sm:h-28 mx-auto rounded-full overflow-hidden border border-black/10 dark:border-white/10 shadow-lg">
                       <img
                         src={
                           artist.images?.[0]?.url ||
@@ -520,10 +520,10 @@ export function UniversalSearch() {
                       />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-white truncate group-hover:text-emerald-400 transition-colors">
+                      <h4 className="text-sm font-bold text-[#111111] dark:text-white truncate group-hover:text-black dark:group-hover:text-white transition-colors">
                         {artist.name}
                       </h4>
-                      <p className="text-xs text-white/40">Artist</p>
+                      <p className="text-xs text-[#777777] dark:text-white/40">Artist</p>
                     </div>
                   </div>
                 ))}
