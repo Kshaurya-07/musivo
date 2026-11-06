@@ -20,58 +20,71 @@ A music streaming and discovery platform with a dense, responsive interface, Spo
 
 ## Overview
 
-Musivo is a music streaming and discovery application inspired by the content density and usability of JioSaavn-style layouts. It combines Spotify playback and library features with Apple iTunes search previews, so visitors can sample tracks without signing in, and signed-in Spotify Premium users can play full tracks in the browser, subject to Spotify's own requirements.
+Musivo is a music streaming and discovery application inspired by the content density and usability of JioSaavn-style layouts. It combines Spotify playback and library features with Apple iTunes search previews, so visitors can sample tracks without signing in, and Spotify Premium users can play full tracks in the browser, subject to Spotify's own requirements.
 
-The interface uses a monochrome and graphite colour system with both day and night modes. Album art and artist imagery are presented in their natural colours.
+The interface uses a monochrome and graphite colour system with day and night modes. Album art and artist imagery are shown in their natural colours, without filtering or desaturation.
 
 ## Features
 
-- **Dense music shelves:** Responsive grids, a sub-navigation ribbon, chart banners, artist avatars, and quick-access cards.
-- **Day and night modes:** A light mode and a dark mode, switchable from the header.
-- **Spotify playback:** In-browser playback through the Spotify Web Playback SDK for Spotify Premium accounts, with seeking, volume control, and shuffle and repeat modes, as described in the original README.
+- **Dense music shelves:** Responsive grids that scale from 2 columns on mobile to 7 columns on wide displays, a sub-navigation ribbon for All, Trending, Top Charts, New Releases, Discover, AI Mix, Library, and Podcasts, 16:9 chart banners, circular artist avatars, and quick-access cards.
+- **Day and night modes:** Light and dark modes, switchable from the header.
+- **Spotify playback:** In-browser playback through the Spotify Web Playback SDK for Spotify Premium accounts, with seeking, volume control, and shuffle and repeat modes.
 - **Instant previews:** 30-second audio previews through the Apple iTunes Search API for unauthenticated exploration.
-- **AI Mix Studio:** Playlist creation based on moods, tempo, and taste profiles, with fallback to Spotify recommendations when no AI provider is configured, as described in the original README.
-- **Podcasts and video:** A podcast player with embedded video support, episode browsing, and transcript summaries, as described in the original README.
-- **Listening analytics:** Tracking of listening time, activity over recent days, music versus podcast split, and top artists and songs, as described in the original README.
+- **AI Mix Studio:** Playlist creation based on moods, tempo, and taste profiles, with fallback to Spotify recommendations when no AI provider is configured.
+- **Podcasts and video:** A podcast player with embedded video support, episode browsing, and transcript summaries.
+- **Listening analytics:** Total listening time, 7-day activity, music versus podcast split, and top artists and songs, counted from 30 seconds of listening.
 - **Queue management:** A floating queue tab with a slide-out drawer for reordering, adding, or clearing upcoming tracks.
-- **Spotify Connect:** A device selector to transfer playback between supported devices, as described in the original README.
-- **Playback diagnostics:** A panel showing SDK status, connected device information, and playback state, as described in the original README.
-- **Sleep timer:** Stop playback after a set duration or at the end of the current track.
-- **Library sync:** Sync liked songs, playlists, and recently played tracks, or create private Spotify playlists from the app, as described in the original README.
-- **Progressive web app:** Installable on desktop and mobile, with service worker caching for the app shell, as described in the original README.
+- **Spotify Connect:** A device selector to transfer playback between the web player, desktop apps, smartphones, smart TVs, and speakers.
+- **Playback diagnostics:** A panel showing SDK status, connected device information, playback state, and active errors.
+- **Sleep timer:** Stop playback after 15, 30, 45, or 60 minutes, or at the end of the current track.
+- **Library sync:** Sync liked songs, playlists, and recently played tracks, or create private Spotify playlists from the app.
+- **Progressive web app:** Installable on Windows, macOS, Android, and iOS, with service worker caching for the app shell.
 
 ## Design System
 
 The UI is built on a neutral monochrome palette, from obsidian and charcoal through graphite and silver to porcelain white.
 
-- **Day mode:** Light backgrounds, light silver borders, dark typography, and high-contrast dark buttons.
-- **Night mode:** Deep obsidian backgrounds, graphite cards, translucent borders, and white typography.
-- **Artwork integrity:** Album art, artist portraits, and video thumbnails are not filtered, greyscaled, or desaturated, as described in the original README.
+- **Palette:** Obsidian (`#050505` / `#080808`), charcoal (`#111111` / `#151515`), graphite (`#1F1F1F` / `#242424`), dark grey (`#2E2E2E` / `#363636`), silver (`#9A9A9A` / `#C2C2C2`), and porcelain (`#F5F5F7` / `#FAFAFA`).
+- **Day mode:** Porcelain backgrounds (`#FAFAFA` / `#F3F3F5`), light silver borders, obsidian typography (`#111111`), and high-contrast dark buttons.
+- **Night mode:** Deep obsidian backgrounds (`#080808`), graphite cards (`#141416`), translucent borders, and white typography (`#FFFFFF`).
+- **Artwork integrity:** Album art, artist portraits, and video thumbnails are not filtered, greyscaled, or desaturated.
+
+A persistent bottom dock keeps playback controls in reach, with album art, title and artist details, a timeline scrubber, volume control, diagnostics, sleep timer, device switching, and the queue drawer.
 
 ## Audio Playback
 
 Musivo uses a hybrid playback approach:
 
-- **Spotify Web Playback SDK:** Full-track playback for Spotify Premium subscribers, with Spotify Connect device sync.
+- **Spotify Web Playback SDK:** Full-track playback for Spotify Premium subscribers, subject to Spotify's requirements, with Spotify Connect device sync.
 - **HTML5 audio fallback:** Apple iTunes 30-second previews, with no authentication required.
 
-Additional playback features described in the original README include an equalizer visualiser, playback diagnostics, and token refresh and cooldown handling to reduce API rate-limit issues.
+Playback also includes an equalizer visualiser with four animated bars that move while music is playing and rest when paused, playback diagnostics, and token refresh and cooldown handling intended to reduce API rate-limit issues.
 
 ## Authentication and Security
 
 ### Google OAuth 2.0
 
-Secure authentication through Google Identity Services, fetching verified email, name, and avatar, and creating or linking a Musivo account.
+Authentication through Google Identity Services using OpenID Connect, fetching verified email, name, and avatar, and creating or linking a Musivo account.
 
 ### Spotify OAuth 2.0
 
-Authorization Code flow with PKCE, covering the scopes described in the original README, including streaming, playback state, current playback, library access, private playlist access, recently played history, and basic profile and email access. Spotify can be used for standalone login or linked to an existing Google session.
+Authorization Code flow with PKCE, covering these scopes:
+
+- `streaming`
+- `user-read-playback-state` and `user-modify-playback-state`
+- `user-read-currently-playing`
+- `user-library-read`
+- `playlist-read-private` and `playlist-modify-private`
+- `user-read-recently-played`
+- `user-read-private` and `user-read-email`
+
+Spotify can be used for standalone login or linked to an existing Google session.
 
 ### Session security
 
-- Spotify tokens are encrypted before database persistence, using AES-256-GCM as described in the original README.
+- Spotify tokens are encrypted with AES-256-GCM before database persistence.
 - Background token refresh is intended to keep streaming sessions uninterrupted.
-- Sessions use HTTP-only, SameSite=Lax, signed JWT cookies, as described in the original README.
+- Sessions use HTTP-only, `SameSite=Lax`, signed JWT cookies.
 
 ## Tech Stack
 
@@ -83,16 +96,16 @@ Authorization Code flow with PKCE, covering the scopes described in the original
 - Framer Motion for transitions and queue animations
 - TanStack Query v5 for caching and background synchronisation
 - tRPC client for type-safe server communication
-- Wouter for routing
+- Wouter for lightweight routing
 - Sonner for toast notifications
 
 ### Backend
 
 - Node.js 20 or higher, Express 4
 - tRPC server for auth, search, playlists, analytics, and Spotify operations
-- Drizzle ORM with MySQL, plus an in-memory fallback store as described in the original README
+- Drizzle ORM with MySQL, plus an in-memory fallback store when no database is configured
 - JOSE for JWT signing, verification, and AES encryption
-- esbuild for server bundling
+- esbuild for server bundling into `dist/index.js`
 
 ## External APIs
 
@@ -134,7 +147,7 @@ DATABASE_URL=mysql://user:password@localhost:3306/musivo
 OPENAI_API_KEY=your_openai_api_key
 ```
 
-The database setting is optional in the original README; an embedded in-memory store is used if it is omitted.
+`DATABASE_URL` is optional; an embedded in-memory store is used if it is omitted. `OPENAI_API_KEY` is also optional; AI Mix Studio falls back to Spotify recommendations without it.
 
 ### Run the development server
 
@@ -142,11 +155,11 @@ The database setting is optional in the original README; an embedded in-memory s
 npm run dev
 ```
 
-Open http://localhost:5000 in your browser, as described in the original README.
+Open http://localhost:5000 in your browser.
 
 ## Testing
 
-The original README describes automated tests covering OAuth flows, token management, session linking, and music search. Run:
+Automated tests cover OAuth flows, token management, session linking, and music search. Run:
 
 ```bash
 npx tsc --noEmit
@@ -160,7 +173,7 @@ npm run build
 | --- | --- |
 | `npm run dev` | Start the client and server concurrently with hot reload |
 | `npm run build` | Build frontend assets and bundle the server |
-| `npm start` | Launch the production bundled server |
+| `npm start` | Launch the production bundled server from `dist/index.js` |
 | `npm test` | Run the test suite |
 | `npm run check` | Run TypeScript checks without emitting files |
 | `npm run db:push` | Push Drizzle schema migrations |
