@@ -8,6 +8,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { ENV } from "./env";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -29,6 +30,9 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  if (ENV.isProduction && !ENV.cookieSecret) {
+    throw new Error("JWT_SECRET is required in production. Set JWT_SECRET to a long random secret in your environment.");
+  }
   const app = express();
   app.set("trust proxy", 1);
   const server = createServer(app);

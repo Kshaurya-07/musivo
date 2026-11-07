@@ -136,18 +136,18 @@ npm install
 Create a `.env` file in the project root with your own values. Replace every placeholder below:
 
 ```env
-PORT=5000
+PORT=3000
 NODE_ENV=development
+JWT_SECRET=<redacted>
 SPOTIFY_CLIENT_ID=your_spotify_client_id
-SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
-VITE_GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-COOKIE_SECRET=your_cookie_secret_at_least_32_characters
-DATABASE_URL=mysql://user:password@localhost:3306/musivo
-OPENAI_API_KEY=your_openai_api_key
+SPOTIFY_CLIENT_SECRET=<redacted>
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=<redacted>
+DATABASE_URL=<redacted>
+OPENAI_API_KEY=<redacted>
 ```
 
-`DATABASE_URL` is optional; an embedded in-memory store is used if it is omitted. `OPENAI_API_KEY` is also optional; AI Mix Studio falls back to Spotify recommendations without it.
+`JWT_SECRET` is required in production (the server will not start without it); use a long random secret. `DATABASE_URL` is optional; an embedded in-memory store is used if it is omitted. `OPENAI_API_KEY` is also optional; AI Mix Studio falls back to Spotify recommendations without it.
 
 ### Run the development server
 
@@ -155,7 +155,7 @@ OPENAI_API_KEY=your_openai_api_key
 npm run dev
 ```
 
-Open http://localhost:5000 in your browser.
+Open http://localhost:3000 in your browser.
 
 ## Testing
 

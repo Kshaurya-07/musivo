@@ -27,7 +27,8 @@ type GoogleTokenResponse = {
 };
 
 function getSessionKey() {
-  const secret = ENV.cookieSecret || ENV.spotifyClientSecret || "musivo-google-oauth-secret-key-32b";
+  const secret = ENV.cookieSecret || ENV.spotifyClientSecret;
+  if (!secret) throw new Error("JWT_SECRET is required for Google OAuth state");
   return new TextEncoder().encode(secret);
 }
 
